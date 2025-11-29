@@ -1,6 +1,10 @@
-import { auth } from '@repo/auth/server';
+import { auth, signOut } from '@repo/auth/server';
+import { Button } from '@repo/design-system/components/button';
+import { LogOut } from 'lucide-react';
+import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { checkSheetConnection } from '../actions/onboarding';
+import { BottomNav } from '../dashboard/components/BottomNav';
 import { OnboardingClient } from './OnboardingClient';
 
 export default async function OnboardingPage() {
@@ -17,14 +21,30 @@ export default async function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-50 flex flex-col">
+    <div className="min-h-screen bg-[#020617] text-slate-50 flex flex-col pb-24">
       {/* Header */}
-      <header className="px-6 py-6 border-b border-white/5">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded bg-white flex items-center justify-center">
-            <span className="font-serif font-bold text-[#020617] text-xl">S</span>
-          </div>
-          <span className="font-medium text-lg tracking-tight text-white">서대리</span>
+      <header className="sticky top-0 z-30 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 px-5 h-14 flex items-center justify-between">
+        <span className="font-bold text-lg tracking-tight">서대리</span>
+        <div className="flex items-center gap-3">
+          <form
+            action={async () => {
+              'use server';
+              await signOut({ redirectTo: '/login' });
+            }}
+          >
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full text-slate-400 hover:text-white hover:bg-white/10">
+              <LogOut size={16} />
+            </Button>
+          </form>
+          {session.user.image && (
+            <Image
+              src={session.user.image}
+              alt={session.user.name || '프로필'}
+              width={32}
+              height={32}
+              className="rounded-full border border-white/10"
+            />
+          )}
         </div>
       </header>
 
@@ -44,6 +64,8 @@ export default async function OnboardingPage() {
           <OnboardingClient userName={session.user.name || undefined} />
         </div>
       </main>
+
+      <BottomNav />
     </div>
   );
 }

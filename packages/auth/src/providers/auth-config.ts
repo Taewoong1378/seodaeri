@@ -2,6 +2,44 @@ import type { NextAuthConfig } from 'next-auth'
 import type { JWT } from 'next-auth/jwt'
 import Google from 'next-auth/providers/google'
 
+/**
+ * Google OAuth access token 갱신
+ */
+async function refreshAccessToken(token: JWT): Promise<JWT> {
+  try {
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        grant_type: 'refresh_token',
+        refresh_token: token.refreshToken as string,
+      }),
+    })
+
+    const refreshedTokens = await response.json()
+
+    if (!response.ok) {
+      throw refreshedTokens
+    }
+
+    return {
+      ...token,
+      accessToken: refreshedTokens.access_token,
+      accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
+      // refresh_token은 갱신되지 않으면 기존 것 유지
+      refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
+    }
+  } catch (error) {
+    console.error('Error refreshing access token:', error)
+    return {
+      ...token,
+      error: 'RefreshAccessTokenError',
+    }
+  }
+}
+
 export const authConfig: NextAuthConfig = {
   secret: process.env.AUTH_SECRET,
   providers: [
@@ -42,7 +80,6 @@ export const authConfig: NextAuthConfig = {
 
         if (error) {
           console.error('Failed to save user to Supabase:', error)
-          // 저장 실패해도 로그인은 허용 (첫 로그인 시 테이블이 없을 수 있음)
         }
       } catch (err) {
         console.error('Supabase upsert error:', err)
@@ -51,13 +88,26 @@ export const authConfig: NextAuthConfig = {
       return true
     },
     async jwt({ token, user, account }) {
+      // 첫 로그인 시 토큰 저장
       if (account && user) {
-        token.accessToken = account.access_token
-        token.refreshToken = account.refresh_token
-        token.provider = account.provider
-        token.id = user.id
+        return {
+          ...token,
+          accessToken: account.access_token,
+          refreshToken: account.refresh_token,
+          accessTokenExpires: account.expires_at ? account.expires_at * 1000 : Date.now() + 3600 * 1000,
+          provider: account.provider,
+          id: user.id,
+        }
       }
-      return token
+
+      // 토큰이 아직 유효하면 그대로 반환
+      if (Date.now() < (token.accessTokenExpires as number || 0)) {
+        return token
+      }
+
+      // 토큰 만료 시 갱신
+      console.log('Access token expired, refreshing...')
+      return refreshAccessToken(token)
     },
     async session({ session, token }) {
       if (token) {
@@ -100,6 +150,8 @@ declare module 'next-auth/jwt' {
     id?: string
     accessToken?: string
     refreshToken?: string
+    accessTokenExpires?: number
     provider?: string
+    error?: string
   }
 }

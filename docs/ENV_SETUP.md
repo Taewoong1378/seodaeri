@@ -160,6 +160,38 @@ NEXT_PUBLIC_ADMIN_URL=http://localhost:3001
 
 ---
 
+## 6. 서대리 마스터 템플릿 (선택)
+
+신규 사용자가 로그인했을 때 자동으로 복사할 마스터 템플릿 시트 ID입니다.
+
+### 6.1 마스터 템플릿 준비
+
+1. 서대리 투자기록 템플릿 스프레드시트 생성
+2. 템플릿에 필요한 시트 탭 구성:
+   - `1. 대시보드`
+   - `2. 거래내역`
+   - `3. 종목현황`
+   - `4. 배당현황`
+3. **공유 설정**: "링크가 있는 모든 사용자" → "뷰어" 권한 부여
+
+### 6.2 시트 ID 찾기
+
+URL에서 ID 추출:
+```
+https://docs.google.com/spreadsheets/d/여기가_시트_ID/edit
+```
+
+### 6.3 환경 변수 설정
+
+```
+SEODAERI_TEMPLATE_SHEET_ID=1234567890abcdefghijklmnop
+```
+
+> **참고**: 이 값이 없으면 "새 시트 만들기" 기능이 동작하지 않습니다.
+> 기존 시트 검색 및 수동 연동은 정상 작동합니다.
+
+---
+
 ## 최종 .env 파일 예시
 
 ```bash
@@ -182,6 +214,9 @@ OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # App URLs
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_ADMIN_URL=http://localhost:3001
+
+# 서대리 마스터 템플릿 (선택)
+SEODAERI_TEMPLATE_SHEET_ID=1234567890abcdefghijklmnop
 ```
 
 ---
