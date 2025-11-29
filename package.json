@@ -1,0 +1,33 @@
+{
+  "name": "seodaeri-app",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:all": "turbo run dev --parallel",
+    "dev:web": "turbo run dev --filter=web",
+    "dev:admin": "turbo run dev --filter=@repo/admin",
+    "dev:mobile": "turbo run dev --filter=@repo/mobile",
+    "build": "turbo run build",
+    "build:web": "turbo run build --filter=web",
+    "build:admin": "turbo run build --filter=@repo/admin",
+    "mobile:start": "pnpm --filter @repo/mobile start",
+    "mobile:ios": "pnpm --filter @repo/mobile ios",
+    "mobile:android": "pnpm --filter @repo/mobile android",
+    "lint": "turbo run lint",
+    "format": "turbo run format",
+    "check": "biome check .",
+    "check:fix": "biome check --write .",
+    "check-types": "turbo run check-types",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "db:generate": "pnpm --filter @repo/database generate",
+    "db:push": "pnpm --filter @repo/database push"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "turbo": "^2.5.4"
+  }
+}

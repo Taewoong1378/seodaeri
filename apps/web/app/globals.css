@@ -1,0 +1,79 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-background: oklch(0.985 0.002 247.839); /* Very light cool gray */
+  --color-foreground: oklch(0.141 0.005 285.823); /* Deep charcoal */
+  
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.141 0.005 285.823);
+  
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.141 0.005 285.823);
+  
+  --color-primary: oklch(0.488 0.243 264.376); /* Vibrant Royal Blue */
+  --color-primary-foreground: oklch(0.985 0 0);
+  
+  --color-secondary: oklch(0.967 0.003 264.542); /* Pale cool gray */
+  --color-secondary-foreground: oklch(0.21 0.006 285.885);
+  
+  --color-muted: oklch(0.967 0.003 264.542);
+  --color-muted-foreground: oklch(0.552 0.016 285.938);
+  
+  --color-accent: oklch(0.967 0.003 264.542);
+  --color-accent-foreground: oklch(0.21 0.006 285.885);
+  
+  --color-destructive: oklch(0.637 0.237 25.331);
+  --color-destructive-foreground: oklch(0.985 0 0);
+  
+  --color-border: oklch(0.92 0.004 286.32);
+  --color-input: oklch(0.92 0.004 286.32);
+  --color-ring: oklch(0.488 0.243 264.376);
+  
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  /* Brand Colors - Premium Fintech */
+  --color-brand-primary: oklch(0.488 0.243 264.376);      /* Royal Blue */
+  --color-brand-secondary: oklch(0.623 0.214 164.935);    /* Teal/Emerald */
+  --color-brand-gradient-start: oklch(0.40 0.20 260);     /* Deep Blue */
+  --color-brand-gradient-end: oklch(0.55 0.20 200);       /* Cyan/Teal */
+  
+  --color-success: oklch(0.65 0.18 150);             /* Fresh Green */
+  --color-danger: oklch(0.60 0.20 25);               /* Soft Red */
+}
+
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
+    
+    /* Native-like Touch Interactions */
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Hide scrollbars but keep functionality */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  body {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+}
