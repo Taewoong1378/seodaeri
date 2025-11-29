@@ -5,6 +5,7 @@ import { LogOut, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { getDashboardData, syncPortfolio } from '../actions/dashboard';
+import { checkSheetConnection } from '../actions/onboarding';
 import { BottomNav } from './components/BottomNav';
 import { DividendChart } from './components/DividendChart';
 import { HeroCard } from './components/HeroCard';
@@ -16,6 +17,12 @@ export default async function DashboardPage() {
   // 로그인 체크
   if (!session?.user) {
     redirect('/login');
+  }
+
+  // 시트 연동 체크 - 연동 안 되어 있으면 온보딩으로
+  const { connected } = await checkSheetConnection();
+  if (!connected) {
+    redirect('/onboarding');
   }
 
   const data = await getDashboardData();
