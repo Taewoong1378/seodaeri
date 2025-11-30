@@ -49,6 +49,20 @@ export function TransactionsClient({ transactions }: TransactionsClientProps) {
 
   const currentTransactions = activeTab === 'dividend' ? dividendTransactions : tradeTransactions;
 
+  // 총 배당금 계산
+  const totalDividend = dividendTransactions.reduce((sum, tx) => sum + tx.total_amount, 0);
+
+  // 올해 배당금 계산
+  const currentYear = new Date().getFullYear();
+  const thisYearDividend = dividendTransactions
+    .filter((tx) => new Date(tx.trade_date).getFullYear() === currentYear)
+    .reduce((sum, tx) => sum + tx.total_amount, 0);
+
+  // 총 입금액 계산
+  const totalDeposit = tradeTransactions
+    .filter((tx) => tx.type === 'DEPOSIT')
+    .reduce((sum, tx) => sum + tx.total_amount, 0);
+
   return (
     <div className="space-y-4">
       {/* Tabs */}
@@ -92,6 +106,33 @@ export function TransactionsClient({ transactions }: TransactionsClientProps) {
           </span>
         </button>
       </div>
+
+      {/* Summary */}
+      {activeTab === 'dividend' && dividendTransactions.length > 0 && (
+        <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/10 rounded-2xl p-5 border border-blue-500/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-blue-300/70 mb-1">누적 배당금</p>
+              <p className="text-2xl font-bold text-white">{formatCurrency(totalDividend)}원</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-blue-300/70 mb-1">올해 배당금</p>
+              <p className="text-lg font-semibold text-blue-400">{formatCurrency(thisYearDividend)}원</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'trade' && tradeTransactions.length > 0 && (
+        <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/10 rounded-2xl p-5 border border-purple-500/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-purple-300/70 mb-1">총 입금액</p>
+              <p className="text-2xl font-bold text-white">{formatCurrency(totalDeposit)}원</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -152,53 +193,18 @@ export function TransactionsClient({ transactions }: TransactionsClientProps) {
                           <TrendingUp className="w-6 h-6" />
                         )}
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-base font-bold text-white leading-tight">
+                      <div className="flex flex-col gap-1.5 flex-1 min-w-0 mr-4">
+                        <span className="text-base font-bold text-white leading-none truncate">
                           {tx.name || (tx.type === 'DEPOSIT' ? '현금 입금' : tx.type === 'WITHDRAW' ? '현금 출금' : tx.ticker)}
                         </span>
-                        <div className="flex items-center gap-2">
-                          {tx.ticker ? (
-                            <span className="text-xs font-medium text-slate-500 bg-white/5 px-1.5 py-0.5 rounded">
-                              {tx.ticker}
-                            </span>
-                          ) : (
-                            <span className="text-xs font-medium text-slate-500 bg-white/5 px-1.5 py-0.5 rounded">
-                              현금
-                            </span>
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                          {tx.ticker && (
+                            <>
+                              <span className="font-medium text-slate-400">{tx.ticker}</span>
+                              <span className="text-slate-600">·</span>
+                            </>
                           )}
-                          <span className="text-xs text-slate-500">·</span>
-                          <span className="text-xs text-slate-500">
-                            {formatDate(tx.trade_date)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span
-                            className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                              tx.type === 'BUY'
-                                ? 'bg-emerald-500/10 text-emerald-400'
-                                : tx.type === 'SELL'
-                                ? 'bg-red-500/10 text-red-400'
-                                : tx.type === 'DIVIDEND'
-                                ? 'bg-blue-500/10 text-blue-400'
-                                : tx.type === 'DEPOSIT'
-                                ? 'bg-purple-500/10 text-purple-400'
-                                : tx.type === 'WITHDRAW'
-                                ? 'bg-orange-500/10 text-orange-400'
-                                : 'bg-slate-500/10 text-slate-400'
-                            }`}
-                          >
-                            {tx.type === 'BUY'
-                              ? '매수'
-                              : tx.type === 'SELL'
-                              ? '매도'
-                              : tx.type === 'DIVIDEND'
-                              ? '배당'
-                              : tx.type === 'DEPOSIT'
-                              ? '입금'
-                              : tx.type === 'WITHDRAW'
-                              ? '출금'
-                              : tx.type}
-                          </span>
+                          <span className="whitespace-nowrap">{formatDate(tx.trade_date)}</span>
                         </div>
                       </div>
                     </div>

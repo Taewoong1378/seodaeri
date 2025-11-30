@@ -554,43 +554,59 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
   console.log('[parseDepositData] Header row:', JSON.stringify(headerRow));
   console.log('[parseDepositData] Column indices:', { dateCol, amountCol, memoCol });
 
-  // 첫 5개 데이터 행 디버깅
-  for (let i = 1; i < Math.min(rows.length, 6); i++) {
-    console.log(`[parseDepositData] Row ${i}:`, JSON.stringify(rows[i]));
+  // 첫 10개 행 디버깅 (구조 파악)
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const row = rows[i];
+    if (row && row.length > 0) {
+      console.log(`[parseDepositData] Row ${i} (${row.length} cols):`, JSON.stringify(row));
+    }
   }
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     if (!row || !Array.isArray(row)) continue;
 
-    // 날짜 찾기
+    // 날짜 찾기 (여러 컬럼에서 검색)
     let date: string | null = null;
+    let dateColIdx = -1;
     for (let col = 0; col < Math.min(row.length, 5); col++) {
       date = parseDate(row[col]);
       if (date) {
-        dateCol = col;
+        dateColIdx = col;
         break;
       }
     }
-
     if (!date) continue;
 
-    // 금액 찾기
-    // 연도(1900-2100 범위의 4자리 숫자)는 금액이 아니므로 제외
-    const isYearLike = (val: number): boolean => {
-      return val >= 1900 && val <= 2100 && Number.isInteger(val);
-    };
+    // 금액 찾기 - ₩ 기호가 포함된 컬럼 찾기
+    let amount = 0;
+    let memoValue = '';
 
-    let amount = parseNumber(row[amountCol]);
+    for (let col = 0; col < row.length; col++) {
+      const cellValue = String(row[col] || '');
+      // ₩ 기호가 있는 컬럼이 금액
+      if (cellValue.includes('₩') || cellValue.includes('\\')) {
+        const parsed = parseNumber(cellValue);
+        if (parsed > 0) {
+          amount = parsed;
+          // 다음 컬럼이 memo
+          if (col + 1 < row.length) {
+            memoValue = String(row[col + 1] || '');
+          }
+          break;
+        }
+      }
+    }
 
-    // 금액이 0이거나 연도처럼 보이면 다른 컬럼에서 찾기
-    if (amount === 0 || isYearLike(amount)) {
-      amount = 0;
-      for (let col = dateCol + 1; col < row.length; col++) {
-        const val = parseNumber(row[col]);
-        // 연도처럼 보이는 숫자는 제외
-        if (val > 0 && !isYearLike(val)) {
-          amount = val;
+    // ₩ 기호가 없으면 큰 숫자(10000 이상) 찾기
+    if (amount === 0) {
+      for (let col = dateColIdx + 1; col < row.length; col++) {
+        const parsed = parseNumber(row[col]);
+        if (parsed >= 10000) {
+          amount = parsed;
+          if (col + 1 < row.length) {
+            memoValue = String(row[col + 1] || '');
+          }
           break;
         }
       }
@@ -605,7 +621,7 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
       date,
       type,
       amount: Math.abs(amount),
-      memo: String(row[memoCol] || ''),
+      memo: memoValue,
     };
 
     // 처음 5개 결과 디버깅
