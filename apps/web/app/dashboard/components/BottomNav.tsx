@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation';
 
 const navItems = [
   { href: '/dashboard', label: '홈', icon: Home },
-  { href: '/transactions', label: '거래내역', icon: History },
+  { href: '/transactions', label: '내역', icon: History },
   { href: '/portfolio', label: '포트폴리오', icon: PieChart },
   { href: '/settings', label: '설정', icon: Settings },
 ];

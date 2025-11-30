@@ -76,7 +76,7 @@ export async function getTransactions(): Promise<TransactionsResult> {
           fetchSheetData(
             session.accessToken,
             user.spreadsheet_id,
-            "'6. 입금내역'!A:F"
+            "'6. 입금내역'!A:H"
           ).catch((e) => {
             console.error('[Sheet] 6. 입금내역 읽기 실패:', e);
             return null;

@@ -546,12 +546,18 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
     }
   }
 
-  // 헤더를 찾지 못한 경우 기본값
-  if (dateCol === -1) dateCol = 1;
-  if (amountCol === -1) amountCol = 2;
-  if (memoCol === -1) memoCol = 3;
+  // 헤더를 찾지 못한 경우 기본값 (일자=0, 입금=6, 비고=7)
+  if (dateCol === -1) dateCol = 0;
+  if (amountCol === -1) amountCol = 6;
+  if (memoCol === -1) memoCol = 7;
 
+  console.log('[parseDepositData] Header row:', JSON.stringify(headerRow));
   console.log('[parseDepositData] Column indices:', { dateCol, amountCol, memoCol });
+
+  // 첫 5개 데이터 행 디버깅
+  for (let i = 1; i < Math.min(rows.length, 6); i++) {
+    console.log(`[parseDepositData] Row ${i}:`, JSON.stringify(rows[i]));
+  }
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
@@ -570,13 +576,20 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
     if (!date) continue;
 
     // 금액 찾기
+    // 연도(1900-2100 범위의 4자리 숫자)는 금액이 아니므로 제외
+    const isYearLike = (val: number): boolean => {
+      return val >= 1900 && val <= 2100 && Number.isInteger(val);
+    };
+
     let amount = parseNumber(row[amountCol]);
 
-    // 금액이 0이면 다른 컬럼에서 찾기
-    if (amount === 0) {
+    // 금액이 0이거나 연도처럼 보이면 다른 컬럼에서 찾기
+    if (amount === 0 || isYearLike(amount)) {
+      amount = 0;
       for (let col = dateCol + 1; col < row.length; col++) {
         const val = parseNumber(row[col]);
-        if (val > 0) {
+        // 연도처럼 보이는 숫자는 제외
+        if (val > 0 && !isYearLike(val)) {
           amount = val;
           break;
         }
@@ -588,12 +601,19 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
     // 입금/출금 구분 (금액이 음수면 출금)
     const type: 'DEPOSIT' | 'WITHDRAW' = amount > 0 ? 'DEPOSIT' : 'WITHDRAW';
 
-    results.push({
+    const record = {
       date,
       type,
       amount: Math.abs(amount),
       memo: String(row[memoCol] || ''),
-    });
+    };
+
+    // 처음 5개 결과 디버깅
+    if (results.length < 5) {
+      console.log(`[parseDepositData] Parsed record ${results.length + 1}:`, JSON.stringify(record));
+    }
+
+    results.push(record);
   }
 
   console.log('[parseDepositData] Parsed records:', results.length);

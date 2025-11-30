@@ -1,7 +1,6 @@
 import { auth } from '@repo/auth/server';
 import { Button } from '@repo/design-system/components/button';
-import { Card, CardContent } from '@repo/design-system/components/card';
-import { ArrowDownLeft, ArrowUpRight, Banknote, ExternalLink, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -9,19 +8,7 @@ import { checkSheetConnection } from '../actions/onboarding';
 import { getTransactions } from '../actions/transactions';
 import { BottomNav } from '../dashboard/components/BottomNav';
 import { OCRModal } from '../dashboard/components/OCRModal';
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(amount);
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(date);
-}
+import { TransactionsClient } from './components/TransactionsClient';
 
 export default async function TransactionsPage() {
   const session = await auth();
@@ -42,7 +29,7 @@ export default async function TransactionsPage() {
     <div className="min-h-screen bg-[#020617] text-slate-50 pb-24">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 px-5 h-14 flex items-center justify-between">
-        <span className="font-bold text-lg tracking-tight">거래내역</span>
+        <span className="font-bold text-lg tracking-tight">내역</span>
         <div className="flex items-center gap-3">
           {sheetUrl && (
             <Link href={sheetUrl} target="_blank">
@@ -75,138 +62,7 @@ export default async function TransactionsPage() {
           </div>
         )}
 
-        {!transactions || transactions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-              <TrendingUp className="w-8 h-8 text-slate-500" />
-            </div>
-            <h3 className="text-lg font-medium text-white mb-2">
-              거래내역이 없습니다
-            </h3>
-            <p className="text-sm text-slate-400 max-w-[280px]">
-              카메라 버튼을 눌러 매매 내역을 촬영하고<br />
-              거래를 기록해보세요.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {transactions.map((tx) => (
-              <Card
-                key={tx.id}
-                className="bg-white/5 border-white/5 shadow-none rounded-2xl overflow-hidden"
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          tx.type === 'BUY'
-                            ? 'bg-emerald-500/20'
-                            : tx.type === 'SELL'
-                            ? 'bg-red-500/20'
-                            : tx.type === 'DIVIDEND'
-                            ? 'bg-blue-500/20'
-                            : tx.type === 'DEPOSIT'
-                            ? 'bg-purple-500/20'
-                            : tx.type === 'WITHDRAW'
-                            ? 'bg-orange-500/20'
-                            : 'bg-slate-500/20'
-                        }`}
-                      >
-                        {tx.type === 'BUY' ? (
-                          <ArrowDownLeft className="w-5 h-5 text-emerald-400" />
-                        ) : tx.type === 'SELL' ? (
-                          <ArrowUpRight className="w-5 h-5 text-red-400" />
-                        ) : tx.type === 'DIVIDEND' ? (
-                          <Banknote className="w-5 h-5 text-blue-400" />
-                        ) : tx.type === 'DEPOSIT' ? (
-                          <Wallet className="w-5 h-5 text-purple-400" />
-                        ) : tx.type === 'WITHDRAW' ? (
-                          <TrendingDown className="w-5 h-5 text-orange-400" />
-                        ) : (
-                          <TrendingUp className="w-5 h-5 text-slate-400" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-white">
-                            {tx.name || tx.ticker}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            {tx.ticker}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-400">
-                          <span
-                            className={
-                              tx.type === 'BUY'
-                                ? 'text-emerald-400'
-                                : tx.type === 'SELL'
-                                ? 'text-red-400'
-                                : tx.type === 'DIVIDEND'
-                                ? 'text-blue-400'
-                                : tx.type === 'DEPOSIT'
-                                ? 'text-purple-400'
-                                : tx.type === 'WITHDRAW'
-                                ? 'text-orange-400'
-                                : ''
-                            }
-                          >
-                            {tx.type === 'BUY'
-                              ? '매수'
-                              : tx.type === 'SELL'
-                              ? '매도'
-                              : tx.type === 'DIVIDEND'
-                              ? '배당'
-                              : tx.type === 'DEPOSIT'
-                              ? '입금'
-                              : tx.type === 'WITHDRAW'
-                              ? '출금'
-                              : tx.type}
-                          </span>
-                          <span>·</span>
-                          <span>{formatDate(tx.trade_date)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div
-                        className={`font-semibold ${
-                          tx.type === 'BUY'
-                            ? 'text-emerald-400'
-                            : tx.type === 'SELL'
-                            ? 'text-red-400'
-                            : tx.type === 'DIVIDEND'
-                            ? 'text-blue-400'
-                            : tx.type === 'DEPOSIT'
-                            ? 'text-purple-400'
-                            : tx.type === 'WITHDRAW'
-                            ? 'text-orange-400'
-                            : 'text-white'
-                        }`}
-                      >
-                        {tx.type === 'BUY' || tx.type === 'WITHDRAW' ? '-' : '+'}
-                        {formatCurrency(tx.total_amount)}원
-                      </div>
-                      {tx.type === 'BUY' || tx.type === 'SELL' ? (
-                        <div className="text-xs text-slate-500">
-                          {formatCurrency(tx.price)}원 × {tx.quantity}주
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                  {!tx.sheet_synced && (
-                    <div className="mt-2 pt-2 border-t border-white/5">
-                      <span className="text-xs text-amber-400">
-                        시트 동기화 대기 중
-                      </span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        <TransactionsClient transactions={transactions || []} />
       </main>
 
       <OCRModal />
