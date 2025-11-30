@@ -37,7 +37,13 @@ export function OnboardingClient({ userName }: OnboardingClientProps) {
 
   const handleResult = (result: OnboardingResult) => {
     if (result.success) {
+      // 캐시 무효화 후 리다이렉트
+      router.refresh();
       router.push('/dashboard');
+      // 만약 router.push가 작동하지 않으면 강제 이동
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 500);
     } else {
       setError(result.error || '오류가 발생했습니다.');
     }
