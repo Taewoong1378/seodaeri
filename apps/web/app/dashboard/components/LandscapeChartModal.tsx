@@ -28,31 +28,29 @@ export function LandscapeChartModal({ title, children, trigger }: LandscapeChart
   return (
     <>
       {trigger ? (
-        <div onClick={() => setIsOpen(true)}>{trigger}</div>
+        <div onClick={() => {
+          console.log('Opening landscape modal');
+          setIsOpen(true);
+        }}>{trigger}</div>
       ) : (
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-slate-500 hover:text-white"
-          onClick={() => setIsOpen(true)}
+          className="h-8 w-8 text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+          onClick={() => {
+            console.log('Opening landscape modal');
+            setIsOpen(true);
+          }}
         >
           <Maximize2 size={16} />
         </Button>
       )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="w-screen h-screen max-w-none m-0 p-0 bg-[#020617] border-none rounded-none flex items-center justify-center overflow-hidden">
+        <DialogContent className="fixed left-0 top-0 w-screen h-screen max-w-none m-0 p-0 translate-x-0 translate-y-0 bg-[#020617] border-none rounded-none flex items-center justify-center overflow-hidden z-[100] data-[state=open]:slide-in-from-bottom-0 data-[state=closed]:slide-out-to-bottom-0">
           <DialogTitle className="sr-only">{title} 전체화면</DialogTitle>
           
-          {/* Close Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-4 z-50 text-slate-400 hover:text-white bg-black/20 backdrop-blur-sm rounded-full"
-            onClick={() => setIsOpen(false)}
-          >
-            <X size={24} />
-          </Button>
+
 
           {/* Content Container */}
           <div
@@ -70,6 +68,14 @@ export function LandscapeChartModal({ title, children, trigger }: LandscapeChart
           >
             <div className="flex items-center justify-between mb-4 shrink-0">
               <h2 className="text-xl font-bold text-white">{title}</h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-slate-400 hover:text-white bg-black/20 backdrop-blur-sm rounded-full"
+                onClick={() => setIsOpen(false)}
+              >
+                <X size={24} />
+              </Button>
             </div>
             
             <div className="flex-1 min-h-0 w-full relative">

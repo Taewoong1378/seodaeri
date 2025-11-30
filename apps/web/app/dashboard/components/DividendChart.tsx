@@ -1,15 +1,16 @@
 'use client';
 
-import { LandscapeChartModal } from '@/app/dashboard/components/LandscapeChartModal';
+import { useState } from 'react';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 
-interface DividendData {
+interface MonthlyDividend {
   month: string;
+  year: number;
   amount: number;
 }
 
 interface DividendChartProps {
-  data: DividendData[];
+  data: MonthlyDividend[];
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -26,100 +27,110 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+// 월 순서 정렬을 위한 헬퍼
+const MONTH_ORDER = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+
 export function DividendChart({ data }: DividendChartProps) {
+  // 사용 가능한 연도 목록 추출 (중복 제거, 내림차순)
+  const availableYears = [...new Set(data.map(d => d.year))].sort((a, b) => b - a);
+
+  // 현재 연도가 있으면 선택, 없으면 가장 최근 연도
+  const currentYear = new Date().getFullYear();
+  const defaultYear = availableYears.includes(currentYear) ? currentYear : availableYears[0];
+
+  const [selectedYear, setSelectedYear] = useState<number>(defaultYear || currentYear);
+
   // 데이터가 없으면 빈 배열 처리
   if (!data || data.length === 0) return null;
 
-  // 최대값 계산 (Y축 스케일링용)
-  const maxAmount = Math.max(...data.map(d => d.amount));
+  // 선택된 연도의 데이터만 필터링
+  const filteredData = data.filter(d => d.year === selectedYear);
+
+  // 12개월 전체 데이터 생성 (빈 월도 포함)
+  const fullYearData = MONTH_ORDER.map(month => {
+    const found = filteredData.find(d => d.month === month);
+    return {
+      month,
+      amount: found?.amount || 0,
+    };
+  });
+
+  // 해당 연도의 총 배당금
+  const yearTotal = filteredData.reduce((sum, d) => sum + d.amount, 0);
 
   return (
-    <div className="relative w-full h-[200px] mt-2">
-      <div className="absolute -top-10 right-0 z-10">
-        <LandscapeChartModal title="월별 배당금">
-          <div className="w-full h-full p-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
-                <defs>
-                  <linearGradient id="barGradientModal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
-                    <stop offset="100%" stopColor="#1e3a8a" stopOpacity={0.8} />
-                  </linearGradient>
-                </defs>
-                <XAxis 
-                  dataKey="month" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#64748b', fontSize: 14, fontWeight: 500 }}
-                  dy={10}
-                />
-                <Tooltip 
-                  content={<CustomTooltip />} 
-                  cursor={{ fill: 'rgba(255, 255, 255, 0.03)', radius: 8 }}
-                />
-                <Bar 
-                  dataKey="amount" 
-                  radius={[8, 8, 8, 8]}
-                  maxBarSize={60}
-                  animationDuration={1500}
-                  animationEasing="ease-out"
-                >
-                  {data.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${entry.month}`} 
-                      fill="url(#barGradientModal)"
-                      className="transition-all duration-300 hover:opacity-100"
-                      style={{ filter: 'drop-shadow(0 4px 6px rgba(59, 130, 246, 0.15))' }}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+    <div className="space-y-4 relative">
+      {/* Header */}
+      <div className="flex flex-col gap-3">
+        <h4 className="text-sm font-semibold text-white">월별 배당금</h4>
+        
+        <div className="flex items-center justify-between">
+          {/* Year Selector */}
+          <div className="flex items-center gap-1">
+            {availableYears.map(year => (
+              <button
+                key={year}
+                type="button"
+                onClick={() => setSelectedYear(year)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  selectedYear === year
+                    ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/30'
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                }`}
+              >
+                {year}
+              </button>
+            ))}
           </div>
-        </LandscapeChartModal>
+
+          {/* Total Amount */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">총</span>
+            <span className="text-base font-bold text-white">{yearTotal.toLocaleString()}원</span>
+          </div>
+        </div>
       </div>
 
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
-          <defs>
-            <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
-              <stop offset="100%" stopColor="#1e3a8a" stopOpacity={0.8} />
-            </linearGradient>
-            <linearGradient id="barGradientHover" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#60a5fa" stopOpacity={1} />
-              <stop offset="100%" stopColor="#2563eb" stopOpacity={0.9} />
-            </linearGradient>
-          </defs>
-          <XAxis 
-            dataKey="month" 
-            axisLine={false} 
-            tickLine={false} 
-            tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }}
-            dy={10}
-          />
-          <Tooltip 
-            content={<CustomTooltip />} 
-            cursor={{ fill: 'rgba(255, 255, 255, 0.03)', radius: 8 }}
-          />
-          <Bar 
-            dataKey="amount" 
-            radius={[6, 6, 6, 6]}
-            maxBarSize={40}
-            animationDuration={1500}
-            animationEasing="ease-out"
-          >
-            {data.map((entry, index) => (
-              <Cell 
-                key={`cell-${entry.month}`} 
-                fill="url(#barGradient)"
-                className="transition-all duration-300 hover:opacity-100"
-                style={{ filter: 'drop-shadow(0 4px 6px rgba(59, 130, 246, 0.15))' }}
-              />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+      {/* Chart */}
+      <div className="relative w-full h-[220px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={fullYearData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
+                <stop offset="100%" stopColor="#1e3a8a" stopOpacity={0.8} />
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="month"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#64748b', fontSize: 10, fontWeight: 500 }}
+              dy={8}
+              tickFormatter={(value) => value.replace('월', '')}
+            />
+            <Tooltip
+              content={<CustomTooltip />}
+              cursor={{ fill: 'rgba(255, 255, 255, 0.03)', radius: 8 }}
+            />
+            <Bar
+              dataKey="amount"
+              radius={[4, 4, 4, 4]}
+              maxBarSize={28}
+              animationDuration={1000}
+              animationEasing="ease-out"
+            >
+              {fullYearData.map((entry) => (
+                <Cell
+                  key={`cell-${entry.month}`}
+                  fill={entry.amount > 0 ? 'url(#barGradient)' : 'rgba(255,255,255,0.05)'}
+                  style={{ filter: entry.amount > 0 ? 'drop-shadow(0 4px 6px rgba(59, 130, 246, 0.15))' : 'none' }}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

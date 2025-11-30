@@ -64,7 +64,7 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
 
   return (
     <div className="relative">
-      <div className="absolute -top-10 right-0 z-10">
+      <div className="absolute -top-5 -right-5 z-10">
         <LandscapeChartModal title="포트폴리오 비중">
           <div className="w-full h-full flex items-center justify-center">
             <div className="w-full h-full max-w-[600px] max-h-[400px] flex items-center gap-8">

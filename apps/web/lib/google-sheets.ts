@@ -373,7 +373,7 @@ export interface MonthlyDividend {
 }
 
 export function aggregateMonthlyDividends(dividends: DividendRecord[]): MonthlyDividend[] {
-  const monthlyMap = new Map<string, number>();
+  const monthlyMap = new Map<string, { year: number; month: number; amount: number }>();
   const exchangeRate = 1400; // USD to KRW (시트에서 읽어오는 것이 이상적)
 
   for (const d of dividends) {
@@ -385,25 +385,25 @@ export function aggregateMonthlyDividends(dividends: DividendRecord[]): MonthlyD
     const key = `${year}-${month.toString().padStart(2, '0')}`;
 
     const amountKRW = d.amountKRW + (d.amountUSD * exchangeRate);
-    monthlyMap.set(key, (monthlyMap.get(key) || 0) + amountKRW);
+    const existing = monthlyMap.get(key);
+    if (existing) {
+      existing.amount += amountKRW;
+    } else {
+      monthlyMap.set(key, { year, month, amount: amountKRW });
+    }
   }
 
-  // 현재 날짜 기준 최근 6개월 생성
-  const now = new Date();
-  const results: MonthlyDividend[] = [];
-
-  for (let i = 5; i >= 0; i--) {
-    const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const year = targetDate.getFullYear();
-    const month = targetDate.getMonth() + 1;
-    const key = `${year}-${month.toString().padStart(2, '0')}`;
-
-    results.push({
+  // 모든 월별 데이터를 배열로 변환하고 정렬 (연도, 월 순)
+  const results: MonthlyDividend[] = Array.from(monthlyMap.values())
+    .map(({ year, month, amount }) => ({
       month: `${month}월`,
       year,
-      amount: Math.round(monthlyMap.get(key) || 0),
+      amount: Math.round(amount),
+    }))
+    .sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return Number.parseInt(a.month) - Number.parseInt(b.month);
     });
-  }
 
   return results;
 }

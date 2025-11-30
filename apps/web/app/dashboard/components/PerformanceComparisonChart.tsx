@@ -105,13 +105,18 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
           ))}
         </div>
         
-        <LandscapeChartModal title="수익률 비교">
-          <div className="w-full h-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={displayData}
-                margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
-              >
+
+      </div>
+
+      <div className="relative">
+        <div className="absolute -top-5 -right-5 z-10">
+          <LandscapeChartModal title="수익률 비교">
+            <div className="w-full h-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={displayData}
+                  margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+                >
                 <defs>
                   <linearGradient id="portfolioGradientModal" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#ffffff" stopOpacity={0.1} />
@@ -167,6 +172,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
           </div>
         </LandscapeChartModal>
       </div>
+    </div>
 
       {/* Scrollable Chart Container */}
       <div

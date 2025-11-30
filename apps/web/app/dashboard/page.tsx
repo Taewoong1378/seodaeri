@@ -52,9 +52,6 @@ export default async function DashboardPage() {
     lastSyncAt: null,
   };
 
-  // 차트 레이블 계산 (데이터가 있으면 해당 연도, 없으면 현재 연도)
-  const firstDividend = displayData.monthlyDividends[0];
-  const chartYear = firstDividend?.year ?? new Date().getFullYear();
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-50 pb-24">
@@ -101,7 +98,11 @@ export default async function DashboardPage() {
           <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
             <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
               <CardContent className="p-6">
-                <AccountTrendChart data={displayData.accountTrend} />
+                <AccountTrendChart
+                  data={displayData.accountTrend}
+                  currentTotalAsset={displayData.totalAsset}
+                  currentTotalInvested={displayData.totalInvested}
+                />
               </CardContent>
             </Card>
           </section>
@@ -181,19 +182,10 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        {/* Chart Section */}
-        <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              월별 배당금
-              <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold">
-                {chartYear}
-              </span>
-            </h3>
-            <button type="button" className="text-xs font-medium text-slate-500 hover:text-white transition-colors">전체보기</button>
-          </div>
+        {/* Dividend Chart Section */}
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
           <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
-            <CardContent className="pt-8 pb-6 px-6">
+            <CardContent className="pt-6 pb-6 px-6">
               {displayData.monthlyDividends.length > 0 ? (
                 <DividendChart data={displayData.monthlyDividends} />
               ) : (

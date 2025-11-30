@@ -2,13 +2,13 @@
 
 import { useEffect, useRef } from 'react';
 import {
-    Area,
-    AreaChart,
-    CartesianGrid,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts';
 import { LandscapeChartModal } from './LandscapeChartModal';
 
@@ -20,6 +20,8 @@ interface AccountTrendData {
 
 interface AccountTrendChartProps {
   data: AccountTrendData[];
+  currentTotalAsset?: number; // 현재 포트폴리오 총자산
+  currentTotalInvested?: number; // 현재 투자원금
 }
 
 function formatCurrency(amount: number): string {
@@ -35,17 +37,58 @@ function formatCurrency(amount: number): string {
   return amount.toLocaleString();
 }
 
-export function AccountTrendChart({ data }: AccountTrendChartProps) {
+export function AccountTrendChart({ data, currentTotalAsset, currentTotalInvested }: AccountTrendChartProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // 현재 월 계산
+  const now = new Date();
+  const currentYY = String(now.getFullYear()).slice(2);
+  const currentMM = String(now.getMonth() + 1).padStart(2, '0');
+  const currentDateStr = `${currentYY}.${currentMM}`;
+
+  // 현재 월 데이터가 없거나 값이 0이면 포트폴리오 데이터로 대체
+  const extendedData = data.map(item => {
+    // 현재 월이고, 계좌총액이 0이면 포트폴리오 데이터로 대체
+    if (item.date === currentDateStr && item.totalAccount === 0 && currentTotalAsset && currentTotalAsset > 0) {
+      // 마지막 유효한 누적입금액 찾기
+      const lastValidDeposit = data
+        .filter(d => d.date < currentDateStr && d.cumulativeDeposit > 0)
+        .pop()?.cumulativeDeposit || currentTotalInvested || 0;
+
+      return {
+        ...item,
+        cumulativeDeposit: lastValidDeposit,
+        totalAccount: currentTotalAsset,
+      };
+    }
+    return item;
+  });
+
+  // 현재 월 데이터가 아예 없으면 추가
+  if (currentTotalAsset && currentTotalAsset > 0) {
+    const hasCurrentMonth = extendedData.some(d => d.date === currentDateStr);
+    if (!hasCurrentMonth) {
+      const lastValidDeposit = data
+        .filter(d => d.cumulativeDeposit > 0)
+        .pop()?.cumulativeDeposit || currentTotalInvested || 0;
+
+      extendedData.push({
+        date: currentDateStr,
+        cumulativeDeposit: lastValidDeposit,
+        totalAccount: currentTotalAsset,
+      });
+    }
+  }
+
   // 데이터가 0인 경우 이전 값으로 채우기 (forward fill)
-  const displayData = data.map((item, index) => {
+  const displayData = extendedData.map((item, index) => {
     const result = { ...item };
 
     if (result.totalAccount === 0 && index > 0) {
       for (let i = index - 1; i >= 0; i--) {
-        if (data[i]?.totalAccount !== 0) {
-          result.totalAccount = data[i]?.totalAccount || 0;
+        const prevItem = extendedData[i];
+        if (prevItem && prevItem.totalAccount !== 0) {
+          result.totalAccount = prevItem.totalAccount;
           break;
         }
       }
@@ -53,8 +96,9 @@ export function AccountTrendChart({ data }: AccountTrendChartProps) {
 
     if (result.cumulativeDeposit === 0 && index > 0) {
       for (let i = index - 1; i >= 0; i--) {
-        if (data[i]?.cumulativeDeposit !== 0) {
-          result.cumulativeDeposit = data[i]?.cumulativeDeposit || 0;
+        const prevItem = extendedData[i];
+        if (prevItem && prevItem.cumulativeDeposit !== 0) {
+          result.cumulativeDeposit = prevItem.cumulativeDeposit;
           break;
         }
       }
@@ -66,15 +110,10 @@ export function AccountTrendChart({ data }: AccountTrendChartProps) {
   // 현재 날짜에 해당하는 위치로 스크롤
   useEffect(() => {
     if (scrollRef.current && displayData.length > 0) {
-      const now = new Date();
-      const currentYY = String(now.getFullYear()).slice(2);
-      const currentMM = String(now.getMonth() + 1).padStart(2, '0');
-      const currentDate = `${currentYY}.${currentMM}`;
-
       let targetIndex = displayData.length - 1;
       for (let i = 0; i < displayData.length; i++) {
         const item = displayData[i];
-        if (item && item.date >= currentDate) {
+        if (item && item.date >= currentDateStr) {
           targetIndex = i;
           break;
         }
@@ -83,7 +122,7 @@ export function AccountTrendChart({ data }: AccountTrendChartProps) {
       const scrollPosition = Math.max(0, targetIndex * 40 - scrollRef.current.clientWidth / 2);
       scrollRef.current.scrollLeft = scrollPosition;
     }
-  }, [displayData]);
+  }, [displayData, currentDateStr]);
 
   // Y축 범위 계산
   const allValues = displayData.flatMap(d => [d.cumulativeDeposit, d.totalAccount]);
