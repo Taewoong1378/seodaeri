@@ -85,23 +85,30 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
     console.log('[Sheet] 1. 계좌현황(누적) 행 수:', accountRows?.length || 0);
     if (accountRows && accountRows.length > 0) {
-      console.log('[Sheet] 계좌현황 - 데이터가 있는 행들:');
+      console.log('[Sheet] 계좌현황 - 라벨이 있는 행들:');
       accountRows.forEach((row, i) => {
-        // 빈 배열이 아닌 행만 출력
+        // 빈 배열이 아닌 행 중에서 주요 라벨 포함 여부 확인
         if (row && row.length > 0 && row.some((cell: any) => cell !== '' && cell !== undefined)) {
-          console.log(`  Row ${i + 1}:`, JSON.stringify(row));
+          const rowStr = row.join(' | ');
+          // 주요 라벨이 포함된 행만 출력
+          if (rowStr.includes('총자산') || rowStr.includes('투자원금') ||
+              rowStr.includes('수익률') || rowStr.includes('수익금') ||
+              rowStr.includes('평가금액') || rowStr.includes('원금')) {
+            console.log(`  Row ${i + 1}:`, JSON.stringify(row));
+          }
         }
       });
     }
 
     console.log('\n[Sheet] 7. 배당내역 행 수:', dividendRows?.length || 0);
     if (dividendRows && dividendRows.length > 0) {
+      console.log('[Sheet] 배당내역 - 헤더 행:', JSON.stringify(dividendRows[0]));
       console.log('[Sheet] 배당내역 - 데이터가 있는 행들 (첫 15개):');
       let count = 0;
       dividendRows.forEach((row, i) => {
         if (count >= 15) return;
         if (row && row.length > 0 && row.some((cell: any) => cell !== '' && cell !== undefined)) {
-          console.log(`  Row ${i + 1}:`, JSON.stringify(row));
+          console.log(`  Row ${i + 1} (${row.length} cols):`, JSON.stringify(row));
           count++;
         }
       });
@@ -139,7 +146,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     }
 
     const monthlyDividends = aggregateMonthlyDividends(dividends);
-    console.log('[Parsed] 월별 배당금:', monthlyDividends);
+    console.log('[Parsed] 월별 배당금:', JSON.stringify(monthlyDividends));
 
     // 이번 달 배당금 계산
     const now = new Date();
@@ -167,6 +174,26 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       console.log('[Parsed] 포트폴리오 샘플 (첫 3종목):', portfolio.slice(0, 3));
     }
 
+    // 계좌 요약이 0이면 포트폴리오에서 계산
+    let { totalAsset, totalYield, totalInvested, totalProfit } = accountSummary;
+
+    if (totalAsset === 0 && portfolio.length > 0) {
+      const exchangeRate = 1468; // USD to KRW (시트에서 표시된 환율)
+
+      for (const item of portfolio) {
+        const rate = item.currency === 'USD' ? exchangeRate : 1;
+        totalAsset += item.totalValue * rate;
+        totalInvested += item.avgPrice * item.quantity * rate;
+      }
+
+      totalProfit = totalAsset - totalInvested;
+      totalYield = totalInvested > 0
+        ? ((totalAsset - totalInvested) / totalInvested) * 100
+        : 0;
+
+      console.log('[Calculated from Portfolio] 총자산:', totalAsset, '투자원금:', totalInvested, '수익금:', totalProfit, '수익률:', totalYield.toFixed(2) + '%');
+    }
+
     // 포트폴리오 캐시 업데이트 (백그라운드)
     if (portfolio.length > 0) {
       const upsertData = portfolio.map((item) => ({
@@ -192,10 +219,10 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     }
 
     return {
-      totalAsset: accountSummary.totalAsset,
-      totalYield: accountSummary.totalYield,
-      totalInvested: accountSummary.totalInvested,
-      totalProfit: accountSummary.totalProfit,
+      totalAsset: Math.round(totalAsset),
+      totalYield: Number.parseFloat(totalYield.toFixed(2)),
+      totalInvested: Math.round(totalInvested),
+      totalProfit: Math.round(totalProfit),
       thisMonthDividend,
       yearlyDividend,
       monthlyDividends,

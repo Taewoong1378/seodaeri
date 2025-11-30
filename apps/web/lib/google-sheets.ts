@@ -236,7 +236,7 @@ export function parseAccountSummary(rows: any[]): AccountSummary {
 
 /**
  * '7. 배당내역' 탭에서 배당금 데이터 파싱
- * 가정: A=날짜, B=종목코드, C=종목명, D=배당금(원화), E=배당금(달러)
+ * 시트 구조가 다를 수 있으므로 유연하게 처리
  */
 export interface DividendRecord {
   date: string;
@@ -255,18 +255,112 @@ export function parseDividendData(rows: any[]): DividendRecord[] {
     return Number.parseFloat(cleaned) || 0;
   };
 
-  // Skip header row
-  return rows.slice(1).map((row) => {
-    if (!row[0]) return null; // 날짜 없으면 skip
+  // 날짜 형식 감지 (YYYY/MM/DD, YYYY-MM-DD, MM/DD/YYYY 등)
+  const parseDate = (val: any): string | null => {
+    if (!val) return null;
+    const str = String(val).trim();
 
-    return {
-      date: String(row[0] || ''),
-      ticker: String(row[1] || ''),
-      name: String(row[2] || ''),
-      amountKRW: parseNumber(row[3]),
-      amountUSD: parseNumber(row[4]),
-    };
-  }).filter((item): item is DividendRecord => item !== null);
+    // YYYY/MM/DD 또는 YYYY-MM-DD 형식
+    const match1 = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+    if (match1) {
+      return `${match1[1]}-${match1[2]?.padStart(2, '0')}-${match1[3]?.padStart(2, '0')}`;
+    }
+
+    // MM/DD/YYYY 형식
+    const match2 = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    if (match2) {
+      return `${match2[3]}-${match2[1]?.padStart(2, '0')}-${match2[2]?.padStart(2, '0')}`;
+    }
+
+    return null;
+  };
+
+  // 헤더 행을 분석하여 컬럼 인덱스 찾기
+  const headerRow = rows[0] || [];
+  let dateCol = -1;
+  let tickerCol = -1;
+  let nameCol = -1;
+  let amountKRWCol = -1;
+  let amountUSDCol = -1;
+
+  for (let i = 0; i < headerRow.length; i++) {
+    const header = String(headerRow[i] || '').toLowerCase();
+    if (header.includes('날짜') || header.includes('date') || header.includes('일자')) {
+      dateCol = i;
+    } else if (header.includes('종목코드') || header.includes('ticker') || header.includes('코드')) {
+      tickerCol = i;
+    } else if (header.includes('종목명') || header.includes('name') || header.includes('종목')) {
+      nameCol = i;
+    } else if (header.includes('원화') || header.includes('krw') || header.includes('배당금')) {
+      if (amountKRWCol === -1) amountKRWCol = i;
+    } else if (header.includes('달러') || header.includes('usd') || header.includes('$')) {
+      amountUSDCol = i;
+    }
+  }
+
+  // 헤더를 찾지 못한 경우 기본값 사용
+  if (dateCol === -1) dateCol = 1; // B열
+  if (tickerCol === -1) tickerCol = 5; // F열
+  if (nameCol === -1) nameCol = 6; // G열
+  if (amountKRWCol === -1) amountKRWCol = 7; // H열
+  if (amountUSDCol === -1) amountUSDCol = 8; // I열
+
+  console.log('[parseDividendData] Column indices:', { dateCol, tickerCol, nameCol, amountKRWCol, amountUSDCol });
+
+  const results: DividendRecord[] = [];
+
+  // 데이터 행 파싱 (헤더 제외)
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    // 날짜 찾기 - 여러 컬럼 시도
+    let date: string | null = null;
+    for (let col = 0; col < Math.min(row.length, 5); col++) {
+      date = parseDate(row[col]);
+      if (date) break;
+    }
+
+    if (!date) continue; // 유효한 날짜 없으면 skip
+
+    // 배당금 찾기 - 숫자 값이 있는 컬럼 탐색
+    let amountKRW = parseNumber(row[amountKRWCol]);
+    let amountUSD = parseNumber(row[amountUSDCol]);
+
+    // 배당금이 0이면 다른 컬럼에서 찾기
+    if (amountKRW === 0 && amountUSD === 0) {
+      for (let col = 5; col < row.length; col++) {
+        const val = parseNumber(row[col]);
+        if (val > 0) {
+          // USD인지 KRW인지 추정 (금액 크기로)
+          if (val > 1000) {
+            amountKRW = val;
+          } else {
+            amountUSD = val;
+          }
+          break;
+        }
+      }
+    }
+
+    // 배당금이 하나라도 있으면 기록
+    if (amountKRW > 0 || amountUSD > 0) {
+      results.push({
+        date,
+        ticker: String(row[tickerCol] || ''),
+        name: String(row[nameCol] || ''),
+        amountKRW,
+        amountUSD,
+      });
+    }
+  }
+
+  console.log('[parseDividendData] Parsed records count:', results.length);
+  if (results.length > 0) {
+    console.log('[parseDividendData] First 3 records:', results.slice(0, 3));
+  }
+
+  return results;
 }
 
 /**
@@ -313,7 +407,7 @@ export function aggregateMonthlyDividends(dividends: DividendRecord[]): MonthlyD
 }
 
 // Helper to parse '3. 종목현황' tab
-// Assuming columns: A=Name, B=Country, C=Ticker, D=통화, E=수량, F=평단가, G=현재가, H=평가액, I=수익금, J=수익률
+// 실제 시트 구조: [empty, index, 국가, 종목코드, 종목명, 수량, 평단가(원), 평단가($), 현재가(원), 현재가($)]
 export interface PortfolioItem {
   ticker: string;
   name: string;
@@ -337,25 +431,56 @@ export function parsePortfolioData(rows: any[]): PortfolioItem[] {
     return Number.parseFloat(cleaned) || 0;
   };
 
-  // Skip header row
-  return rows.slice(1).map((row, index) => {
-    const ticker = row[2]; // C column
-    if (!ticker) return null;
+  const results: PortfolioItem[] = [];
 
-    return {
-      ticker: String(ticker),
-      name: String(row[0] || ''), // A column
-      country: String(row[1] || ''), // B column
-      currency: row[1] === '한국' ? 'KRW' : 'USD',
-      quantity: parseNumber(row[4]), // E column
-      avgPrice: parseNumber(row[5]), // F column
-      currentPrice: parseNumber(row[6]), // G column
-      totalValue: parseNumber(row[7]), // H column
-      profit: parseNumber(row[8]), // I column
-      yieldPercent: parseNumber(row[9]), // J column
-      rowIndex: index + 2, // 실제 시트 행 번호 (1-indexed, 헤더 제외)
-    };
-  }).filter((item): item is PortfolioItem => item !== null);
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    // 종목코드가 숫자로 시작하는 행만 처리 (헤더나 빈 행 제외)
+    const ticker = String(row[3] || '').trim();
+    if (!ticker || !/^[A-Za-z0-9]/.test(ticker)) continue;
+
+    // 헤더 행 제외 (종목코드가 "종목코드" 또는 "티커"인 경우)
+    if (ticker.includes('종목') || ticker.includes('티커')) continue;
+
+    const country = String(row[2] || '').trim();
+    const name = String(row[4] || '').trim();
+    const quantity = parseNumber(row[5]);
+
+    // 수량이 0이면 skip
+    if (quantity === 0) continue;
+
+    const avgPrice = parseNumber(row[6]); // 원화 평단가
+    const currentPrice = parseNumber(row[8]); // 원화 현재가
+
+    // 평가액 계산 (현재가 * 수량)
+    const totalValue = currentPrice * quantity;
+    const invested = avgPrice * quantity;
+    const profit = totalValue - invested;
+    const yieldPercent = invested > 0 ? (profit / invested) * 100 : 0;
+
+    results.push({
+      ticker,
+      name,
+      country,
+      currency: country === '한국' ? 'KRW' : 'USD',
+      quantity,
+      avgPrice,
+      currentPrice,
+      totalValue,
+      profit,
+      yieldPercent,
+      rowIndex: i + 1, // 실제 시트 행 번호 (1-indexed)
+    });
+  }
+
+  console.log('[parsePortfolioData] Parsed items:', results.length);
+  if (results.length > 0) {
+    console.log('[parsePortfolioData] First item:', JSON.stringify(results[0]));
+  }
+
+  return results;
 }
 
 /**
