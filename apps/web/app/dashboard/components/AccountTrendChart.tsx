@@ -73,7 +73,8 @@ export function AccountTrendChart({ data }: AccountTrendChartProps) {
 
       let targetIndex = displayData.length - 1;
       for (let i = 0; i < displayData.length; i++) {
-        if (displayData[i] && displayData[i].date >= currentDate) {
+        const item = displayData[i];
+        if (item && item.date >= currentDate) {
           targetIndex = i;
           break;
         }
@@ -92,102 +93,79 @@ export function AccountTrendChart({ data }: AccountTrendChartProps) {
   // 차트 너비 계산 (데이터 포인트당 40px)
   const chartWidth = Math.max(displayData.length * 40, 400);
 
-  // 최신 데이터에서 현재 값 추출
-  const latestData = displayData[displayData.length - 1];
-  const currentDeposit = latestData?.cumulativeDeposit || 0;
-  const currentAccount = latestData?.totalAccount || 0;
-  const profit = currentAccount - currentDeposit;
-  const profitPercent = currentDeposit > 0 ? ((currentAccount - currentDeposit) / currentDeposit) * 100 : 0;
-
   return (
     <div className="space-y-4">
-      {/* Header with current values */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h4 className="text-sm font-semibold text-white mb-1">월별 계좌추세</h4>
-            <LandscapeChartModal title="월별 계좌추세">
-              <div className="w-full h-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={displayData}
-                    margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
-                  >
-                    <defs>
-                      <linearGradient id="depositGradientModal" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.5} />
-                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.1} />
-                      </linearGradient>
-                      <linearGradient id="accountGradientModal" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#fb7185" stopOpacity={0.5} />
-                        <stop offset="100%" stopColor="#fb7185" stopOpacity={0.1} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                    <XAxis
-                      dataKey="date"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#64748b', fontSize: 12 }}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#64748b', fontSize: 12 }}
-                      tickFormatter={(value) => formatCurrency(value)}
-                      domain={[0, yMax]}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#1e293b',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
-                        padding: '12px',
-                      }}
-                      labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
-                      formatter={(value: number, name: string) => {
-                        const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액';
-                        return [`₩${value.toLocaleString()}`, label];
-                      }}
-                      labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="cumulativeDeposit"
-                      stroke="#3b82f6"
-                      strokeWidth={2}
-                      fill="url(#depositGradientModal)"
-                      dot={false}
-                      activeDot={{ r: 6, fill: '#3b82f6', stroke: '#020617', strokeWidth: 2 }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="totalAccount"
-                      stroke="#fb7185"
-                      strokeWidth={2}
-                      fill="url(#accountGradientModal)"
-                      dot={false}
-                      activeDot={{ r: 6, fill: '#fb7185', stroke: '#020617', strokeWidth: 2 }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </LandscapeChartModal>
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <h4 className="text-sm font-semibold text-white">월별 계좌추세</h4>
+        <LandscapeChartModal title="월별 계좌추세">
+          <div className="w-full h-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={displayData}
+                margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+              >
+                <defs>
+                  <linearGradient id="depositGradientModal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.1} />
+                  </linearGradient>
+                  <linearGradient id="accountGradientModal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#fb7185" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#fb7185" stopOpacity={0.1} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tickFormatter={(value) => formatCurrency(value)}
+                  domain={[0, yMax]}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1e293b',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                    padding: '12px',
+                  }}
+                  labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                  formatter={(value: number, name: string) => {
+                    const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액';
+                    return [`₩${value.toLocaleString()}`, label];
+                  }}
+                  labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="cumulativeDeposit"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  fill="url(#depositGradientModal)"
+                  dot={false}
+                  activeDot={{ r: 6, fill: '#3b82f6', stroke: '#020617', strokeWidth: 2 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="totalAccount"
+                  stroke="#fb7185"
+                  strokeWidth={2}
+                  fill="url(#accountGradientModal)"
+                  dot={false}
+                  activeDot={{ r: 6, fill: '#fb7185', stroke: '#020617', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
-          <p className="text-xs text-slate-500">누적입금액 vs 계좌총액</p>
-        </div>
-        <div className="text-right">
-          <div className="flex items-baseline gap-1">
-            <span className={`text-lg font-bold ${profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
-            </span>
-            <span className="text-xs text-slate-500">원</span>
-          </div>
-          <span className={`text-xs ${profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-            {profit >= 0 ? '+' : ''}{profitPercent.toFixed(1)}%
-          </span>
-        </div>
+        </LandscapeChartModal>
       </div>
 
       {/* Legend */}
