@@ -1,5 +1,7 @@
 'use client';
 
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
+
 interface DividendData {
   month: string;
   amount: number;
@@ -9,48 +11,70 @@ interface DividendChartProps {
   data: DividendData[];
 }
 
-export function DividendChart({ data }: DividendChartProps) {
-  const amounts = data.map(d => d.amount);
-  const maxAmount = amounts.length > 0 ? Math.max(...amounts) : 0;
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-slate-800 border border-white/10 px-3 py-2 rounded-lg shadow-xl">
+        <p className="text-slate-400 text-[10px] mb-0.5">{label}</p>
+        <p className="text-white text-sm font-bold">
+          {payload[0].value.toLocaleString()}원
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
 
-  // 차트 최대 높이 (픽셀)
-  const maxBarHeight = 160;
+export function DividendChart({ data }: DividendChartProps) {
+  // 데이터가 없으면 빈 배열 처리
+  if (!data || data.length === 0) return null;
+
+  // 최대값 계산 (Y축 스케일링용)
+  const maxAmount = Math.max(...data.map(d => d.amount));
 
   return (
-    <div className="w-full">
-      <div className="flex justify-between items-end space-x-3 px-2" style={{ height: `${maxBarHeight + 40}px` }}>
-        {data.map((item) => {
-          // 바 높이를 픽셀로 계산
-          const barHeight = maxAmount > 0
-            ? Math.max((item.amount / maxAmount) * maxBarHeight, 8)
-            : 8;
-
-          return (
-            <div key={item.month} className="flex-1 flex flex-col items-center justify-end group relative h-full">
-              {/* Tooltip */}
-              <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-xl border border-white/10 transition-all duration-200 pointer-events-none z-20 whitespace-nowrap">
-                {item.amount.toLocaleString()}원
-                <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 border-r border-b border-white/10 rotate-45" />
-              </div>
-
-              {/* Bar */}
-              <div
-                className="w-full max-w-[28px] rounded-t-md transition-all duration-300 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.5)]"
-                style={{
-                  height: `${barHeight}px`,
-                  background: 'linear-gradient(180deg, #3b82f6 0%, #1e3a8a 100%)',
-                }}
-              >
-              </div>
-
-              {/* Label */}
-              <span className="text-[11px] text-slate-500 mt-3 font-medium group-hover:text-blue-400 transition-colors">
-                {item.month}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+    <div className="w-full h-[200px] mt-2">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
+              <stop offset="100%" stopColor="#1e3a8a" stopOpacity={0.8} />
+            </linearGradient>
+            <linearGradient id="barGradientHover" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#60a5fa" stopOpacity={1} />
+              <stop offset="100%" stopColor="#2563eb" stopOpacity={0.9} />
+            </linearGradient>
+          </defs>
+          <XAxis 
+            dataKey="month" 
+            axisLine={false} 
+            tickLine={false} 
+            tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }}
+            dy={10}
+          />
+          <Tooltip 
+            content={<CustomTooltip />} 
+            cursor={{ fill: 'rgba(255, 255, 255, 0.03)', radius: 8 }}
+          />
+          <Bar 
+            dataKey="amount" 
+            radius={[6, 6, 6, 6]}
+            maxBarSize={40}
+            animationDuration={1500}
+            animationEasing="ease-out"
+          >
+            {data.map((entry, index) => (
+              <Cell 
+                key={`cell-${entry.month}`} 
+                fill="url(#barGradient)"
+                className="transition-all duration-300 hover:opacity-100"
+                style={{ filter: 'drop-shadow(0 4px 6px rgba(59, 130, 246, 0.15))' }}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }

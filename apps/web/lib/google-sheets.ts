@@ -388,22 +388,24 @@ export function aggregateMonthlyDividends(dividends: DividendRecord[]): MonthlyD
     monthlyMap.set(key, (monthlyMap.get(key) || 0) + amountKRW);
   }
 
-  // 최근 6개월 데이터 반환
-  const sorted = Array.from(monthlyMap.entries())
-    .sort((a, b) => b[0].localeCompare(a[0]))
-    .slice(0, 6)
-    .reverse();
+  // 현재 날짜 기준 최근 6개월 생성
+  const now = new Date();
+  const results: MonthlyDividend[] = [];
 
-  return sorted.map(([key, amount]) => {
-    const parts = key.split('-');
-    const year = parts[0] || '2024';
-    const month = parts[1] || '1';
-    return {
-      month: `${Number.parseInt(month)}월`,
-      year: Number.parseInt(year),
-      amount: Math.round(amount),
-    };
-  });
+  for (let i = 5; i >= 0; i--) {
+    const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth() + 1;
+    const key = `${year}-${month.toString().padStart(2, '0')}`;
+
+    results.push({
+      month: `${month}월`,
+      year,
+      amount: Math.round(monthlyMap.get(key) || 0),
+    });
+  }
+
+  return results;
 }
 
 // Helper to parse '3. 종목현황' tab
@@ -480,6 +482,111 @@ export function parsePortfolioData(rows: any[]): PortfolioItem[] {
     console.log('[parsePortfolioData] First item:', JSON.stringify(results[0]));
   }
 
+  return results;
+}
+
+/**
+ * '6. 입금내역' 탭에서 입금/출금 데이터 파싱
+ */
+export interface DepositRecord {
+  date: string;
+  type: 'DEPOSIT' | 'WITHDRAW';
+  amount: number;
+  memo: string;
+}
+
+export function parseDepositData(rows: any[]): DepositRecord[] {
+  if (!rows || rows.length <= 1) return [];
+
+  const parseNumber = (val: any): number => {
+    if (!val) return 0;
+    const cleaned = String(val).replace(/[₩$,\s]/g, '');
+    return Number.parseFloat(cleaned) || 0;
+  };
+
+  const parseDate = (val: any): string | null => {
+    if (!val) return null;
+    const str = String(val).trim();
+
+    // YYYY/MM/DD 또는 YYYY-MM-DD 형식
+    const match1 = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+    if (match1) {
+      return `${match1[1]}-${match1[2]?.padStart(2, '0')}-${match1[3]?.padStart(2, '0')}`;
+    }
+
+    return null;
+  };
+
+  const results: DepositRecord[] = [];
+
+  // 헤더 행 분석
+  const headerRow = rows[0] || [];
+  let dateCol = -1;
+  let amountCol = -1;
+  let memoCol = -1;
+
+  for (let i = 0; i < headerRow.length; i++) {
+    const header = String(headerRow[i] || '').toLowerCase();
+    if (header.includes('날짜') || header.includes('일자') || header.includes('date')) {
+      dateCol = i;
+    } else if (header.includes('금액') || header.includes('입금') || header.includes('amount')) {
+      if (amountCol === -1) amountCol = i;
+    } else if (header.includes('메모') || header.includes('비고') || header.includes('memo')) {
+      memoCol = i;
+    }
+  }
+
+  // 헤더를 찾지 못한 경우 기본값
+  if (dateCol === -1) dateCol = 1;
+  if (amountCol === -1) amountCol = 2;
+  if (memoCol === -1) memoCol = 3;
+
+  console.log('[parseDepositData] Column indices:', { dateCol, amountCol, memoCol });
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    // 날짜 찾기
+    let date: string | null = null;
+    for (let col = 0; col < Math.min(row.length, 5); col++) {
+      date = parseDate(row[col]);
+      if (date) {
+        dateCol = col;
+        break;
+      }
+    }
+
+    if (!date) continue;
+
+    // 금액 찾기
+    let amount = parseNumber(row[amountCol]);
+
+    // 금액이 0이면 다른 컬럼에서 찾기
+    if (amount === 0) {
+      for (let col = dateCol + 1; col < row.length; col++) {
+        const val = parseNumber(row[col]);
+        if (val > 0) {
+          amount = val;
+          break;
+        }
+      }
+    }
+
+    if (amount === 0) continue;
+
+    // 입금/출금 구분 (금액이 음수면 출금)
+    const type: 'DEPOSIT' | 'WITHDRAW' = amount > 0 ? 'DEPOSIT' : 'WITHDRAW';
+
+    results.push({
+      date,
+      type,
+      amount: Math.abs(amount),
+      memo: String(row[memoCol] || ''),
+    });
+  }
+
+  console.log('[parseDepositData] Parsed records:', results.length);
   return results;
 }
 

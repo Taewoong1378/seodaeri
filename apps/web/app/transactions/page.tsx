@@ -1,7 +1,7 @@
 import { auth } from '@repo/auth/server';
 import { Button } from '@repo/design-system/components/button';
 import { Card, CardContent } from '@repo/design-system/components/card';
-import { ArrowDownLeft, ArrowUpRight, ExternalLink, TrendingDown, TrendingUp } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Banknote, ExternalLink, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -17,6 +17,7 @@ function formatCurrency(amount: number): string {
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
   return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
     month: 'short',
     day: 'numeric',
   }).format(date);
@@ -103,7 +104,13 @@ export default async function TransactionsPage() {
                             ? 'bg-emerald-500/20'
                             : tx.type === 'SELL'
                             ? 'bg-red-500/20'
-                            : 'bg-blue-500/20'
+                            : tx.type === 'DIVIDEND'
+                            ? 'bg-blue-500/20'
+                            : tx.type === 'DEPOSIT'
+                            ? 'bg-purple-500/20'
+                            : tx.type === 'WITHDRAW'
+                            ? 'bg-orange-500/20'
+                            : 'bg-slate-500/20'
                         }`}
                       >
                         {tx.type === 'BUY' ? (
@@ -111,9 +118,13 @@ export default async function TransactionsPage() {
                         ) : tx.type === 'SELL' ? (
                           <ArrowUpRight className="w-5 h-5 text-red-400" />
                         ) : tx.type === 'DIVIDEND' ? (
-                          <TrendingUp className="w-5 h-5 text-blue-400" />
+                          <Banknote className="w-5 h-5 text-blue-400" />
+                        ) : tx.type === 'DEPOSIT' ? (
+                          <Wallet className="w-5 h-5 text-purple-400" />
+                        ) : tx.type === 'WITHDRAW' ? (
+                          <TrendingDown className="w-5 h-5 text-orange-400" />
                         ) : (
-                          <TrendingDown className="w-5 h-5 text-slate-400" />
+                          <TrendingUp className="w-5 h-5 text-slate-400" />
                         )}
                       </div>
                       <div>
@@ -132,6 +143,12 @@ export default async function TransactionsPage() {
                                 ? 'text-emerald-400'
                                 : tx.type === 'SELL'
                                 ? 'text-red-400'
+                                : tx.type === 'DIVIDEND'
+                                ? 'text-blue-400'
+                                : tx.type === 'DEPOSIT'
+                                ? 'text-purple-400'
+                                : tx.type === 'WITHDRAW'
+                                ? 'text-orange-400'
                                 : ''
                             }
                           >
@@ -141,6 +158,10 @@ export default async function TransactionsPage() {
                               ? '매도'
                               : tx.type === 'DIVIDEND'
                               ? '배당'
+                              : tx.type === 'DEPOSIT'
+                              ? '입금'
+                              : tx.type === 'WITHDRAW'
+                              ? '출금'
                               : tx.type}
                           </span>
                           <span>·</span>
@@ -155,15 +176,23 @@ export default async function TransactionsPage() {
                             ? 'text-emerald-400'
                             : tx.type === 'SELL'
                             ? 'text-red-400'
+                            : tx.type === 'DIVIDEND'
+                            ? 'text-blue-400'
+                            : tx.type === 'DEPOSIT'
+                            ? 'text-purple-400'
+                            : tx.type === 'WITHDRAW'
+                            ? 'text-orange-400'
                             : 'text-white'
                         }`}
                       >
-                        {tx.type === 'BUY' ? '-' : '+'}
+                        {tx.type === 'BUY' || tx.type === 'WITHDRAW' ? '-' : '+'}
                         {formatCurrency(tx.total_amount)}원
                       </div>
-                      <div className="text-xs text-slate-500">
-                        {formatCurrency(tx.price)}원 × {tx.quantity}주
-                      </div>
+                      {tx.type === 'BUY' || tx.type === 'SELL' ? (
+                        <div className="text-xs text-slate-500">
+                          {formatCurrency(tx.price)}원 × {tx.quantity}주
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                   {!tx.sheet_synced && (
