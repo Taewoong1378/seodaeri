@@ -4,7 +4,13 @@ import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
 import { revalidatePath } from 'next/cache';
 import OpenAI from 'openai';
-import { appendSheetData } from '../../lib/google-sheets';
+import {
+  appendSheetData,
+  batchUpdateSheet,
+  calculateNewAvgPrice,
+  fetchSheetData,
+  parsePortfolioData,
+} from '../../lib/google-sheets';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -59,7 +65,7 @@ export async function analyzeTradeImage(imageBase64: string): Promise<OCRResult 
             {
               type: "image_url",
               image_url: {
-                url: imageBase64, // base64 string should include data:image/jpeg;base64, prefix
+                url: imageBase64,
               },
             },
           ],
@@ -72,7 +78,7 @@ export async function analyzeTradeImage(imageBase64: string): Promise<OCRResult 
     if (!content) return null;
 
     const result = JSON.parse(content);
-    
+
     return {
       date: result.date || new Date().toISOString().split('T')[0],
       ticker: result.ticker || '',
@@ -89,6 +95,9 @@ export async function analyzeTradeImage(imageBase64: string): Promise<OCRResult 
 
 /**
  * 거래 내역을 Supabase DB와 Google Sheet에 저장
+ * 1. DB에 거래 로그 저장
+ * 2. 시트 '8. 매매일지(App)' 탭에 거래 기록 추가
+ * 3. 시트 '3. 종목현황' 탭에서 해당 종목의 수량/평단가 업데이트
  */
 export async function saveTransaction(transaction: OCRResult): Promise<SaveTransactionResult> {
   const session = await auth();
@@ -135,14 +144,17 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
       return { success: false, error: '거래내역 저장에 실패했습니다.' };
     }
 
-    // 3. Google Sheet에 데이터 추가
+    // 3. Google Sheet 동기화
     if (session.accessToken) {
+      let sheetSynced = false;
+
       try {
-        // "2. 거래내역" 시트에 추가 (A: 날짜, B: 종목코드, C: 종목명, D: 거래유형, E: 단가, F: 수량, G: 총금액)
+        // 3-1. 매매일지 탭에 거래 기록 추가 (Append)
+        // "8. 매매일지(App)" 탭: A=날짜, B=종목코드, C=종목명, D=거래유형, E=단가, F=수량, G=총금액
         await appendSheetData(
           session.accessToken,
           user.spreadsheet_id,
-          '2. 거래내역!A:G',
+          "'8. 매매일지(App)'!A:G",
           [[
             transaction.date,
             transaction.ticker,
@@ -154,15 +166,80 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
           ]]
         );
 
-        // 시트 동기화 완료 표시
+        sheetSynced = true;
+      } catch (appendError) {
+        // 매매일지 탭이 없을 수 있음 - 에러 무시하고 계속 진행
+        console.warn('Failed to append to 매매일지 tab (might not exist):', appendError);
+      }
+
+      try {
+        // 3-2. 종목현황 탭에서 해당 종목 찾아서 수량/평단가 업데이트
+        const portfolioRows = await fetchSheetData(
+          session.accessToken,
+          user.spreadsheet_id,
+          "'3. 종목현황'!A:J"
+        );
+
+        if (portfolioRows) {
+          const portfolio = parsePortfolioData(portfolioRows);
+          const existingItem = portfolio.find(
+            (item) => item.ticker.toUpperCase() === transaction.ticker.toUpperCase()
+          );
+
+          if (existingItem) {
+            // 기존 종목 - 평단가/수량 계산 후 업데이트
+            const { newQty, newAvgPrice } = calculateNewAvgPrice(
+              existingItem.quantity,
+              existingItem.avgPrice,
+              transaction.quantity,
+              transaction.price,
+              transaction.type
+            );
+
+            // 수량(E열)과 평단가(F열) 업데이트
+            const rowIndex = existingItem.rowIndex;
+            await batchUpdateSheet(
+              session.accessToken,
+              user.spreadsheet_id,
+              [
+                { range: `'3. 종목현황'!E${rowIndex}`, values: [[newQty]] },
+                { range: `'3. 종목현황'!F${rowIndex}`, values: [[newAvgPrice]] },
+              ]
+            );
+
+            sheetSynced = true;
+          } else if (transaction.type === 'BUY') {
+            // 신규 종목 매수 - 새 행 추가
+            // A=종목명, B=국가, C=종목코드, D=통화, E=수량, F=평단가
+            const isKorean = /^\d{6}$/.test(transaction.ticker);
+            await appendSheetData(
+              session.accessToken,
+              user.spreadsheet_id,
+              "'3. 종목현황'!A:F",
+              [[
+                transaction.name || transaction.ticker,
+                isKorean ? '한국' : '미국',
+                transaction.ticker,
+                isKorean ? 'KRW' : 'USD',
+                transaction.quantity,
+                transaction.price,
+              ]]
+            );
+
+            sheetSynced = true;
+          }
+        }
+      } catch (updateError) {
+        console.error('Failed to update 종목현황:', updateError);
+        // 종목현황 업데이트 실패해도 계속 진행
+      }
+
+      // 시트 동기화 상태 업데이트
+      if (sheetSynced) {
         await supabase
           .from('transactions')
           .update({ sheet_synced: true })
           .eq('id', insertedTransaction.id);
-
-      } catch (sheetError) {
-        console.error('Failed to sync to sheet:', sheetError);
-        // 시트 동기화 실패해도 DB에는 저장되었으므로 부분 성공
       }
     }
 

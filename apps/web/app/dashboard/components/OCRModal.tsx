@@ -11,8 +11,8 @@ import {
 } from '@repo/design-system/components/dialog';
 import { Input } from '@repo/design-system/components/input';
 import { Label } from '@repo/design-system/components/label';
-import { Camera, Check, Loader2, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Check, ImagePlus, Loader2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { sendMessageToNative } from '../../../lib/native-bridge';
 import { type OCRResult, analyzeTradeImage, saveTransaction } from '../../actions/ocr';
 
@@ -24,14 +24,15 @@ export function OCRModal() {
   const [isSaving, setIsSaving] = useState(false);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
   const [editedResult, setEditedResult] = useState<OCRResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Listen for messages from Native
+    // Listen for messages from Native (갤러리에서 이미지 선택 시)
     const handleNativeMessage = (event: MessageEvent) => {
       try {
         const message = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-        
-        if (message.type === 'IMAGE_CAPTURED') {
+
+        if (message.type === 'IMAGE_SELECTED' || message.type === 'IMAGE_CAPTURED') {
           setImageSrc(message.payload.base64);
           setStep('preview');
         }
@@ -49,8 +50,41 @@ export function OCRModal() {
     };
   }, []);
 
-  const handleCameraClick = () => {
-    sendMessageToNative({ type: 'OPEN_CAMERA' });
+  const handleGalleryClick = () => {
+    // 네이티브 앱 환경인지 확인
+    if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
+      // 네이티브 앱에 갤러리 열기 요청
+      sendMessageToNative({ type: 'OPEN_GALLERY' });
+    } else {
+      // 웹 환경에서는 file input 사용
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // 이미지 파일인지 확인
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 선택해주세요.');
+      return;
+    }
+
+    // 파일을 base64로 변환
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      setImageSrc(base64);
+      setStep('preview');
+    };
+    reader.onerror = () => {
+      alert('이미지를 불러오는데 실패했습니다.');
+    };
+    reader.readAsDataURL(file);
+
+    // input 초기화 (같은 파일 재선택 가능하도록)
+    event.target.value = '';
   };
 
   const handleAnalyze = async () => {
@@ -107,14 +141,25 @@ export function OCRModal() {
     setEditedResult({ ...editedResult, [field]: value });
   };
 
+  // 모달 열림 상태 변경 핸들러
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    // 모달이 열릴 때 (initial 상태면) 바로 갤러리 열기
+    if (open && step === 'initial') {
+      setTimeout(() => {
+        handleGalleryClick();
+      }, 150);
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button 
-          size="icon" 
-          className="h-14 w-14 rounded-full shadow-xl bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary)]/90 text-white fixed bottom-20 right-4 z-50 animate-in zoom-in duration-300"
+        <Button
+          size="icon"
+          className="h-14 w-14 rounded-full shadow-xl bg-blue-600 hover:bg-blue-700 text-white fixed bottom-20 right-4 z-50 animate-in zoom-in duration-300"
         >
-          <Camera size={28} />
+          <ImagePlus size={28} />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] h-[90vh] sm:h-auto flex flex-col p-0 gap-0 overflow-hidden rounded-t-[20px] sm:rounded-lg bottom-0 sm:bottom-auto translate-y-0 sm:translate-y-[-50%] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=open]:slide-in-from-bottom-0">
@@ -129,20 +174,29 @@ export function OCRModal() {
           </DialogHeader>
         </div>
 
+        {/* Hidden file input for web */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+
         <div className="flex-1 overflow-y-auto p-6 pt-2">
           {step === 'initial' && (
             <div className="flex flex-col items-center justify-center h-full space-y-6 py-10">
               <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center">
-                <Camera size={40} className="text-muted-foreground" />
+                <ImagePlus size={40} className="text-muted-foreground" />
               </div>
               <div className="text-center space-y-2">
-                <h3 className="font-semibold text-lg">거래 내역 촬영</h3>
+                <h3 className="font-semibold text-lg">거래 내역 첨부</h3>
                 <p className="text-sm text-muted-foreground">
-                  증권사 앱의 거래 내역을 캡처하거나<br />직접 촬영해주세요.
+                  증권사 앱의 거래 체결 화면을<br />캡처한 이미지를 첨부해주세요.
                 </p>
               </div>
-              <Button className="w-full max-w-xs" onClick={handleCameraClick}>
-                촬영하기
+              <Button className="w-full max-w-xs" onClick={handleGalleryClick}>
+                이미지 선택
               </Button>
             </div>
           )}
@@ -151,21 +205,31 @@ export function OCRModal() {
             <div className="space-y-6">
               <div className="aspect-[3/4] bg-muted rounded-lg flex items-center justify-center relative overflow-hidden">
                 {imageSrc ? (
-                  <img src={imageSrc} alt="Captured" className="w-full h-full object-cover" />
+                  <img src={imageSrc} alt="Selected" className="w-full h-full object-contain" />
                 ) : (
                   <p className="text-muted-foreground">이미지 로딩 중...</p>
                 )}
               </div>
-              <Button className="w-full" onClick={handleAnalyze} disabled={isAnalyzing}>
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    분석 중...
-                  </>
-                ) : (
-                  '분석하기'
-                )}
-              </Button>
+              <div className="space-y-2">
+                <Button className="w-full" onClick={handleAnalyze} disabled={isAnalyzing}>
+                  {isAnalyzing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      분석 중...
+                    </>
+                  ) : (
+                    '분석하기'
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleReset}
+                  disabled={isAnalyzing}
+                >
+                  다른 이미지 선택
+                </Button>
+              </div>
             </div>
           )}
 
@@ -263,7 +327,7 @@ export function OCRModal() {
                   onClick={handleReset}
                   disabled={isSaving}
                 >
-                  다시 촬영
+                  다시 선택
                 </Button>
               </div>
             </div>

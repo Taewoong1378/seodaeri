@@ -2,49 +2,247 @@
 
 import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
-import { fetchSheetData, parsePortfolioData } from '../../lib/google-sheets';
+import { revalidatePath } from 'next/cache';
+import {
+  type AccountSummary,
+  type DividendRecord,
+  type MonthlyDividend,
+  type PortfolioItem,
+  aggregateMonthlyDividends,
+  fetchSheetData,
+  parseAccountSummary,
+  parseDividendData,
+  parsePortfolioData,
+} from '../../lib/google-sheets';
 
-export async function getDashboardData() {
+export interface DashboardData {
+  // 계좌 요약 (1. 계좌현황(누적) 탭에서)
+  totalAsset: number;
+  totalYield: number;
+  totalInvested: number;
+  totalProfit: number;
+  // 배당 데이터 (7. 배당내역 탭에서)
+  thisMonthDividend: number;
+  yearlyDividend: number;
+  monthlyDividends: MonthlyDividend[];
+  // 포트폴리오 (3. 종목현황 탭에서)
+  portfolio: PortfolioItem[];
+  // 마지막 동기화 시간
+  lastSyncAt: string | null;
+}
+
+/**
+ * 대시보드 데이터 조회
+ * 캐시된 데이터 우선 사용, 없으면 시트에서 직접 읽기
+ */
+export async function getDashboardData(): Promise<DashboardData | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
 
   const supabase = createServiceClient();
 
-  // Fetch cached portfolio data
-  const { data: portfolio } = await supabase
-    .from('portfolio_cache')
-    .select('*')
-    .eq('user_id', session.user.id);
+  // 사용자 정보 및 spreadsheet_id 조회
+  const { data: user } = await supabase
+    .from('users')
+    .select('spreadsheet_id')
+    .eq('id', session.user.id)
+    .single();
 
-  // Calculate total assets and yield based on cache
-  let totalAsset = 0;
-  let totalInvested = 0;
-
-  if (portfolio) {
-    for (const item of portfolio) {
-      const currentVal = (item.current_price || 0) * (item.quantity || 0);
-      const investedVal = (item.avg_price || 0) * (item.quantity || 0);
-      
-      // Simple currency conversion for MVP (assuming 1 USD = 1400 KRW if not handled)
-      // Ideally we should fetch exchange rate
-      const rate = item.currency === 'USD' ? 1400 : 1;
-      
-      totalAsset += currentVal * rate;
-      totalInvested += investedVal * rate;
-    }
+  if (!user?.spreadsheet_id || !session.accessToken) {
+    // 시트 연동 안됨 - 기본값 반환
+    return {
+      totalAsset: 0,
+      totalYield: 0,
+      totalInvested: 0,
+      totalProfit: 0,
+      thisMonthDividend: 0,
+      yearlyDividend: 0,
+      monthlyDividends: [],
+      portfolio: [],
+      lastSyncAt: null,
+    };
   }
 
-  const totalYield = totalInvested > 0 
-    ? ((totalAsset - totalInvested) / totalInvested) * 100 
-    : 0;
+  try {
+    // 시트에서 데이터 읽기 (병렬 처리)
+    const [accountRows, dividendRows, portfolioRows] = await Promise.all([
+      fetchSheetData(session.accessToken, user.spreadsheet_id, "'1. 계좌현황(누적)'!A:K").catch((e) => {
+        console.error('[Sheet] 1. 계좌현황(누적) 읽기 실패:', e);
+        return null;
+      }),
+      fetchSheetData(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!A:J").catch((e) => {
+        console.error('[Sheet] 7. 배당내역 읽기 실패:', e);
+        return null;
+      }),
+      fetchSheetData(session.accessToken, user.spreadsheet_id, "'3. 종목현황'!A:J").catch((e) => {
+        console.error('[Sheet] 3. 종목현황 읽기 실패:', e);
+        return null;
+      }),
+    ]);
 
-  return {
-    totalAsset: Math.round(totalAsset),
-    totalYield: Number.parseFloat(totalYield.toFixed(2)),
-    portfolio: portfolio || [],
-  };
+    // 디버깅: 시트에서 가져온 원본 데이터 출력 (데이터가 있는 행만)
+    console.log('\n========== 시트 데이터 디버깅 ==========');
+
+    console.log('[Sheet] 1. 계좌현황(누적) 행 수:', accountRows?.length || 0);
+    if (accountRows && accountRows.length > 0) {
+      console.log('[Sheet] 계좌현황 - 데이터가 있는 행들:');
+      accountRows.forEach((row, i) => {
+        // 빈 배열이 아닌 행만 출력
+        if (row && row.length > 0 && row.some((cell: any) => cell !== '' && cell !== undefined)) {
+          console.log(`  Row ${i + 1}:`, JSON.stringify(row));
+        }
+      });
+    }
+
+    console.log('\n[Sheet] 7. 배당내역 행 수:', dividendRows?.length || 0);
+    if (dividendRows && dividendRows.length > 0) {
+      console.log('[Sheet] 배당내역 - 데이터가 있는 행들 (첫 15개):');
+      let count = 0;
+      dividendRows.forEach((row, i) => {
+        if (count >= 15) return;
+        if (row && row.length > 0 && row.some((cell: any) => cell !== '' && cell !== undefined)) {
+          console.log(`  Row ${i + 1}:`, JSON.stringify(row));
+          count++;
+        }
+      });
+    }
+
+    console.log('\n[Sheet] 3. 종목현황 행 수:', portfolioRows?.length || 0);
+    if (portfolioRows && portfolioRows.length > 0) {
+      console.log('[Sheet] 종목현황 - 데이터가 있는 행들 (첫 10개):');
+      let count = 0;
+      portfolioRows.forEach((row, i) => {
+        if (count >= 10) return;
+        if (row && row.length > 0 && row.some((cell: any) => cell !== '' && cell !== undefined)) {
+          console.log(`  Row ${i + 1}:`, JSON.stringify(row));
+          count++;
+        }
+      });
+    }
+    console.log('==========================================\n');
+
+    // 계좌 요약 파싱
+    const accountSummary: AccountSummary = accountRows
+      ? parseAccountSummary(accountRows)
+      : { totalAsset: 0, totalYield: 0, totalInvested: 0, totalProfit: 0 };
+
+    console.log('[Parsed] 계좌 요약:', accountSummary);
+
+    // 배당 데이터 파싱
+    const dividends: DividendRecord[] = dividendRows
+      ? parseDividendData(dividendRows)
+      : [];
+
+    console.log('[Parsed] 배당 내역 수:', dividends.length);
+    if (dividends.length > 0) {
+      console.log('[Parsed] 배당 샘플 (첫 3건):', dividends.slice(0, 3));
+    }
+
+    const monthlyDividends = aggregateMonthlyDividends(dividends);
+    console.log('[Parsed] 월별 배당금:', monthlyDividends);
+
+    // 이번 달 배당금 계산
+    const now = new Date();
+    const thisMonth = `${now.getMonth() + 1}월`;
+    const thisYear = now.getFullYear();
+    const thisMonthData = monthlyDividends.find(
+      (m) => m.month === thisMonth && m.year === thisYear
+    );
+    const thisMonthDividend = thisMonthData?.amount || 0;
+
+    // 올해 총 배당금 계산
+    const yearlyDividend = monthlyDividends
+      .filter((m) => m.year === thisYear)
+      .reduce((sum, m) => sum + m.amount, 0);
+
+    console.log('[Parsed] 이번달 배당:', thisMonthDividend, '올해 배당:', yearlyDividend);
+
+    // 포트폴리오 파싱
+    const portfolio: PortfolioItem[] = portfolioRows
+      ? parsePortfolioData(portfolioRows)
+      : [];
+
+    console.log('[Parsed] 포트폴리오 종목 수:', portfolio.length);
+    if (portfolio.length > 0) {
+      console.log('[Parsed] 포트폴리오 샘플 (첫 3종목):', portfolio.slice(0, 3));
+    }
+
+    // 포트폴리오 캐시 업데이트 (백그라운드)
+    if (portfolio.length > 0) {
+      const upsertData = portfolio.map((item) => ({
+        user_id: session.user.id,
+        ticker: item.ticker,
+        avg_price: item.avgPrice,
+        quantity: item.quantity,
+        current_price: item.currentPrice,
+        currency: item.currency,
+        updated_at: new Date().toISOString(),
+      }));
+
+      // 백그라운드에서 캐시 업데이트 (에러 무시)
+      (async () => {
+        try {
+          await supabase
+            .from('portfolio_cache')
+            .upsert(upsertData, { onConflict: 'user_id,ticker' });
+        } catch (err) {
+          console.error('Cache update failed:', err);
+        }
+      })();
+    }
+
+    return {
+      totalAsset: accountSummary.totalAsset,
+      totalYield: accountSummary.totalYield,
+      totalInvested: accountSummary.totalInvested,
+      totalProfit: accountSummary.totalProfit,
+      thisMonthDividend,
+      yearlyDividend,
+      monthlyDividends,
+      portfolio,
+      lastSyncAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+
+    // 에러 시 캐시된 포트폴리오 데이터 반환
+    const { data: cachedPortfolio } = await supabase
+      .from('portfolio_cache')
+      .select('*')
+      .eq('user_id', session.user.id);
+
+    let totalAsset = 0;
+    let totalInvested = 0;
+
+    if (cachedPortfolio) {
+      for (const item of cachedPortfolio) {
+        const rate = item.currency === 'USD' ? 1400 : 1;
+        totalAsset += (item.current_price || 0) * (item.quantity || 0) * rate;
+        totalInvested += (item.avg_price || 0) * (item.quantity || 0) * rate;
+      }
+    }
+
+    const totalYield = totalInvested > 0
+      ? ((totalAsset - totalInvested) / totalInvested) * 100
+      : 0;
+
+    return {
+      totalAsset: Math.round(totalAsset),
+      totalYield: Number.parseFloat(totalYield.toFixed(2)),
+      totalInvested: Math.round(totalInvested),
+      totalProfit: Math.round(totalAsset - totalInvested),
+      thisMonthDividend: 0,
+      yearlyDividend: 0,
+      monthlyDividends: [],
+      portfolio: [],
+      lastSyncAt: null,
+    };
+  }
 }
 
+/**
+ * 포트폴리오 데이터 새로고침 (수동 동기화)
+ */
 export async function syncPortfolio() {
   const session = await auth();
   if (!session?.user?.id || !session.accessToken) {
@@ -53,7 +251,6 @@ export async function syncPortfolio() {
 
   const supabase = createServiceClient();
 
-  // Get user's spreadsheet ID
   const { data: user } = await supabase
     .from('users')
     .select('spreadsheet_id')
@@ -64,25 +261,26 @@ export async function syncPortfolio() {
     throw new Error('Spreadsheet ID not found');
   }
 
-  // Fetch data from Google Sheets
-  // Assuming '3. 종목현황' is the tab name and data is in A:J
-  const rows = await fetchSheetData(session.accessToken, user.spreadsheet_id, "'3. 종목현황'!A:J");
-  const parsedData = parsePortfolioData(rows || []);
+  // 시트에서 포트폴리오 데이터 읽기
+  const rows = await fetchSheetData(
+    session.accessToken,
+    user.spreadsheet_id,
+    "'3. 종목현황'!A:J"
+  );
 
-  // Update portfolio_cache
-  if (parsedData.length > 0) {
-    const upsertData = parsedData.map(item => {
-      if (!item) return null;
-      return {
-        user_id: session.user.id,
-        ticker: item.ticker,
-        avg_price: item.avgPrice,
-        quantity: item.quantity,
-        current_price: item.currentPrice,
-        currency: item.currency,
-        updated_at: new Date().toISOString(),
-      };
-    }).filter((item): item is NonNullable<typeof item> => item !== null);
+  const portfolio = parsePortfolioData(rows || []);
+
+  // 포트폴리오 캐시 업데이트
+  if (portfolio.length > 0) {
+    const upsertData = portfolio.map((item) => ({
+      user_id: session.user.id,
+      ticker: item.ticker,
+      avg_price: item.avgPrice,
+      quantity: item.quantity,
+      current_price: item.currentPrice,
+      currency: item.currency,
+      updated_at: new Date().toISOString(),
+    }));
 
     const { error } = await supabase
       .from('portfolio_cache')
@@ -91,5 +289,7 @@ export async function syncPortfolio() {
     if (error) throw error;
   }
 
-  return { success: true, count: parsedData.length };
+  revalidatePath('/dashboard');
+
+  return { success: true, count: portfolio.length };
 }
