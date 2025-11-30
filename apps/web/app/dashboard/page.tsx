@@ -10,7 +10,10 @@ import { checkSheetConnection } from '../actions/onboarding';
 import { BottomNav } from './components/BottomNav';
 import { DividendChart } from './components/DividendChart';
 import { HeroCard } from './components/HeroCard';
-import { OCRModal } from './components/OCRModal';
+import { PerformanceAreaChart } from './components/PerformanceAreaChart';
+import { PerformanceComparisonChart } from './components/PerformanceComparisonChart';
+import { PortfolioDonutChart } from './components/PortfolioDonutChart';
+import { PortfolioHoldingsChart } from './components/PortfolioHoldingsChart';
 import { SyncButton } from './components/SyncButton';
 
 function formatCurrency(amount: number): string {
@@ -44,6 +47,7 @@ export default async function DashboardPage() {
     yearlyDividend: 0,
     monthlyDividends: [],
     portfolio: [],
+    performanceComparison: [],
     lastSyncAt: null,
   };
 
@@ -91,8 +95,73 @@ export default async function DashboardPage() {
           />
         </section>
 
+        {/* Performance Chart */}
+        {displayData.portfolio.length > 0 && (
+          <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
+            <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+              <CardContent className="p-6">
+                <PerformanceAreaChart
+                  data={displayData.monthlyDividends}
+                  totalProfit={displayData.totalProfit}
+                  totalYield={displayData.totalYield}
+                />
+              </CardContent>
+            </Card>
+          </section>
+        )}
+
+        {/* Performance Comparison Chart */}
+        {displayData.performanceComparison.length > 0 && (
+          <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-base font-bold text-white">수익률 비교</h3>
+              <span className="text-xs text-slate-500">vs 주요 지수</span>
+            </div>
+            <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+              <CardContent className="p-6">
+                <PerformanceComparisonChart data={displayData.performanceComparison} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
+
+        {/* Portfolio Charts */}
+        {displayData.portfolio.length > 0 && (
+          <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-base font-bold text-white">포트폴리오</h3>
+              <Link href="/portfolio">
+                <button type="button" className="text-xs font-medium text-slate-500 hover:text-white transition-colors">
+                  전체보기
+                </button>
+              </Link>
+            </div>
+
+            {/* Donut Chart Card */}
+            <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+              <CardContent className="p-6">
+                <PortfolioDonutChart
+                  data={displayData.portfolio}
+                  totalAsset={displayData.totalAsset}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Holdings Chart Card */}
+            <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-sm font-semibold text-white">상위 보유 종목</h4>
+                  <span className="text-xs text-slate-500">{displayData.portfolio.length}개 종목</span>
+                </div>
+                <PortfolioHoldingsChart data={displayData.portfolio} />
+              </CardContent>
+            </Card>
+          </section>
+        )}
+
         {/* Quick Stats Summary */}
-        <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white/[0.03] border border-white/5 rounded-[20px] p-5 backdrop-blur-sm">
               <span className="text-xs font-medium text-slate-500 block mb-1">이번 달 배당금</span>
@@ -148,7 +217,7 @@ export default async function DashboardPage() {
         </section>
       </main>
 
-      <OCRModal />
+
       <BottomNav />
     </div>
   );

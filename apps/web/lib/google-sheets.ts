@@ -659,3 +659,96 @@ export function calculateNewAvgPrice(
   const newQty = Math.max(0, currentQty - tradeQty);
   return { newQty, newAvgPrice: currentAvgPrice }; // 평단가 유지
 }
+
+/**
+ * 월별 수익률 비교 데이터 타입
+ */
+export interface PerformanceComparisonData {
+  date: string; // "23.01" 형식
+  portfolio: number; // 계좌종합 수익률 (%)
+  kospi: number; // 코스피 수익률 (%)
+  sp500: number; // S&P500 수익률 (%)
+  nasdaq: number; // 나스닥 수익률 (%)
+}
+
+/**
+ * "5. 계좌내역(누적)" 시트의 수익률 비교 데이터 파싱
+ * 범위: G17:AB78 (G열=날짜, O~R열=수익률 데이터)
+ */
+export function parsePerformanceComparisonData(rows: any[]): PerformanceComparisonData[] {
+  if (!rows || rows.length === 0) return [];
+
+  const parsePercent = (val: any): number => {
+    if (!val) return 0;
+    const str = String(val).replace(/[%,\s]/g, '');
+    const num = Number.parseFloat(str);
+    // 소수점 형태(0.15)를 퍼센트(15%)로 변환
+    if (!Number.isNaN(num) && Math.abs(num) < 10) {
+      return num * 100;
+    }
+    return num || 0;
+  };
+
+  console.log('[parsePerformanceComparisonData] Total rows:', rows.length);
+  console.log('[parsePerformanceComparisonData] First row:', JSON.stringify(rows[0]));
+  if (rows.length > 1) {
+    console.log('[parsePerformanceComparisonData] Second row:', JSON.stringify(rows[1]));
+  }
+  if (rows.length > 2) {
+    console.log('[parsePerformanceComparisonData] Third row:', JSON.stringify(rows[2]));
+  }
+
+  const results: PerformanceComparisonData[] = [];
+
+  // G17:AB78 범위에서 가져왔으므로:
+  // - Column 0 (G) = 날짜 (YY.MM 형식)
+  // - Column 8 (O) = 계좌종합 수익률
+  // - Column 9 (P) = 코스피
+  // - Column 10 (Q) = S&P500
+  // - Column 11 (R) = 나스닥
+  // 하지만 실제 구조를 확인해야 함
+
+  // 첫 번째 행은 헤더일 수 있으므로 스킵
+  const startIdx = rows[0] && String(rows[0][0]).includes('날짜') ? 1 : 0;
+
+  for (let i = startIdx; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || !Array.isArray(row) || row.length === 0) continue;
+
+    // 첫 번째 셀에서 날짜 찾기 (YY.MM 형식)
+    const dateCell = String(row[0] || '').trim();
+    if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue;
+
+    // 수익률 데이터 찾기 (인덱스 8, 9, 10, 11)
+    // 데이터는 100을 기준점으로 하는 인덱스 형식 (100 = 0%, 150 = 50%)
+    const portfolioIdx = parsePercent(row[8]);
+    const kospiIdx = parsePercent(row[9]);
+    const sp500Idx = parsePercent(row[10]);
+    const nasdaqIdx = parsePercent(row[11]);
+
+    // 인덱스 값을 백분율 변화로 변환 (100 -> 0%, 150 -> 50%)
+    const portfolio = portfolioIdx > 0 ? portfolioIdx - 100 : 0;
+    const kospi = kospiIdx > 0 ? kospiIdx - 100 : 0;
+    const sp500 = sp500Idx > 0 ? sp500Idx - 100 : 0;
+    const nasdaq = nasdaqIdx > 0 ? nasdaqIdx - 100 : 0;
+
+    // 미래 데이터(모든 인덱스가 0)는 제외
+    if (portfolioIdx === 0 && kospiIdx === 0 && sp500Idx === 0 && nasdaqIdx === 0) continue;
+
+    results.push({
+      date: dateCell,
+      portfolio: Math.round(portfolio * 10) / 10,
+      kospi: Math.round(kospi * 10) / 10,
+      sp500: Math.round(sp500 * 10) / 10,
+      nasdaq: Math.round(nasdaq * 10) / 10,
+    });
+  }
+
+  console.log('[parsePerformanceComparisonData] Parsed records:', results.length);
+  if (results.length > 0) {
+    console.log('[parsePerformanceComparisonData] First:', JSON.stringify(results[0]));
+    console.log('[parsePerformanceComparisonData] Last:', JSON.stringify(results[results.length - 1]));
+  }
+
+  return results;
+}

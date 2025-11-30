@@ -7,11 +7,13 @@ import {
   type AccountSummary,
   type DividendRecord,
   type MonthlyDividend,
+  type PerformanceComparisonData,
   type PortfolioItem,
   aggregateMonthlyDividends,
   fetchSheetData,
   parseAccountSummary,
   parseDividendData,
+  parsePerformanceComparisonData,
   parsePortfolioData,
 } from '../../lib/google-sheets';
 
@@ -27,6 +29,8 @@ export interface DashboardData {
   monthlyDividends: MonthlyDividend[];
   // 포트폴리오 (3. 종목현황 탭에서)
   portfolio: PortfolioItem[];
+  // 수익률 비교 (2. 월별 수익률 비교(누적) 탭에서)
+  performanceComparison: PerformanceComparisonData[];
   // 마지막 동기화 시간
   lastSyncAt: string | null;
 }
@@ -59,13 +63,14 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       yearlyDividend: 0,
       monthlyDividends: [],
       portfolio: [],
+      performanceComparison: [],
       lastSyncAt: null,
     };
   }
 
   try {
     // 시트에서 데이터 읽기 (병렬 처리)
-    const [accountRows, dividendRows, portfolioRows] = await Promise.all([
+    const [accountRows, dividendRows, portfolioRows, performanceRows] = await Promise.all([
       fetchSheetData(session.accessToken, user.spreadsheet_id, "'1. 계좌현황(누적)'!A:K").catch((e) => {
         console.error('[Sheet] 1. 계좌현황(누적) 읽기 실패:', e);
         return null;
@@ -76,6 +81,11 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       }),
       fetchSheetData(session.accessToken, user.spreadsheet_id, "'3. 종목현황'!A:P").catch((e) => {
         console.error('[Sheet] 3. 종목현황 읽기 실패:', e);
+        return null;
+      }),
+      // 수익률 비교 데이터는 "5. 계좌내역(누적)" 시트에 있음
+      fetchSheetData(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AB78").catch((e) => {
+        console.error('[Sheet] 5. 계좌내역(누적) 수익률 비교 읽기 실패:', e);
         return null;
       }),
     ]);
@@ -214,6 +224,13 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       })();
     }
 
+    // 수익률 비교 파싱
+    const performanceComparison: PerformanceComparisonData[] = performanceRows
+      ? parsePerformanceComparisonData(performanceRows)
+      : [];
+
+    console.log('[Parsed] 수익률 비교 데이터 수:', performanceComparison.length);
+
     return {
       totalAsset: Math.round(totalAsset),
       totalYield: Number.parseFloat(totalYield.toFixed(2)),
@@ -223,6 +240,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       yearlyDividend,
       monthlyDividends,
       portfolio,
+      performanceComparison,
       lastSyncAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -258,6 +276,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       yearlyDividend: 0,
       monthlyDividends: [],
       portfolio: [],
+      performanceComparison: [],
       lastSyncAt: null,
     };
   }

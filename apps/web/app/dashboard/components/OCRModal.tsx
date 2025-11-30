@@ -2,12 +2,11 @@
 
 import { Button } from '@repo/design-system/components/button';
 import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogTitle
 } from '@repo/design-system/components/dialog';
 import { Input } from '@repo/design-system/components/input';
 import { Label } from '@repo/design-system/components/label';
@@ -50,7 +49,7 @@ export function OCRModal() {
     };
   }, []);
 
-  const handleGalleryClick = () => {
+  const handleButtonClick = () => {
     // 네이티브 앱 환경인지 확인
     if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
       // 네이티브 앱에 갤러리 열기 요청
@@ -77,6 +76,7 @@ export function OCRModal() {
       const base64 = e.target?.result as string;
       setImageSrc(base64);
       setStep('preview');
+      setIsOpen(true);
     };
     reader.onerror = () => {
       alert('이미지를 불러오는데 실패했습니다.');
@@ -144,196 +144,195 @@ export function OCRModal() {
   // 모달 열림 상태 변경 핸들러
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
-    // 모달이 열릴 때 (initial 상태면) 바로 갤러리 열기
-    if (open && step === 'initial') {
-      setTimeout(() => {
-        handleGalleryClick();
-      }, 150);
+    if (!open) {
+      handleReset();
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button
-          size="icon"
-          className="h-14 w-14 rounded-full shadow-xl bg-blue-600 hover:bg-blue-700 text-white fixed bottom-20 right-4 z-50 animate-in zoom-in duration-300"
-        >
-          <ImagePlus size={28} />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] h-[90vh] sm:h-auto flex flex-col p-0 gap-0 overflow-hidden rounded-t-[20px] sm:rounded-lg bottom-0 sm:bottom-auto translate-y-0 sm:translate-y-[-50%] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=open]:slide-in-from-bottom-0">
-        <div className="p-6 pb-2">
-          <DialogHeader className="flex flex-row items-center justify-between">
-            <DialogTitle>매매 인증</DialogTitle>
-            <DialogClose asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <X size={20} />
-              </Button>
-            </DialogClose>
-          </DialogHeader>
-        </div>
+    <>
+      <Button
+        size="icon"
+        onClick={handleButtonClick}
+        className="h-14 w-14 rounded-full shadow-xl bg-blue-600 hover:bg-blue-700 text-white fixed bottom-24 right-5 z-50 animate-in zoom-in duration-300"
+      >
+        <ImagePlus size={28} />
+      </Button>
 
-        {/* Hidden file input for web */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-[425px] h-[90vh] sm:h-auto flex flex-col p-0 gap-0 overflow-hidden rounded-t-[20px] sm:rounded-lg bottom-0 sm:bottom-auto translate-y-0 sm:translate-y-[-50%] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=open]:slide-in-from-bottom-0">
+          <div className="p-6 pb-2">
+            <DialogHeader className="flex flex-row items-center justify-between">
+              <DialogTitle>매매 인증</DialogTitle>
+              <DialogClose asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <X size={20} />
+                </Button>
+              </DialogClose>
+            </DialogHeader>
+          </div>
 
-        <div className="flex-1 overflow-y-auto p-6 pt-2">
-          {step === 'initial' && (
-            <div className="flex flex-col items-center justify-center h-full space-y-6 py-10">
-              <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center">
-                <ImagePlus size={40} className="text-muted-foreground" />
-              </div>
-              <div className="text-center space-y-2">
-                <h3 className="font-semibold text-lg">거래 내역 첨부</h3>
-                <p className="text-sm text-muted-foreground">
-                  증권사 앱의 거래 체결 화면을<br />캡처한 이미지를 첨부해주세요.
-                </p>
-              </div>
-              <Button className="w-full max-w-xs" onClick={handleGalleryClick}>
-                이미지 선택
-              </Button>
-            </div>
-          )}
+          {/* Hidden file input for web */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
 
-          {step === 'preview' && (
-            <div className="space-y-6">
-              <div className="aspect-[3/4] bg-muted rounded-lg flex items-center justify-center relative overflow-hidden">
-                {imageSrc ? (
-                  <img src={imageSrc} alt="Selected" className="w-full h-full object-contain" />
-                ) : (
-                  <p className="text-muted-foreground">이미지 로딩 중...</p>
-                )}
+          <div className="flex-1 overflow-y-auto p-6 pt-2">
+            {step === 'initial' && (
+              <div className="flex flex-col items-center justify-center h-full space-y-6 py-10">
+                <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center">
+                  <ImagePlus size={40} className="text-muted-foreground" />
+                </div>
+                <div className="text-center space-y-2">
+                  <h3 className="font-semibold text-lg">거래 내역 첨부</h3>
+                  <p className="text-sm text-muted-foreground">
+                    증권사 앱의 거래 체결 화면을<br />캡처한 이미지를 첨부해주세요.
+                  </p>
+                </div>
+                <Button className="w-full max-w-xs" onClick={handleButtonClick}>
+                  이미지 선택
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Button className="w-full" onClick={handleAnalyze} disabled={isAnalyzing}>
-                  {isAnalyzing ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      분석 중...
-                    </>
+            )}
+
+            {step === 'preview' && (
+              <div className="space-y-6">
+                <div className="aspect-[3/4] bg-muted rounded-lg flex items-center justify-center relative overflow-hidden">
+                  {imageSrc ? (
+                    <img src={imageSrc} alt="Selected" className="w-full h-full object-contain" />
                   ) : (
-                    '분석하기'
+                    <p className="text-muted-foreground">이미지 로딩 중...</p>
                   )}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleReset}
-                  disabled={isAnalyzing}
-                >
-                  다른 이미지 선택
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {step === 'verify' && editedResult && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="date">거래일자</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={editedResult.date}
-                  onChange={(e) => updateField('date', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ticker">종목코드</Label>
-                <Input
-                  id="ticker"
-                  value={editedResult.ticker}
-                  onChange={(e) => updateField('ticker', e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="name">종목명</Label>
-                <Input
-                  id="name"
-                  value={editedResult.name || ''}
-                  onChange={(e) => updateField('name', e.target.value)}
-                  placeholder="종목명 입력 (선택)"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">단가</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    value={editedResult.price}
-                    onChange={(e) => updateField('price', Number(e.target.value))}
-                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="quantity">수량</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    value={editedResult.quantity}
-                    onChange={(e) => updateField('quantity', Number(e.target.value))}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>거래유형</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant={editedResult.type === 'BUY' ? 'default' : 'outline'}
-                    className={editedResult.type === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-                    onClick={() => updateField('type', 'BUY')}
-                  >
-                    매수
+                  <Button className="w-full" onClick={handleAnalyze} disabled={isAnalyzing}>
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        분석 중...
+                      </>
+                    ) : (
+                      '분석하기'
+                    )}
                   </Button>
                   <Button
-                    type="button"
-                    variant={editedResult.type === 'SELL' ? 'default' : 'outline'}
-                    className={editedResult.type === 'SELL' ? 'bg-red-600 hover:bg-red-700' : ''}
-                    onClick={() => updateField('type', 'SELL')}
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleReset}
+                    disabled={isAnalyzing}
                   >
-                    매도
+                    다른 이미지 선택
                   </Button>
                 </div>
               </div>
+            )}
 
-              <div className="pt-4 space-y-2">
-                <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      저장 중...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="mr-2 h-4 w-4" />
-                      인증 완료
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleReset}
-                  disabled={isSaving}
-                >
-                  다시 선택
-                </Button>
+            {step === 'verify' && editedResult && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="date">거래일자</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={editedResult.date}
+                    onChange={(e) => updateField('date', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ticker">종목코드</Label>
+                  <Input
+                    id="ticker"
+                    value={editedResult.ticker}
+                    onChange={(e) => updateField('ticker', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">종목명</Label>
+                  <Input
+                    id="name"
+                    value={editedResult.name || ''}
+                    onChange={(e) => updateField('name', e.target.value)}
+                    placeholder="종목명 입력 (선택)"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="price">단가</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      value={editedResult.price}
+                      onChange={(e) => updateField('price', Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity">수량</Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      value={editedResult.quantity}
+                      onChange={(e) => updateField('quantity', Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>거래유형</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant={editedResult.type === 'BUY' ? 'default' : 'outline'}
+                      className={editedResult.type === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                      onClick={() => updateField('type', 'BUY')}
+                    >
+                      매수
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={editedResult.type === 'SELL' ? 'default' : 'outline'}
+                      className={editedResult.type === 'SELL' ? 'bg-red-600 hover:bg-red-700' : ''}
+                      onClick={() => updateField('type', 'SELL')}
+                    >
+                      매도
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="pt-4 space-y-2">
+                  <Button
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        저장 중...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="mr-2 h-4 w-4" />
+                        인증 완료
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleReset}
+                    disabled={isSaving}
+                  >
+                    다시 선택
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

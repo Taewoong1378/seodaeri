@@ -7,7 +7,6 @@ import { redirect } from 'next/navigation';
 import { getDashboardData } from '../actions/dashboard';
 import { checkSheetConnection } from '../actions/onboarding';
 import { BottomNav } from '../dashboard/components/BottomNav';
-import { OCRModal } from '../dashboard/components/OCRModal';
 import { SyncButton } from '../dashboard/components/SyncButton';
 import { PortfolioClient } from './components/PortfolioClient';
 
@@ -131,7 +130,7 @@ export default async function PortfolioPage() {
         )}
       </main>
 
-      <OCRModal />
+
       <BottomNav />
     </div>
   );

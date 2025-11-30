@@ -7,7 +7,6 @@ import { redirect } from 'next/navigation';
 import { checkSheetConnection } from '../actions/onboarding';
 import { getTransactions } from '../actions/transactions';
 import { BottomNav } from '../dashboard/components/BottomNav';
-import { OCRModal } from '../dashboard/components/OCRModal';
 import { TransactionsClient } from './components/TransactionsClient';
 
 export default async function TransactionsPage() {
@@ -65,7 +64,7 @@ export default async function TransactionsPage() {
         <TransactionsClient transactions={transactions || []} />
       </main>
 
-      <OCRModal />
+
       <BottomNav />
     </div>
   );

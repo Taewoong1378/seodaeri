@@ -4,6 +4,7 @@ import { Card, CardContent } from '@repo/design-system/components/card';
 import { cn } from '@repo/design-system/lib/utils';
 import { ArrowDownLeft, ArrowUpRight, Banknote, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import { useState } from 'react';
+import { OCRModal } from '../../dashboard/components/OCRModal';
 
 interface Transaction {
   id: string;
@@ -37,7 +38,7 @@ function formatDate(dateStr: string): string {
 }
 
 export function TransactionsClient({ transactions }: TransactionsClientProps) {
-  const [activeTab, setActiveTab] = useState<'dividend' | 'trade'>('dividend');
+  const [activeTab, setActiveTab] = useState<'trade' | 'dividend'>('trade');
 
   // 배당내역: DIVIDEND
   const dividendTransactions = transactions.filter((tx) => tx.type === 'DIVIDEND');
@@ -69,25 +70,6 @@ export function TransactionsClient({ transactions }: TransactionsClientProps) {
       <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/5">
         <button
           type="button"
-          onClick={() => setActiveTab('dividend')}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-            activeTab === 'dividend'
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-900/20"
-              : "text-slate-400 hover:text-white hover:bg-white/5"
-          )}
-        >
-          <Banknote size={16} />
-          배당내역
-          <span className={cn(
-            "text-xs px-1.5 py-0.5 rounded-full",
-            activeTab === 'dividend' ? "bg-white/20" : "bg-white/10"
-          )}>
-            {dividendTransactions.length}
-          </span>
-        </button>
-        <button
-          type="button"
           onClick={() => setActiveTab('trade')}
           className={cn(
             "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
@@ -103,6 +85,25 @@ export function TransactionsClient({ transactions }: TransactionsClientProps) {
             activeTab === 'trade' ? "bg-white/20" : "bg-white/10"
           )}>
             {tradeTransactions.length}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('dividend')}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+            activeTab === 'dividend'
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-900/20"
+              : "text-slate-400 hover:text-white hover:bg-white/5"
+          )}
+        >
+          <Banknote size={16} />
+          배당내역
+          <span className={cn(
+            "text-xs px-1.5 py-0.5 rounded-full",
+            activeTab === 'dividend' ? "bg-white/20" : "bg-white/10"
+          )}>
+            {dividendTransactions.length}
           </span>
         </button>
       </div>
@@ -247,6 +248,8 @@ export function TransactionsClient({ transactions }: TransactionsClientProps) {
           </div>
         )}
       </div>
+
+      {activeTab === 'trade' && <OCRModal />}
     </div>
   );
 }
