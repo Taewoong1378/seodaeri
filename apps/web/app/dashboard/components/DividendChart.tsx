@@ -1,5 +1,6 @@
 'use client';
 
+import { LandscapeChartModal } from '@/app/dashboard/components/LandscapeChartModal';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 
 interface DividendData {
@@ -33,7 +34,51 @@ export function DividendChart({ data }: DividendChartProps) {
   const maxAmount = Math.max(...data.map(d => d.amount));
 
   return (
-    <div className="w-full h-[200px] mt-2">
+    <div className="relative w-full h-[200px] mt-2">
+      <div className="absolute -top-10 right-0 z-10">
+        <LandscapeChartModal title="월별 배당금">
+          <div className="w-full h-full p-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data} margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
+                <defs>
+                  <linearGradient id="barGradientModal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#1e3a8a" stopOpacity={0.8} />
+                  </linearGradient>
+                </defs>
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#64748b', fontSize: 14, fontWeight: 500 }}
+                  dy={10}
+                />
+                <Tooltip 
+                  content={<CustomTooltip />} 
+                  cursor={{ fill: 'rgba(255, 255, 255, 0.03)', radius: 8 }}
+                />
+                <Bar 
+                  dataKey="amount" 
+                  radius={[8, 8, 8, 8]}
+                  maxBarSize={60}
+                  animationDuration={1500}
+                  animationEasing="ease-out"
+                >
+                  {data.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${entry.month}`} 
+                      fill="url(#barGradientModal)"
+                      className="transition-all duration-300 hover:opacity-100"
+                      style={{ filter: 'drop-shadow(0 4px 6px rgba(59, 130, 246, 0.15))' }}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </LandscapeChartModal>
+      </div>
+
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 20, right: 0, left: 0, bottom: 0 }}>
           <defs>

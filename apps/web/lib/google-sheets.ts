@@ -661,6 +661,67 @@ export function calculateNewAvgPrice(
 }
 
 /**
+ * 월별 계좌추세 데이터 타입 (누적입금액 vs 계좌총액)
+ */
+export interface AccountTrendData {
+  date: string; // "23.01" 형식
+  cumulativeDeposit: number; // 누적입금액
+  totalAccount: number; // 계좌총액
+}
+
+/**
+ * "5. 계좌내역(누적)" 시트의 계좌추세 데이터 파싱
+ * 범위: G17:AB78 (G열=날짜, H열=누적입금액, L열=계좌총액)
+ */
+export function parseAccountTrendData(rows: any[]): AccountTrendData[] {
+  if (!rows || rows.length === 0) return [];
+
+  const parseNumber = (val: any): number => {
+    if (!val) return 0;
+    const cleaned = String(val).replace(/[₩$,%\s,]/g, '');
+    return Number.parseFloat(cleaned) || 0;
+  };
+
+  console.log('[parseAccountTrendData] Total rows:', rows.length);
+
+  const results: AccountTrendData[] = [];
+
+  // G17:AB78 범위에서 가져왔으므로:
+  // - Column 0 (G) = 날짜 (YY.MM 형식)
+  // - Column 1 (H) = 계좌총액 (평가금액)
+  // - Column 5 (L) = 누적입금액 (G+5=L)
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || !Array.isArray(row) || row.length === 0) continue;
+
+    // 첫 번째 셀에서 날짜 찾기 (YY.MM 형식)
+    const dateCell = String(row[0] || '').trim();
+    if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue;
+
+    const totalAccount = parseNumber(row[1]); // H열 (index 1) - 계좌총액
+    const cumulativeDeposit = parseNumber(row[5]); // L열 (index 5) - 누적입금액
+
+    // 데이터가 있는 행만 포함
+    if (cumulativeDeposit > 0 || totalAccount > 0) {
+      results.push({
+        date: dateCell,
+        cumulativeDeposit: Math.round(cumulativeDeposit),
+        totalAccount: Math.round(totalAccount),
+      });
+    }
+  }
+
+  console.log('[parseAccountTrendData] Parsed records:', results.length);
+  if (results.length > 0) {
+    console.log('[parseAccountTrendData] First:', JSON.stringify(results[0]));
+    console.log('[parseAccountTrendData] Last:', JSON.stringify(results[results.length - 1]));
+  }
+
+  return results;
+}
+
+/**
  * 월별 수익률 비교 데이터 타입
  */
 export interface PerformanceComparisonData {

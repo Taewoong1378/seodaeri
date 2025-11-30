@@ -5,6 +5,7 @@ import { createServiceClient } from '@repo/database/server';
 import { revalidatePath } from 'next/cache';
 import {
   type AccountSummary,
+  type AccountTrendData,
   type DividendRecord,
   type MonthlyDividend,
   type PerformanceComparisonData,
@@ -12,6 +13,7 @@ import {
   aggregateMonthlyDividends,
   fetchSheetData,
   parseAccountSummary,
+  parseAccountTrendData,
   parseDividendData,
   parsePerformanceComparisonData,
   parsePortfolioData,
@@ -29,8 +31,10 @@ export interface DashboardData {
   monthlyDividends: MonthlyDividend[];
   // 포트폴리오 (3. 종목현황 탭에서)
   portfolio: PortfolioItem[];
-  // 수익률 비교 (2. 월별 수익률 비교(누적) 탭에서)
+  // 수익률 비교 (5. 계좌내역(누적) 탭에서)
   performanceComparison: PerformanceComparisonData[];
+  // 계좌 추세 (5. 계좌내역(누적) 탭에서 - 누적입금액 vs 계좌총액)
+  accountTrend: AccountTrendData[];
   // 마지막 동기화 시간
   lastSyncAt: string | null;
 }
@@ -64,6 +68,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       monthlyDividends: [],
       portfolio: [],
       performanceComparison: [],
+      accountTrend: [],
       lastSyncAt: null,
     };
   }
@@ -231,6 +236,13 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
     console.log('[Parsed] 수익률 비교 데이터 수:', performanceComparison.length);
 
+    // 계좌 추세 파싱 (같은 performanceRows에서)
+    const accountTrend: AccountTrendData[] = performanceRows
+      ? parseAccountTrendData(performanceRows)
+      : [];
+
+    console.log('[Parsed] 계좌 추세 데이터 수:', accountTrend.length);
+
     return {
       totalAsset: Math.round(totalAsset),
       totalYield: Number.parseFloat(totalYield.toFixed(2)),
@@ -241,6 +253,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       monthlyDividends,
       portfolio,
       performanceComparison,
+      accountTrend,
       lastSyncAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -277,6 +290,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       monthlyDividends: [],
       portfolio: [],
       performanceComparison: [],
+      accountTrend: [],
       lastSyncAt: null,
     };
   }

@@ -57,6 +57,12 @@ export async function getTransactions(): Promise<TransactionsResult> {
 
     const appTransactions: Transaction[] = (dbTransactions || []).map((tx) => ({
       ...tx,
+      ticker: tx.ticker || '',
+      trade_date: tx.trade_date || new Date().toISOString(),
+      created_at: tx.created_at || new Date().toISOString(),
+      price: tx.price ?? 0,
+      quantity: tx.quantity ?? 0,
+      total_amount: tx.total_amount ?? 0,
       source: 'app' as const,
     }));
 
@@ -67,7 +73,7 @@ export async function getTransactions(): Promise<TransactionsResult> {
       .eq('id', session.user.id)
       .single();
 
-    let sheetTransactions: Transaction[] = [];
+    const sheetTransactions: Transaction[] = [];
 
     if (user?.spreadsheet_id && session.accessToken) {
       try {

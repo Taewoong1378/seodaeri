@@ -5,10 +5,12 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis,
+  YAxis
 } from 'recharts';
+import { LandscapeChartModal } from './LandscapeChartModal';
 
 interface PerformanceComparisonData {
   date: string;
@@ -40,8 +42,8 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
     if (result.portfolio === 0 && index > 0) {
       // 이전에 유효한 값을 찾기
       for (let i = index - 1; i >= 0; i--) {
-        if (data[i].portfolio !== 0) {
-          result.portfolio = data[i].portfolio;
+        if (data[i]?.portfolio !== 0) {
+          result.portfolio = data[i]?.portfolio || 0;
           break;
         }
       }
@@ -61,7 +63,8 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
       // 현재 날짜에 가장 가까운 인덱스 찾기
       let targetIndex = displayData.length - 1;
       for (let i = 0; i < displayData.length; i++) {
-        if (displayData[i].date >= currentDate) {
+        const item = displayData[i];
+        if (item && item.date >= currentDate) {
           targetIndex = i;
           break;
         }
@@ -85,20 +88,84 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
 
   return (
     <div className="space-y-4">
-      {/* Legend */}
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-        {LINES.map((line) => (
-          <div key={line.dataKey} className="flex items-center gap-1.5">
-            <div
-              className="w-4 h-0.5"
-              style={{
-                backgroundColor: line.color,
-                backgroundImage: line.strokeDasharray ? 'none' : undefined,
-              }}
-            />
-            <span className="text-[11px] text-slate-400">{line.name}</span>
+      <div className="flex items-center justify-between">
+        {/* Legend */}
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+          {LINES.map((line) => (
+            <div key={line.dataKey} className="flex items-center gap-1.5">
+              <div
+                className="w-4 h-0.5"
+                style={{
+                  backgroundColor: line.color,
+                  backgroundImage: line.strokeDasharray ? 'none' : undefined,
+                }}
+              />
+              <span className="text-[11px] text-slate-400">{line.name}</span>
+            </div>
+          ))}
+        </div>
+        
+        <LandscapeChartModal title="수익률 비교">
+          <div className="w-full h-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={displayData}
+                margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+              >
+                <defs>
+                  <linearGradient id="portfolioGradientModal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ffffff" stopOpacity={0.1} />
+                    <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tickFormatter={(value) => value}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tickFormatter={(value) => `${value}%`}
+                  domain={[yMin, yMax]}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1e293b',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                    padding: '12px',
+                  }}
+                  labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                  itemStyle={{ fontSize: 13, padding: '2px 0' }}
+                  formatter={(value: number, name: string) => {
+                    const lineConfig = LINES.find(l => l.dataKey === name);
+                    return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, lineConfig?.name || name];
+                  }}
+                  labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
+                />
+                {LINES.map((line) => (
+                  <Line
+                    key={line.dataKey}
+                    type="monotone"
+                    dataKey={line.dataKey}
+                    name={line.dataKey}
+                    stroke={line.color}
+                    strokeWidth={line.strokeWidth || 2}
+                    strokeDasharray={line.strokeDasharray}
+                    dot={false}
+                    activeDot={{ r: 6, fill: line.color, stroke: '#020617', strokeWidth: 2 }}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-        ))}
+        </LandscapeChartModal>
       </div>
 
       {/* Scrollable Chart Container */}

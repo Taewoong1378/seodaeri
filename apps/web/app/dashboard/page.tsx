@@ -7,10 +7,10 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getDashboardData } from '../actions/dashboard';
 import { checkSheetConnection } from '../actions/onboarding';
+import { AccountTrendChart } from './components/AccountTrendChart';
 import { BottomNav } from './components/BottomNav';
 import { DividendChart } from './components/DividendChart';
 import { HeroCard } from './components/HeroCard';
-import { PerformanceAreaChart } from './components/PerformanceAreaChart';
 import { PerformanceComparisonChart } from './components/PerformanceComparisonChart';
 import { PortfolioDonutChart } from './components/PortfolioDonutChart';
 import { PortfolioHoldingsChart } from './components/PortfolioHoldingsChart';
@@ -48,6 +48,7 @@ export default async function DashboardPage() {
     monthlyDividends: [],
     portfolio: [],
     performanceComparison: [],
+    accountTrend: [],
     lastSyncAt: null,
   };
 
@@ -95,16 +96,12 @@ export default async function DashboardPage() {
           />
         </section>
 
-        {/* Performance Chart */}
-        {displayData.portfolio.length > 0 && (
+        {/* Account Trend Chart (누적입금액 vs 계좌총액) */}
+        {displayData.accountTrend.length > 0 && (
           <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
             <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
               <CardContent className="p-6">
-                <PerformanceAreaChart
-                  data={displayData.monthlyDividends}
-                  totalProfit={displayData.totalProfit}
-                  totalYield={displayData.totalYield}
-                />
+                <AccountTrendChart data={displayData.accountTrend} />
               </CardContent>
             </Card>
           </section>

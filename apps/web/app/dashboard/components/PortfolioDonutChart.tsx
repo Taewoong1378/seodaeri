@@ -1,6 +1,7 @@
 'use client';
 
-import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { LandscapeChartModal } from './LandscapeChartModal';
 
 interface PortfolioItem {
   ticker: string;
@@ -63,6 +64,64 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
 
   return (
     <div className="relative">
+      <div className="absolute -top-10 right-0 z-10">
+        <LandscapeChartModal title="포트폴리오 비중">
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="w-full h-full max-w-[600px] max-h-[400px] flex items-center gap-8">
+              <div className="relative flex-1 aspect-square max-h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius="60%"
+                      outerRadius="80%"
+                      paddingAngle={2}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${entry.name}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1e293b',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '12px',
+                        padding: '12px',
+                      }}
+                      itemStyle={{ color: '#fff' }}
+                      formatter={(value: number) => formatCurrency(value)}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-sm text-slate-500">총 자산</span>
+                  <span className="text-xl font-bold text-white">{formatCurrency(totalAsset)}</span>
+                </div>
+              </div>
+              <div className="flex-1 space-y-3">
+                {chartData.map((item, index) => (
+                  <div key={item.name} className="flex items-center gap-3">
+                    <div
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    />
+                    <span className="text-sm text-slate-300 truncate flex-1">{item.name}</span>
+                    <span className="text-sm font-bold text-white">{item.weight.toFixed(1)}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </LandscapeChartModal>
+      </div>
+
       <div className="flex items-center gap-4">
         {/* Donut Chart */}
         <div className="relative w-[140px] h-[140px] flex-shrink-0">
