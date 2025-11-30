@@ -18,17 +18,22 @@ export interface OnboardingResult {
  */
 export async function checkSheetConnection(): Promise<{ connected: boolean; sheetId?: string }> {
   const session = await auth();
+  console.log('[checkSheetConnection] session.user.id:', session?.user?.id);
+
   if (!session?.user?.id) {
+    console.log('[checkSheetConnection] No session user ID');
     return { connected: false };
   }
 
   const supabase = createServiceClient();
 
-  const { data: user } = await supabase
+  const { data: user, error } = await supabase
     .from('users')
     .select('spreadsheet_id')
     .eq('id', session.user.id)
     .single();
+
+  console.log('[checkSheetConnection] DB result:', { user, error });
 
   return {
     connected: !!user?.spreadsheet_id,
@@ -136,6 +141,8 @@ export async function createNewSheet(): Promise<OnboardingResult> {
  */
 export async function connectSheetById(sheetId: string): Promise<OnboardingResult> {
   const session = await auth();
+  console.log('[connectSheetById] session.user.id:', session?.user?.id);
+
   if (!session?.user?.id) {
     return { success: false, error: '로그인이 필요합니다.' };
   }
@@ -146,18 +153,38 @@ export async function connectSheetById(sheetId: string): Promise<OnboardingResul
 
   try {
     const supabase = createServiceClient();
-    const { error: updateError } = await supabase
+    console.log('[connectSheetById] Upserting user:', session.user.id, 'with sheetId:', sheetId.trim());
+
+    // upsert를 사용하여 row가 없으면 생성, 있으면 업데이트
+    const { data: upsertData, error: upsertError } = await supabase
       .from('users')
-      .update({
+      .upsert({
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        image: session.user.image,
         spreadsheet_id: sheetId.trim(),
         updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'id',
       })
-      .eq('id', session.user.id);
+      .select();
 
-    if (updateError) {
-      console.error('Failed to update spreadsheet_id:', updateError);
+    console.log('[connectSheetById] Upsert result:', { upsertData, upsertError });
+
+    if (upsertError) {
+      console.error('Failed to upsert user:', upsertError);
       return { success: false, error: '시트 연동에 실패했습니다.' };
     }
+
+    // 업데이트 확인
+    const { data: verifyData } = await supabase
+      .from('users')
+      .select('spreadsheet_id')
+      .eq('id', session.user.id)
+      .single();
+
+    console.log('[connectSheetById] Verify after upsert:', verifyData);
 
     revalidatePath('/dashboard');
     revalidatePath('/onboarding');
