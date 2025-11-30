@@ -1,16 +1,17 @@
 import { auth } from '@repo/auth/server';
 import { Button } from '@repo/design-system/components/button';
 import { Card, CardContent } from '@repo/design-system/components/card';
-import { ExternalLink, RefreshCw } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { getDashboardData, syncPortfolio } from '../actions/dashboard';
+import { getDashboardData } from '../actions/dashboard';
 import { checkSheetConnection } from '../actions/onboarding';
 import { BottomNav } from './components/BottomNav';
 import { DividendChart } from './components/DividendChart';
 import { HeroCard } from './components/HeroCard';
 import { OCRModal } from './components/OCRModal';
+import { SyncButton } from './components/SyncButton';
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(Math.round(amount));
@@ -68,14 +69,7 @@ export default async function DashboardPage() {
               </Button>
             </Link>
           )}
-          <form action={async () => {
-            'use server';
-            await syncPortfolio();
-          }}>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
-              <RefreshCw size={16} />
-            </Button>
-          </form>
+          <SyncButton />
           {session.user.image && (
             <Image
               src={session.user.image}
