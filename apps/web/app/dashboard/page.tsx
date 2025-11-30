@@ -1,8 +1,9 @@
 import { auth } from '@repo/auth/server';
 import { Button } from '@repo/design-system/components/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/design-system/components/card';
-import { LogOut, RefreshCw } from 'lucide-react';
+import { ExternalLink, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getDashboardData, syncPortfolio } from '../actions/dashboard';
 import { checkSheetConnection } from '../actions/onboarding';
@@ -20,12 +21,13 @@ export default async function DashboardPage() {
   }
 
   // 시트 연동 체크 - 연동 안 되어 있으면 온보딩으로
-  const { connected } = await checkSheetConnection();
+  const { connected, sheetId } = await checkSheetConnection();
   if (!connected) {
     redirect('/onboarding');
   }
 
   const data = await getDashboardData();
+  const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : null;
 
   // Fallback data if DB is empty
   const displayData = data || {
@@ -52,6 +54,18 @@ export default async function DashboardPage() {
       <header className="sticky top-0 z-30 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 px-5 h-14 flex items-center justify-between">
         <span className="font-bold text-lg tracking-tight">서대리</span>
         <div className="flex items-center gap-3">
+          {sheetUrl && (
+            <Link href={sheetUrl} target="_blank">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3 text-xs text-slate-400 hover:text-white hover:bg-white/10 gap-1.5"
+              >
+                <ExternalLink size={14} />
+                시트
+              </Button>
+            </Link>
+          )}
           <form action={async () => {
             'use server';
             await syncPortfolio();

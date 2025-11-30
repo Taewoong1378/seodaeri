@@ -14,14 +14,16 @@ import { Label } from '@repo/design-system/components/label';
 import { Camera, Check, Loader2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { sendMessageToNative } from '../../../lib/native-bridge';
-import { type OCRResult, analyzeTradeImage } from '../../actions/ocr';
+import { type OCRResult, analyzeTradeImage, saveTransaction } from '../../actions/ocr';
 
 export function OCRModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<'initial' | 'preview' | 'verify'>('initial');
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
+  const [editedResult, setEditedResult] = useState<OCRResult | null>(null);
 
   useEffect(() => {
     // Listen for messages from Native
@@ -53,12 +55,13 @@ export function OCRModal() {
 
   const handleAnalyze = async () => {
     if (!imageSrc) return;
-    
+
     setIsAnalyzing(true);
     try {
       const result = await analyzeTradeImage(imageSrc);
       if (result) {
         setOcrResult(result);
+        setEditedResult(result);
         setStep('verify');
       } else {
         alert('이미지 분석에 실패했습니다. 다시 시도해주세요.');
@@ -69,6 +72,39 @@ export function OCRModal() {
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const handleSave = async () => {
+    if (!editedResult) return;
+
+    setIsSaving(true);
+    try {
+      const result = await saveTransaction(editedResult);
+      if (result.success) {
+        alert('거래내역이 저장되었습니다.');
+        handleReset();
+        setIsOpen(false);
+      } else {
+        alert(result.error || '저장에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      alert('저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleReset = () => {
+    setStep('initial');
+    setImageSrc(null);
+    setOcrResult(null);
+    setEditedResult(null);
+  };
+
+  const updateField = (field: keyof OCRResult, value: string | number) => {
+    if (!editedResult) return;
+    setEditedResult({ ...editedResult, [field]: value });
   };
 
   return (
@@ -133,31 +169,101 @@ export function OCRModal() {
             </div>
           )}
 
-          {step === 'verify' && (
+          {step === 'verify' && editedResult && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="date">거래일자</Label>
-                <Input id="date" type="date" defaultValue={ocrResult?.date} />
+                <Input
+                  id="date"
+                  type="date"
+                  value={editedResult.date}
+                  onChange={(e) => updateField('date', e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ticker">종목코드</Label>
-                <Input id="ticker" defaultValue={ocrResult?.ticker} />
+                <Input
+                  id="ticker"
+                  value={editedResult.ticker}
+                  onChange={(e) => updateField('ticker', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">종목명</Label>
+                <Input
+                  id="name"
+                  value={editedResult.name || ''}
+                  onChange={(e) => updateField('name', e.target.value)}
+                  placeholder="종목명 입력 (선택)"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="price">단가</Label>
-                  <Input id="price" type="number" defaultValue={ocrResult?.price} />
+                  <Input
+                    id="price"
+                    type="number"
+                    value={editedResult.price}
+                    onChange={(e) => updateField('price', Number(e.target.value))}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="quantity">수량</Label>
-                  <Input id="quantity" type="number" defaultValue={ocrResult?.quantity} />
+                  <Input
+                    id="quantity"
+                    type="number"
+                    value={editedResult.quantity}
+                    onChange={(e) => updateField('quantity', Number(e.target.value))}
+                  />
                 </div>
               </div>
-              
-              <div className="pt-4">
-                <Button className="w-full bg-[var(--color-brand-primary)] hover:bg-[var(--color-brand-primary)]/90">
-                  <Check className="mr-2 h-4 w-4" />
-                  인증 완료
+              <div className="space-y-2">
+                <Label>거래유형</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={editedResult.type === 'BUY' ? 'default' : 'outline'}
+                    className={editedResult.type === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                    onClick={() => updateField('type', 'BUY')}
+                  >
+                    매수
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={editedResult.type === 'SELL' ? 'default' : 'outline'}
+                    className={editedResult.type === 'SELL' ? 'bg-red-600 hover:bg-red-700' : ''}
+                    onClick={() => updateField('type', 'SELL')}
+                  >
+                    매도
+                  </Button>
+                </div>
+              </div>
+
+              <div className="pt-4 space-y-2">
+                <Button
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      저장 중...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      인증 완료
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleReset}
+                  disabled={isSaving}
+                >
+                  다시 촬영
                 </Button>
               </div>
             </div>

@@ -1,14 +1,14 @@
 'use client';
 
 import { cn } from '@repo/design-system/lib/utils';
-import { Home, List, PieChart, Settings } from 'lucide-react';
+import { History, Home, PieChart, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navItems = [
   { href: '/dashboard', label: '홈', icon: Home },
+  { href: '/transactions', label: '거래내역', icon: History },
   { href: '/portfolio', label: '포트폴리오', icon: PieChart },
-  { href: '/stocks', label: '종목', icon: List },
   { href: '/settings', label: '설정', icon: Settings },
 ];
 

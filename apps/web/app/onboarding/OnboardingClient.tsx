@@ -3,45 +3,43 @@
 import { Button } from '@repo/design-system/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/design-system/components/card';
 import { Input } from '@repo/design-system/components/input';
-import { FileSpreadsheet, Loader2, Plus, Search } from 'lucide-react';
+import { ExternalLink, FileSpreadsheet, Loader2, Plus } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
+  type OnboardingResult,
   connectSheetById,
   createNewSheet,
-  searchAndConnectSheet,
-  type OnboardingResult,
 } from '../actions/onboarding';
 
 interface OnboardingClientProps {
   userName?: string;
 }
 
+// URL에서 스프레드시트 ID 추출
+function extractSheetId(input: string): string {
+  // 이미 ID만 입력한 경우
+  if (!input.includes('/')) {
+    return input.trim();
+  }
+
+  // URL에서 ID 추출: /d/ID/ 패턴
+  const match = input.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  return match?.[1] || input.trim();
+}
+
 export function OnboardingClient({ userName }: OnboardingClientProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState<'search' | 'create' | 'manual' | null>(null);
+  const [loading, setLoading] = useState<'create' | 'manual' | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [manualSheetId, setManualSheetId] = useState('');
-  const [showManualInput, setShowManualInput] = useState(false);
+  const [sheetInput, setSheetInput] = useState('');
 
   const handleResult = (result: OnboardingResult) => {
     if (result.success) {
       router.push('/dashboard');
     } else {
       setError(result.error || '오류가 발생했습니다.');
-    }
-  };
-
-  const handleSearchSheet = async () => {
-    setLoading('search');
-    setError(null);
-    try {
-      const result = await searchAndConnectSheet();
-      handleResult(result);
-    } catch (err) {
-      setError('시트 검색 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(null);
     }
   };
 
@@ -59,15 +57,17 @@ export function OnboardingClient({ userName }: OnboardingClientProps) {
   };
 
   const handleManualConnect = async () => {
-    if (!manualSheetId.trim()) {
-      setError('시트 ID를 입력해주세요.');
+    const sheetId = extractSheetId(sheetInput);
+
+    if (!sheetId) {
+      setError('스프레드시트 URL 또는 ID를 입력해주세요.');
       return;
     }
 
     setLoading('manual');
     setError(null);
     try {
-      const result = await connectSheetById(manualSheetId);
+      const result = await connectSheetById(sheetId);
       handleResult(result);
     } catch (err) {
       setError('시트 연동 중 오류가 발생했습니다.');
@@ -78,39 +78,64 @@ export function OnboardingClient({ userName }: OnboardingClientProps) {
 
   return (
     <div className="space-y-4">
-      {/* Option 1: Search existing sheet */}
-      <Card className="bg-white/5 border-white/10 hover:bg-white/[0.07] transition-colors cursor-pointer">
+      {/* Option 1: 기존 시트 연동 (메인) */}
+      <Card className="bg-white/5 border-white/10">
         <CardHeader className="pb-3">
           <CardTitle className="text-white flex items-center gap-3 text-lg">
             <div className="p-2 rounded-lg bg-blue-500/20">
-              <Search className="w-5 h-5 text-blue-400" />
+              <FileSpreadsheet className="w-5 h-5 text-blue-400" />
             </div>
-            기존 서대리 시트 연동
+            내 스프레드시트 연동
           </CardTitle>
           <CardDescription className="text-slate-400">
-            Google Drive에서 "서대리" 시트를 자동으로 찾아 연동합니다.
+            이미 사용 중인 투자기록 스프레드시트의 URL 또는 ID를 입력하세요.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Input
+              placeholder="스프레드시트 URL 또는 ID 붙여넣기"
+              value={sheetInput}
+              onChange={(e) => setSheetInput(e.target.value)}
+              className="h-12 px-4 bg-white/5 border-white/10 text-white placeholder:text-slate-500"
+            />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs text-slate-500">
+              <span>Google Drive에서 시트를 열고 URL을 복사하세요</span>
+              <Link
+                href="https://drive.google.com"
+                target="_blank"
+                className="text-blue-400 hover:text-blue-300 inline-flex items-center gap-1 whitespace-nowrap"
+              >
+                Drive 열기 <ExternalLink className="w-3 h-3" />
+              </Link>
+            </div>
+          </div>
           <Button
-            onClick={handleSearchSheet}
-            disabled={loading !== null}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={handleManualConnect}
+            disabled={loading !== null || !sheetInput.trim()}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
           >
-            {loading === 'search' ? (
+            {loading === 'manual' ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                검색 중...
+                <Loader2 className="w-4 h-4 animate-spin" />
+                연동 중...
               </>
             ) : (
-              '내 드라이브에서 찾기'
+              '시트 연동하기'
             )}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Option 2: Create new sheet */}
-      <Card className="bg-white/5 border-white/10 hover:bg-white/[0.07] transition-colors cursor-pointer">
+      {/* Divider */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1 h-px bg-white/10" />
+        <span className="text-xs text-slate-500">또는</span>
+        <div className="flex-1 h-px bg-white/10" />
+      </div>
+
+      {/* Option 2: 새 시트 만들기 */}
+      <Card className="bg-white/5 border-white/10">
         <CardHeader className="pb-3">
           <CardTitle className="text-white flex items-center gap-3 text-lg">
             <div className="p-2 rounded-lg bg-emerald-500/20">
@@ -119,7 +144,7 @@ export function OnboardingClient({ userName }: OnboardingClientProps) {
             새 시트 만들기
           </CardTitle>
           <CardDescription className="text-slate-400">
-            서대리 마스터 템플릿을 복사하여 새로운 투자 기록 시트를 만듭니다.
+            서대리 투자기록 템플릿으로 새 스프레드시트를 생성합니다.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -130,74 +155,13 @@ export function OnboardingClient({ userName }: OnboardingClientProps) {
           >
             {loading === 'create' ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
                 생성 중...
               </>
             ) : (
               '새 시트 생성하기'
             )}
           </Button>
-        </CardContent>
-      </Card>
-
-      {/* Option 3: Manual input */}
-      <Card className="bg-white/5 border-white/10">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-white flex items-center gap-3 text-lg">
-            <div className="p-2 rounded-lg bg-slate-500/20">
-              <FileSpreadsheet className="w-5 h-5 text-slate-400" />
-            </div>
-            직접 시트 ID 입력
-          </CardTitle>
-          <CardDescription className="text-slate-400">
-            이미 사용 중인 구글 스프레드시트가 있다면 ID를 직접 입력하세요.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {showManualInput ? (
-            <>
-              <Input
-                placeholder="스프레드시트 ID 입력"
-                value={manualSheetId}
-                onChange={(e) => setManualSheetId(e.target.value)}
-                className="bg-white/5 border-white/10 text-white placeholder:text-slate-500"
-              />
-              <p className="text-xs text-slate-500">
-                URL에서 ID 찾기: docs.google.com/spreadsheets/d/<span className="text-blue-400">여기가_ID</span>/edit
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleManualConnect}
-                  disabled={loading !== null}
-                  className="flex-1 bg-white/10 hover:bg-white/20 text-white"
-                >
-                  {loading === 'manual' ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      연동 중...
-                    </>
-                  ) : (
-                    '연동하기'
-                  )}
-                </Button>
-                <Button
-                  onClick={() => setShowManualInput(false)}
-                  variant="ghost"
-                  className="text-slate-400 hover:text-white"
-                >
-                  취소
-                </Button>
-              </div>
-            </>
-          ) : (
-            <Button
-              onClick={() => setShowManualInput(true)}
-              variant="ghost"
-              className="w-full text-slate-400 hover:text-white hover:bg-white/5"
-            >
-              직접 입력하기
-            </Button>
-          )}
         </CardContent>
       </Card>
 
