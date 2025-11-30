@@ -74,7 +74,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         console.error('[Sheet] 7. 배당내역 읽기 실패:', e);
         return null;
       }),
-      fetchSheetData(session.accessToken, user.spreadsheet_id, "'3. 종목현황'!A:J").catch((e) => {
+      fetchSheetData(session.accessToken, user.spreadsheet_id, "'3. 종목현황'!A:P").catch((e) => {
         console.error('[Sheet] 3. 종목현황 읽기 실패:', e);
         return null;
       }),
@@ -116,12 +116,12 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
     console.log('\n[Sheet] 3. 종목현황 행 수:', portfolioRows?.length || 0);
     if (portfolioRows && portfolioRows.length > 0) {
-      console.log('[Sheet] 종목현황 - 데이터가 있는 행들 (첫 10개):');
+      console.log('[Sheet] 종목현황 - 모든 데이터 행 (최대 50개):');
       let count = 0;
       portfolioRows.forEach((row, i) => {
-        if (count >= 10) return;
+        if (count >= 50) return;
         if (row && row.length > 0 && row.some((cell: any) => cell !== '' && cell !== undefined)) {
-          console.log(`  Row ${i + 1}:`, JSON.stringify(row));
+          console.log(`  Row ${i + 1} (${row.length} cols):`, JSON.stringify(row));
           count++;
         }
       });
@@ -174,25 +174,21 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       console.log('[Parsed] 포트폴리오 샘플 (첫 3종목):', portfolio.slice(0, 3));
     }
 
-    // 계좌 요약이 0이면 포트폴리오에서 계산
-    let { totalAsset, totalYield, totalInvested, totalProfit } = accountSummary;
+    // 포트폴리오에서 총자산 계산 (시트의 평가액 합계)
+    let totalAsset = 0;
+    let totalInvested = 0;
 
-    if (totalAsset === 0 && portfolio.length > 0) {
-      const exchangeRate = 1468; // USD to KRW (시트에서 표시된 환율)
-
-      for (const item of portfolio) {
-        const rate = item.currency === 'USD' ? exchangeRate : 1;
-        totalAsset += item.totalValue * rate;
-        totalInvested += item.avgPrice * item.quantity * rate;
-      }
-
-      totalProfit = totalAsset - totalInvested;
-      totalYield = totalInvested > 0
-        ? ((totalAsset - totalInvested) / totalInvested) * 100
-        : 0;
-
-      console.log('[Calculated from Portfolio] 총자산:', totalAsset, '투자원금:', totalInvested, '수익금:', totalProfit, '수익률:', totalYield.toFixed(2) + '%');
+    for (const item of portfolio) {
+      totalAsset += item.totalValue;
+      totalInvested += item.avgPrice * item.quantity;
     }
+
+    const totalProfit = totalAsset - totalInvested;
+    const totalYield = totalInvested > 0
+      ? ((totalAsset - totalInvested) / totalInvested) * 100
+      : accountSummary.totalYield; // 시트의 수익률 fallback
+
+    console.log('[Calculated from Portfolio] 총자산:', totalAsset, '투자원금:', totalInvested, '수익금:', totalProfit, '수익률:', totalYield.toFixed(2) + '%');
 
     // 포트폴리오 캐시 업데이트 (백그라운드)
     if (portfolio.length > 0) {

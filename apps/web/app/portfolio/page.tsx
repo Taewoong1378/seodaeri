@@ -44,10 +44,10 @@ export default async function PortfolioPage() {
   const portfolio = data?.portfolio || [];
   const totalAsset = data?.totalAsset || 0;
 
-  // 종목별 비중 계산
+  // 시트의 투자비중 사용 (없으면 계산)
   const portfolioWithWeight = portfolio.map((item) => ({
     ...item,
-    weight: totalAsset > 0 ? (item.totalValue / totalAsset) * 100 : 0,
+    weight: item.weight > 0 ? item.weight : (totalAsset > 0 ? (item.totalValue / totalAsset) * 100 : 0),
   }));
 
   return (

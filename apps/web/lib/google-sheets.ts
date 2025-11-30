@@ -409,7 +409,7 @@ export function aggregateMonthlyDividends(dividends: DividendRecord[]): MonthlyD
 }
 
 // Helper to parse '3. 종목현황' tab
-// 실제 시트 구조: [empty, index, 국가, 종목코드, 종목명, 수량, 평단가(원), 평단가($), 현재가(원), 현재가($)]
+// 실제 시트 구조: [empty, index, 국가, 종목코드, 종목명, 수량, 평단가(원), 평단가($), 현재가(원), 현재가($), 평가액, 투자비중, ...]
 export interface PortfolioItem {
   ticker: string;
   name: string;
@@ -421,6 +421,7 @@ export interface PortfolioItem {
   totalValue: number;
   profit: number;
   yieldPercent: number;
+  weight: number; // 시트의 투자비중
   rowIndex: number; // 시트 행 번호 (업데이트용)
 }
 
@@ -439,25 +440,33 @@ export function parsePortfolioData(rows: any[]): PortfolioItem[] {
     const row = rows[i];
     if (!row || !Array.isArray(row)) continue;
 
-    // 종목코드가 숫자로 시작하는 행만 처리 (헤더나 빈 행 제외)
+    // 종목코드/종목명 확인
     const ticker = String(row[3] || '').trim();
-    if (!ticker || !/^[A-Za-z0-9]/.test(ticker)) continue;
+    const name = String(row[4] || '').trim();
 
-    // 헤더 행 제외 (종목코드가 "종목코드" 또는 "티커"인 경우)
-    if (ticker.includes('종목') || ticker.includes('티커')) continue;
+    // 헤더 행 제외
+    if (!ticker || ticker.includes('종목') || ticker.includes('티커')) continue;
+
+    // 빈 행 제외 (종목명도 없는 경우)
+    if (!name) continue;
 
     const country = String(row[2] || '').trim();
-    const name = String(row[4] || '').trim();
     const quantity = parseNumber(row[5]);
-
-    // 수량이 0이면 skip
-    if (quantity === 0) continue;
-
     const avgPrice = parseNumber(row[6]); // 원화 평단가
     const currentPrice = parseNumber(row[8]); // 원화 현재가
 
-    // 평가액 계산 (현재가 * 수량)
-    const totalValue = currentPrice * quantity;
+    // 평가액: 시트에서 직접 가져오거나 계산
+    let totalValue = parseNumber(row[10]); // 평가액 [원화] 컬럼 (K열, index 10)
+    if (totalValue === 0 && currentPrice > 0 && quantity > 0) {
+      totalValue = currentPrice * quantity;
+    }
+
+    // 평가액이 0이면 skip (빈 행)
+    if (totalValue === 0) continue;
+
+    // 투자비중: 시트에서 직접 가져옴 (%)
+    const weight = parseNumber(row[11]); // 투자비중 컬럼 (L열, index 11)
+
     const invested = avgPrice * quantity;
     const profit = totalValue - invested;
     const yieldPercent = invested > 0 ? (profit / invested) * 100 : 0;
@@ -473,13 +482,14 @@ export function parsePortfolioData(rows: any[]): PortfolioItem[] {
       totalValue,
       profit,
       yieldPercent,
-      rowIndex: i + 1, // 실제 시트 행 번호 (1-indexed)
+      weight,
+      rowIndex: i + 1,
     });
   }
 
   console.log('[parsePortfolioData] Parsed items:', results.length);
   if (results.length > 0) {
-    console.log('[parsePortfolioData] First item:', JSON.stringify(results[0]));
+    console.log('[parsePortfolioData] First 3 items:', JSON.stringify(results.slice(0, 3)));
   }
 
   return results;

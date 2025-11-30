@@ -40,9 +40,9 @@ function formatPercent(value: number): string {
 export function PortfolioClient({ portfolio }: PortfolioClientProps) {
   const [view, setView] = useState<'list' | 'chart'>('list');
 
-  // 수익률 순으로 정렬
+  // 비중 순으로 정렬 (높은 비중부터)
   const sortedPortfolio = [...portfolio].sort(
-    (a, b) => b.yieldPercent - a.yieldPercent
+    (a, b) => b.weight - a.weight
   );
 
   return (
