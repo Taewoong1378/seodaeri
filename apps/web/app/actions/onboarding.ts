@@ -15,6 +15,7 @@ export interface OnboardingResult {
 
 /**
  * 사용자의 시트 연동 상태 확인
+ * ID로 먼저 조회하고, 실패하면 이메일로 fallback 조회
  */
 export async function checkSheetConnection(): Promise<{ connected: boolean; sheetId?: string }> {
   const session = await auth();
@@ -27,13 +28,30 @@ export async function checkSheetConnection(): Promise<{ connected: boolean; shee
 
   const supabase = createServiceClient();
 
-  const { data: user, error } = await supabase
+  // 1. ID로 먼저 조회
+  let { data: user, error } = await supabase
     .from('users')
     .select('spreadsheet_id')
     .eq('id', session.user.id)
     .single();
 
-  console.log('[checkSheetConnection] DB result:', { user, error });
+  console.log('[checkSheetConnection] ID lookup result:', { user, error });
+
+  // 2. ID로 못 찾으면 이메일로 fallback 조회
+  if (!user && session.user.email) {
+    console.log('[checkSheetConnection] Falling back to email lookup:', session.user.email);
+    const { data: userByEmail, error: emailError } = await supabase
+      .from('users')
+      .select('id, spreadsheet_id')
+      .eq('email', session.user.email)
+      .single();
+
+    console.log('[checkSheetConnection] Email lookup result:', { userByEmail, emailError });
+
+    if (userByEmail) {
+      user = userByEmail;
+    }
+  }
 
   return {
     connected: !!user?.spreadsheet_id,
@@ -46,7 +64,7 @@ export async function checkSheetConnection(): Promise<{ connected: boolean; shee
  */
 export async function searchAndConnectSheet(): Promise<OnboardingResult> {
   const session = await auth();
-  if (!session?.user?.id || !session.accessToken) {
+  if (!session?.user?.id || !session?.user?.email || !session.accessToken) {
     return { success: false, error: '로그인이 필요합니다.' };
   }
 
@@ -58,19 +76,44 @@ export async function searchAndConnectSheet(): Promise<OnboardingResult> {
       return { success: false, error: '서대리 시트를 찾을 수 없습니다.' };
     }
 
-    // 2. DB에 spreadsheet_id 저장
+    // 2. DB에 spreadsheet_id 저장 (이메일로 기존 사용자 찾기)
     const supabase = createServiceClient();
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        spreadsheet_id: existingSheet.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', session.user.id);
 
-    if (updateError) {
-      console.error('Failed to update spreadsheet_id:', updateError);
-      return { success: false, error: '시트 연동에 실패했습니다.' };
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', session.user.email)
+      .single();
+
+    if (existingUser) {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          spreadsheet_id: existingSheet.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingUser.id);
+
+      if (updateError) {
+        console.error('Failed to update spreadsheet_id:', updateError);
+        return { success: false, error: '시트 연동에 실패했습니다.' };
+      }
+    } else {
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.name,
+          image: session.user.image,
+          spreadsheet_id: existingSheet.id,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (insertError) {
+        console.error('Failed to insert user:', insertError);
+        return { success: false, error: '시트 연동에 실패했습니다.' };
+      }
     }
 
     revalidatePath('/dashboard');
@@ -93,7 +136,7 @@ export async function searchAndConnectSheet(): Promise<OnboardingResult> {
  */
 export async function createNewSheet(): Promise<OnboardingResult> {
   const session = await auth();
-  if (!session?.user?.id || !session.accessToken) {
+  if (!session?.user?.id || !session?.user?.email || !session.accessToken) {
     return { success: false, error: '로그인이 필요합니다.' };
   }
 
@@ -101,19 +144,44 @@ export async function createNewSheet(): Promise<OnboardingResult> {
     // 1. 마스터 템플릿 복사
     const newSheet = await copyMasterTemplate(session.accessToken, session.user.name || undefined);
 
-    // 2. DB에 spreadsheet_id 저장
+    // 2. DB에 spreadsheet_id 저장 (이메일로 기존 사용자 찾기)
     const supabase = createServiceClient();
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        spreadsheet_id: newSheet.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', session.user.id);
 
-    if (updateError) {
-      console.error('Failed to update spreadsheet_id:', updateError);
-      return { success: false, error: '시트 연동에 실패했습니다.' };
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', session.user.email)
+      .single();
+
+    if (existingUser) {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          spreadsheet_id: newSheet.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingUser.id);
+
+      if (updateError) {
+        console.error('Failed to update spreadsheet_id:', updateError);
+        return { success: false, error: '시트 연동에 실패했습니다.' };
+      }
+    } else {
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.name,
+          image: session.user.image,
+          spreadsheet_id: newSheet.id,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (insertError) {
+        console.error('Failed to insert user:', insertError);
+        return { success: false, error: '시트 연동에 실패했습니다.' };
+      }
     }
 
     revalidatePath('/dashboard');
@@ -138,12 +206,13 @@ export async function createNewSheet(): Promise<OnboardingResult> {
 
 /**
  * 수동으로 시트 ID 입력하여 연동
+ * 기존 사용자가 있으면 이메일로 찾아서 업데이트
  */
 export async function connectSheetById(sheetId: string): Promise<OnboardingResult> {
   const session = await auth();
-  console.log('[connectSheetById] session.user.id:', session?.user?.id);
+  console.log('[connectSheetById] session.user.id:', session?.user?.id, 'email:', session?.user?.email);
 
-  if (!session?.user?.id) {
+  if (!session?.user?.id || !session?.user?.email) {
     return { success: false, error: '로그인이 필요합니다.' };
   }
 
@@ -153,38 +222,61 @@ export async function connectSheetById(sheetId: string): Promise<OnboardingResul
 
   try {
     const supabase = createServiceClient();
-    console.log('[connectSheetById] Upserting user:', session.user.id, 'with sheetId:', sheetId.trim());
 
-    // upsert를 사용하여 row가 없으면 생성, 있으면 업데이트
-    const { data: upsertData, error: upsertError } = await supabase
+    // 1. 먼저 이메일로 기존 사용자가 있는지 확인
+    const { data: existingUser } = await supabase
       .from('users')
-      .upsert({
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image,
-        spreadsheet_id: sheetId.trim(),
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'id',
-      })
-      .select();
+      .select('id')
+      .eq('email', session.user.email)
+      .single();
 
-    console.log('[connectSheetById] Upsert result:', { upsertData, upsertError });
+    console.log('[connectSheetById] Existing user by email:', existingUser);
 
-    if (upsertError) {
-      console.error('Failed to upsert user:', upsertError);
-      return { success: false, error: '시트 연동에 실패했습니다.' };
+    if (existingUser) {
+      // 기존 사용자가 있으면 해당 row를 업데이트
+      console.log('[connectSheetById] Updating existing user:', existingUser.id);
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          spreadsheet_id: sheetId.trim(),
+          name: session.user.name,
+          image: session.user.image,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingUser.id);
+
+      if (updateError) {
+        console.error('Failed to update user:', updateError);
+        return { success: false, error: '시트 연동에 실패했습니다.' };
+      }
+    } else {
+      // 기존 사용자가 없으면 새로 생성
+      console.log('[connectSheetById] Creating new user:', session.user.id);
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.name,
+          image: session.user.image,
+          spreadsheet_id: sheetId.trim(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (insertError) {
+        console.error('Failed to insert user:', insertError);
+        return { success: false, error: '시트 연동에 실패했습니다.' };
+      }
     }
 
     // 업데이트 확인
     const { data: verifyData } = await supabase
       .from('users')
       .select('spreadsheet_id')
-      .eq('id', session.user.id)
+      .eq('email', session.user.email)
       .single();
 
-    console.log('[connectSheetById] Verify after upsert:', verifyData);
+    console.log('[connectSheetById] Verify after update:', verifyData);
 
     revalidatePath('/dashboard');
     revalidatePath('/onboarding');
