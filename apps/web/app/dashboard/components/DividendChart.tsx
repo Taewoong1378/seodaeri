@@ -173,13 +173,16 @@ export function DividendChart({ data }: DividendChartProps) {
       <div
         ref={hiddenChartRef}
         style={{
-          position: 'absolute',
-          left: '-9999px',
+          position: 'fixed',
           top: 0,
+          left: 0,
+          zIndex: -50,
+          opacity: 0,
           width: '800px',
           height: '450px',
           backgroundColor: '#020617',
           padding: '20px',
+          pointerEvents: 'none',
         }}
       >
         <div className="mb-4 flex items-center justify-between">

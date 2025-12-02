@@ -24,6 +24,14 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
         backgroundColor: '#020617', // 배경색
         pixelRatio: 2, // 고해상도
         cacheBust: true,
+        style: {
+          opacity: '1',
+          visibility: 'visible',
+          position: 'static',
+          transform: 'none',
+          left: 'auto',
+          top: 'auto',
+        },
       });
 
       // DataURL을 Blob으로 변환

@@ -986,3 +986,170 @@ export function parsePerformanceComparisonData(rows: any[]): PerformanceComparis
 
   return results;
 }
+
+/**
+ * 수익률 비교 바 차트 데이터 타입
+ */
+export interface YieldComparisonData {
+  thisYearYield: {
+    account: number;
+    kospi: number;
+    sp500: number;
+    nasdaq: number;
+  };
+  annualizedYield: {
+    account: number;
+    kospi: number;
+    sp500: number;
+    nasdaq: number;
+  };
+}
+
+/**
+ * "5. 계좌내역(누적)" 시트에서 수익률 비교 데이터 파싱
+ * 현재 연월의 데이터에서 올해 수익률과 연평균 수익률 계산
+ */
+export function parseYieldComparisonData(rows: any[]): YieldComparisonData | null {
+  if (!rows || rows.length === 0) return null;
+
+  const parsePercent = (val: any): number => {
+    if (!val) return 0;
+    const str = String(val).replace(/[%,\s]/g, '');
+    const num = Number.parseFloat(str);
+    // 소수점 형태(0.15)를 퍼센트(15%)로 변환
+    if (!Number.isNaN(num) && Math.abs(num) < 10) {
+      return num * 100;
+    }
+    return num || 0;
+  };
+
+  // 현재 연월 계산
+  const now = new Date();
+  const currentYY = String(now.getFullYear()).slice(2);
+  const currentMM = String(now.getMonth() + 1).padStart(2, '0');
+  const currentDateStr = `${currentYY}.${currentMM}`;
+
+  // G17:AB78 범위 기준 컬럼 인덱스:
+  // G(0)=날짜, H(1)=평가금액, ...O(8)=계좌지수, P(9)=코스피, Q(10)=S&P500, R(11)=나스닥
+
+  // 현재 월 데이터 찾기
+  let currentRow: any[] | null = null;
+  let prevYearRow: any[] | null = null; // 작년 12월 데이터
+
+  // 작년 12월 날짜 계산
+  const prevYear = now.getFullYear() - 1;
+  const prevYearDateStr = `${String(prevYear).slice(2)}.12`;
+
+  for (const row of rows) {
+    if (!row || !Array.isArray(row) || row.length === 0) continue;
+    const dateCell = String(row[0] || '').trim();
+
+    if (dateCell === currentDateStr) {
+      currentRow = row;
+    }
+    if (dateCell === prevYearDateStr) {
+      prevYearRow = row;
+    }
+  }
+
+  // 현재 월 데이터가 없으면 가장 최근 데이터 사용
+  if (!currentRow) {
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const row = rows[i];
+      if (!row || !Array.isArray(row) || row.length === 0) continue;
+      const dateCell = String(row[0] || '').trim();
+      if (/^\d{2}\.\d{2}$/.test(dateCell)) {
+        currentRow = row;
+        break;
+      }
+    }
+  }
+
+  if (!currentRow) return null;
+
+  // 올해 수익률 계산
+  // 시트의 O열(index 8)은 계좌지수 (100 기준)
+  const currentAccountIdx = parsePercent(currentRow[8]); // O열
+  const currentKospiIdx = parsePercent(currentRow[9]); // P열
+  const currentSp500Idx = parsePercent(currentRow[10]); // Q열
+  const currentNasdaqIdx = parsePercent(currentRow[11]); // R열
+
+  let prevAccountIdx = 100;
+  let prevKospiIdx = 100;
+  let prevSp500Idx = 100;
+  let prevNasdaqIdx = 100;
+
+  if (prevYearRow) {
+    prevAccountIdx = parsePercent(prevYearRow[8]) || 100;
+    prevKospiIdx = parsePercent(prevYearRow[9]) || 100;
+    prevSp500Idx = parsePercent(prevYearRow[10]) || 100;
+    prevNasdaqIdx = parsePercent(prevYearRow[11]) || 100;
+  }
+
+  // 올해 수익률 계산 (작년말 대비 증감률)
+  const thisYearYield = {
+    account: prevAccountIdx > 0 ? ((currentAccountIdx / prevAccountIdx) - 1) * 100 : 0,
+    kospi: prevKospiIdx > 0 ? ((currentKospiIdx / prevKospiIdx) - 1) * 100 : 0,
+    sp500: prevSp500Idx > 0 ? ((currentSp500Idx / prevSp500Idx) - 1) * 100 : 0,
+    nasdaq: prevNasdaqIdx > 0 ? ((currentNasdaqIdx / prevNasdaqIdx) - 1) * 100 : 0,
+  };
+
+  // 누적 수익률
+  const cumulativeYield = currentAccountIdx - 100;
+  const cumulativeKospi = currentKospiIdx - 100;
+  const cumulativeSp500 = currentSp500Idx - 100;
+  const cumulativeNasdaq = currentNasdaqIdx - 100;
+
+  // 투자 기간 계산 (첫 데이터부터 현재까지)
+  let firstDate: string | null = null;
+  for (const row of rows) {
+    if (!row || !Array.isArray(row)) continue;
+    const dateCell = String(row[0] || '').trim();
+    if (/^\d{2}\.\d{2}$/.test(dateCell)) {
+      firstDate = dateCell;
+      break;
+    }
+  }
+
+  let years = 1;
+  if (firstDate) {
+    const [firstYY, firstMM] = firstDate.split('.').map(Number);
+    const firstYear = 2000 + (firstYY || 0);
+    const firstMonth = firstMM || 1;
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    years = Math.max(1, (currentYear - firstYear) + (currentMonth - firstMonth) / 12);
+  }
+
+  // 연평균 수익률 계산: (1 + 누적수익률)^(1/연수) - 1
+  const calcAnnualized = (cumulative: number): number => {
+    const total = 1 + cumulative / 100;
+    if (total <= 0 || years <= 0) return 0;
+    return (Math.pow(total, 1 / years) - 1) * 100;
+  };
+
+  const annualizedYield = {
+    account: calcAnnualized(cumulativeYield),
+    kospi: calcAnnualized(cumulativeKospi),
+    sp500: calcAnnualized(cumulativeSp500),
+    nasdaq: calcAnnualized(cumulativeNasdaq),
+  };
+
+  // 소수점 한 자리로 반올림
+  const round = (n: number) => Math.round(n * 10) / 10;
+
+  return {
+    thisYearYield: {
+      account: round(thisYearYield.account),
+      kospi: round(thisYearYield.kospi),
+      sp500: round(thisYearYield.sp500),
+      nasdaq: round(thisYearYield.nasdaq),
+    },
+    annualizedYield: {
+      account: round(annualizedYield.account),
+      kospi: round(annualizedYield.kospi),
+      sp500: round(annualizedYield.sp500),
+      nasdaq: round(annualizedYield.nasdaq),
+    },
+  };
+}

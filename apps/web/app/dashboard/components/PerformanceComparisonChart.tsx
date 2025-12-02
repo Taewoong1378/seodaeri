@@ -2,13 +2,13 @@
 
 import { useEffect, useRef } from 'react';
 import {
-    CartesianGrid,
-    Line,
-    LineChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from 'recharts';
 import { LandscapeChartModal } from './LandscapeChartModal';
 import { ShareChartButton } from './ShareChartButton';
@@ -261,13 +261,16 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
       <div
         ref={hiddenChartRef}
         style={{
-          position: 'absolute',
-          left: '-9999px',
+          position: 'fixed',
           top: 0,
+          left: 0,
+          zIndex: -50,
+          opacity: 0,
           width: '800px',
           height: '450px',
           backgroundColor: '#020617',
           padding: '20px',
+          pointerEvents: 'none',
         }}
       >
         <div className="mb-4">
@@ -312,6 +315,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                   strokeDasharray={line.strokeDasharray}
                   dot={false}
                   activeDot={{ r: 6, fill: line.color, stroke: '#020617', strokeWidth: 2 }}
+                  isAnimationActive={false}
                 />
               ))}
               {/* Legend for captured image */}

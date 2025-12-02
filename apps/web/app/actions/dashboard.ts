@@ -11,6 +11,7 @@ import {
   type MonthlyProfitLoss,
   type PerformanceComparisonData,
   type PortfolioItem,
+  type YieldComparisonData,
   aggregateMonthlyDividends,
   fetchSheetData,
   parseAccountSummary,
@@ -19,6 +20,7 @@ import {
   parseMonthlyProfitLoss,
   parsePerformanceComparisonData,
   parsePortfolioData,
+  parseYieldComparisonData,
 } from '../../lib/google-sheets';
 
 // 사용자별 캐시 태그 생성
@@ -72,6 +74,8 @@ export interface DashboardData {
   accountTrend: AccountTrendData[];
   // 월별 손익 (1. 계좌현황(누적) 탭에서 B49:M50)
   monthlyProfitLoss: MonthlyProfitLoss[];
+  // 수익률 비교 바 차트 (5. 계좌내역(누적) 탭에서)
+  yieldComparison: YieldComparisonData | null;
   // 마지막 동기화 시간
   lastSyncAt: string | null;
 }
@@ -120,6 +124,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       performanceComparison: [],
       accountTrend: [],
       monthlyProfitLoss: [],
+      yieldComparison: null,
       lastSyncAt: null,
     };
   }
@@ -220,6 +225,11 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       ? parseMonthlyProfitLoss(profitLossRows)
       : [];
 
+    // 수익률 비교 바 차트 데이터 파싱 (같은 performanceRows에서)
+    const yieldComparison: YieldComparisonData | null = performanceRows
+      ? parseYieldComparisonData(performanceRows)
+      : null;
+
     return {
       totalAsset: Math.round(totalAsset),
       totalYield: Number.parseFloat(totalYield.toFixed(2)),
@@ -232,6 +242,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       performanceComparison,
       accountTrend,
       monthlyProfitLoss,
+      yieldComparison,
       lastSyncAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -270,6 +281,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       performanceComparison: [],
       accountTrend: [],
       monthlyProfitLoss: [],
+      yieldComparison: null,
       lastSyncAt: null,
     };
   }

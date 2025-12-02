@@ -184,9 +184,11 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
       <div
         ref={hiddenChartRef}
         style={{
-          position: 'absolute',
-          left: '-9999px',
+          position: 'fixed',
           top: 0,
+          left: 0,
+          zIndex: -50,
+          opacity: 0,
           width: '800px',
           height: '450px',
           backgroundColor: '#020617',
@@ -194,6 +196,7 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          pointerEvents: 'none',
         }}
       >
         <div className="w-full h-full max-w-[700px] max-h-[400px] flex items-center gap-12">
@@ -209,6 +212,7 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
                   paddingAngle={2}
                   dataKey="value"
                   stroke="none"
+                  isAnimationActive={false}
                 >
                   {chartData.map((entry, index) => (
                     <Cell

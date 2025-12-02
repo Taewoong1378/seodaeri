@@ -17,6 +17,7 @@ import { PerformanceComparisonChart } from './components/PerformanceComparisonCh
 import { PortfolioDonutChart } from './components/PortfolioDonutChart';
 import { PortfolioHoldingsChart } from './components/PortfolioHoldingsChart';
 import { SyncButton } from './components/SyncButton';
+import { YieldComparisonChart } from './components/YieldComparisonChart';
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(Math.round(amount));
@@ -52,6 +53,7 @@ export default async function DashboardPage() {
     performanceComparison: [],
     accountTrend: [],
     monthlyProfitLoss: [],
+    yieldComparison: null,
     lastSyncAt: null,
   };
 
@@ -115,11 +117,11 @@ export default async function DashboardPage() {
                   </Card>
                 )}
 
-                {/* Performance Comparison Chart */}
+                {/* Performance Comparison Line Chart */}
                 {displayData.performanceComparison.length > 0 && (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between px-1">
-                      <h3 className="text-base font-bold text-white">수익률 비교</h3>
+                      <h3 className="text-base font-bold text-white">누적 수익률</h3>
                       <span className="text-xs text-slate-500">vs 주요 지수</span>
                     </div>
                     <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
@@ -128,6 +130,15 @@ export default async function DashboardPage() {
                       </CardContent>
                     </Card>
                   </div>
+                )}
+
+                {/* Yield Comparison Bar Chart */}
+                {displayData.yieldComparison && (
+                  <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                    <CardContent className="p-6">
+                      <YieldComparisonChart data={displayData.yieldComparison} />
+                    </CardContent>
+                  </Card>
                 )}
 
                 {/* Portfolio Charts */}
