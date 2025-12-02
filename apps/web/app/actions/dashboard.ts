@@ -144,8 +144,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AB78", user.id),
       // 월별 손익 데이터는 "2. 계좌현황(올해)" 시트의 B48:M50
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'2. 계좌현황(올해)'!B48:M50", user.id),
-      // 수익률 비교(달러환율 적용) 데이터 - "5. 계좌내역(누적)" 시트의 Y~AC 컬럼 (달러환율 적용 지수)
-      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AC78", user.id),
+      // 수익률 비교(달러환율 적용) 데이터 - "5. 계좌내역(누적)" 시트의 AI~AM 컬럼 (달러환율 적용 지수)
+      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AQ78", user.id),
     ]);
 
     // 계좌 요약 파싱

@@ -7,6 +7,9 @@ import './globals.css'
 export const metadata: Metadata = {
   title: '서대리 투자기록',
   description: '입력은 1초, 데이터는 평생 - AI OCR 기반 투자 기록 앱',
+  verification: {
+    google: 'pLLmKd3TTIiJA8cJ85BUX80bKLuh0G7b3lSgXCnycSk',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

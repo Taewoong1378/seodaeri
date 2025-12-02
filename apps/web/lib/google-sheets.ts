@@ -1177,29 +1177,24 @@ export function parseYieldComparisonData(rows: any[]): YieldComparisonData | nul
 /**
  * "5. 계좌내역(누적)" 시트에서 수익률 비교(달러환율 적용) 데이터 파싱
  *
- * 범위: G17:AC78
+ * 범위: G17:AQ78
  * - G열(0) = 날짜 (YY.MM)
- * - S열(12) = 올해 수익률 (계좌, 달러환율 적용)
- * - T열(13) = 올해 수익률 (KOSPI, 달러환율 적용)
- * - U열(14) = 올해 수익률 (S&P500, 달러환율 적용)
- * - V열(15) = 올해 수익률 (NASDAQ, 달러환율 적용)
- * - W열(16) = 올해 수익률 (DOLLAR)
- * - X열(17) = 연평균 수익률 (계좌, 달러환율 적용)
- * - Y열(18) = 연평균 수익률 (KOSPI, 달러환율 적용)
- * - Z열(19) = 연평균 수익률 (S&P500, 달러환율 적용)
- * - AA열(20) = 연평균 수익률 (NASDAQ, 달러환율 적용)
- * - AB열(21) = 연평균 수익률 (DOLLAR)
+ * - 달러환율 적용 지수 컬럼들: AI~AM (28~32)
+ *   (기본 지수 컬럼 O~R에서 +20 오프셋)
  */
 export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDollarData | null {
   if (!rows || rows.length === 0) return null;
+
+  // 헤더 행 로그
+  const headerRow = rows[0];
+  console.log('[parseYieldComparisonDollarData] Header row (28-36):', headerRow?.slice(28, 37));
 
   const parsePercent = (val: any): number => {
     if (!val || val === '#NUM!' || val === '#VALUE!' || val === '#DIV/0!' || val === '#REF!') return 0;
     const str = String(val).replace(/[%,\s]/g, '');
     const num = Number.parseFloat(str);
     if (Number.isNaN(num)) return 0;
-    // 값이 소수점 형태(0.15 = 15%)로 저장된 경우 변환
-    // 단, 이미 백분율 형태(-0.6, 66.5 등)인 경우는 그대로 사용
+    // 소수점 형태(0.15 = 15%)를 퍼센트로 변환
     if (Math.abs(num) < 2 && num !== 0) {
       return num * 100;
     }
@@ -1212,21 +1207,12 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
   const currentMM = String(now.getMonth() + 1).padStart(2, '0');
   const currentDateStr = `${currentYY}.${currentMM}`;
 
-  // G17:AC78 범위 기준 컬럼 인덱스 (G=0 기준):
-  // 올해 수익률 컬럼들 (S~W = 12~16)
-  const COL_THIS_YEAR_ACCOUNT = 12;  // S열
-  const COL_THIS_YEAR_KOSPI = 13;    // T열
-  const COL_THIS_YEAR_SP500 = 14;    // U열
-  const COL_THIS_YEAR_NASDAQ = 15;   // V열
-  const COL_THIS_YEAR_DOLLAR = 16;   // W열
-  // 연평균 수익률 컬럼들 (X~AB = 17~21)
-  const COL_ANNUAL_ACCOUNT = 17;     // X열
-  const COL_ANNUAL_KOSPI = 18;       // Y열
-  const COL_ANNUAL_SP500 = 19;       // Z열
-  const COL_ANNUAL_NASDAQ = 20;      // AA열
-  const COL_ANNUAL_DOLLAR = 21;      // AB열
+  // 작년 12월 날짜
+  const prevYear = now.getFullYear() - 1;
+  const prevYearDateStr = `${String(prevYear).slice(2)}.12`;
 
   let currentRow: any[] | null = null;
+  let prevYearRow: any[] | null = null;
 
   for (const row of rows) {
     if (!row || !Array.isArray(row) || row.length === 0) continue;
@@ -1234,7 +1220,9 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
 
     if (dateCell === currentDateStr) {
       currentRow = row;
-      break;
+    }
+    if (dateCell === prevYearDateStr) {
+      prevYearRow = row;
     }
   }
 
@@ -1255,27 +1243,93 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
     return null;
   }
 
-  // Debug: 현재 행의 모든 컬럼 값 출력
+  // Debug: 현재 행의 컬럼 값 출력
   console.log('[parseYieldComparisonDollarData] Current date:', currentRow[0]);
   console.log('[parseYieldComparisonDollarData] Row length:', currentRow.length);
-  console.log('[parseYieldComparisonDollarData] Columns 12-21:', currentRow.slice(12, 22));
+  console.log('[parseYieldComparisonDollarData] Columns 28-36 (AI~AQ):', currentRow.slice(28, 37));
 
-  // 올해 수익률 (이미 백분율로 저장된 값)
+  // G17:AQ78 범위 기준 컬럼 인덱스 (G=0 기준):
+  // 달러환율 적용 지수 컬럼들 AI~AM = 28~32
+  const COL_ACCOUNT_DOLLAR = 28;  // AI열 - 계좌 달러환율 적용 지수
+  const COL_KOSPI_DOLLAR = 29;    // AJ열 - KOSPI 달러환율 적용 지수
+  const COL_SP500_DOLLAR = 30;    // AK열 - S&P500 달러환율 적용 지수
+  const COL_NASDAQ_DOLLAR = 31;   // AL열 - NASDAQ 달러환율 적용 지수
+  const COL_DOLLAR = 32;          // AM열 - DOLLAR 지수
+
+  // 달러환율 적용 지수 데이터 (100 기준)
+  const currentAccountIdx = parsePercent(currentRow[COL_ACCOUNT_DOLLAR]);
+  const currentKospiIdx = parsePercent(currentRow[COL_KOSPI_DOLLAR]);
+  const currentSp500Idx = parsePercent(currentRow[COL_SP500_DOLLAR]);
+  const currentNasdaqIdx = parsePercent(currentRow[COL_NASDAQ_DOLLAR]);
+  const currentDollarIdx = parsePercent(currentRow[COL_DOLLAR]);
+
+  let prevAccountIdx = 100;
+  let prevKospiIdx = 100;
+  let prevSp500Idx = 100;
+  let prevNasdaqIdx = 100;
+  let prevDollarIdx = 100;
+
+  if (prevYearRow) {
+    prevAccountIdx = parsePercent(prevYearRow[COL_ACCOUNT_DOLLAR]) || 100;
+    prevKospiIdx = parsePercent(prevYearRow[COL_KOSPI_DOLLAR]) || 100;
+    prevSp500Idx = parsePercent(prevYearRow[COL_SP500_DOLLAR]) || 100;
+    prevNasdaqIdx = parsePercent(prevYearRow[COL_NASDAQ_DOLLAR]) || 100;
+    prevDollarIdx = parsePercent(prevYearRow[COL_DOLLAR]) || 100;
+  }
+
+  console.log('[parseYieldComparisonDollarData] Current indices:', { currentAccountIdx, currentKospiIdx, currentSp500Idx, currentNasdaqIdx, currentDollarIdx });
+  console.log('[parseYieldComparisonDollarData] Prev indices:', { prevAccountIdx, prevKospiIdx, prevSp500Idx, prevNasdaqIdx, prevDollarIdx });
+
+  // 올해 수익률 계산 (작년말 대비 증감률)
   const thisYearYield = {
-    account: parsePercent(currentRow[COL_THIS_YEAR_ACCOUNT]),
-    kospi: parsePercent(currentRow[COL_THIS_YEAR_KOSPI]),
-    sp500: parsePercent(currentRow[COL_THIS_YEAR_SP500]),
-    nasdaq: parsePercent(currentRow[COL_THIS_YEAR_NASDAQ]),
-    dollar: parsePercent(currentRow[COL_THIS_YEAR_DOLLAR]),
+    account: prevAccountIdx > 0 ? ((currentAccountIdx / prevAccountIdx) - 1) * 100 : 0,
+    kospi: prevKospiIdx > 0 ? ((currentKospiIdx / prevKospiIdx) - 1) * 100 : 0,
+    sp500: prevSp500Idx > 0 ? ((currentSp500Idx / prevSp500Idx) - 1) * 100 : 0,
+    nasdaq: prevNasdaqIdx > 0 ? ((currentNasdaqIdx / prevNasdaqIdx) - 1) * 100 : 0,
+    dollar: prevDollarIdx > 0 ? ((currentDollarIdx / prevDollarIdx) - 1) * 100 : 0,
   };
 
-  // 연평균 수익률 (이미 백분율로 저장된 값)
+  // 누적 수익률 (100 기준 대비)
+  const cumulativeYield = currentAccountIdx - 100;
+  const cumulativeKospi = currentKospiIdx - 100;
+  const cumulativeSp500 = currentSp500Idx - 100;
+  const cumulativeNasdaq = currentNasdaqIdx - 100;
+  const cumulativeDollar = currentDollarIdx - 100;
+
+  // 투자 기간 계산
+  let firstDate: string | null = null;
+  for (const row of rows) {
+    if (!row || !Array.isArray(row)) continue;
+    const dateCell = String(row[0] || '').trim();
+    if (/^\d{2}\.\d{2}$/.test(dateCell)) {
+      firstDate = dateCell;
+      break;
+    }
+  }
+
+  let years = 1;
+  if (firstDate) {
+    const [firstYY, firstMM] = firstDate.split('.').map(Number);
+    const firstYear = 2000 + (firstYY || 0);
+    const firstMonth = firstMM || 1;
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    years = Math.max(1, (currentYear - firstYear) + (currentMonth - firstMonth) / 12);
+  }
+
+  // 연평균 수익률 계산
+  const calcAnnualized = (cumulative: number): number => {
+    const total = 1 + cumulative / 100;
+    if (total <= 0 || years <= 0) return 0;
+    return (total ** (1 / years) - 1) * 100;
+  };
+
   const annualizedYield = {
-    account: parsePercent(currentRow[COL_ANNUAL_ACCOUNT]),
-    kospi: parsePercent(currentRow[COL_ANNUAL_KOSPI]),
-    sp500: parsePercent(currentRow[COL_ANNUAL_SP500]),
-    nasdaq: parsePercent(currentRow[COL_ANNUAL_NASDAQ]),
-    dollar: parsePercent(currentRow[COL_ANNUAL_DOLLAR]),
+    account: calcAnnualized(cumulativeYield),
+    kospi: calcAnnualized(cumulativeKospi),
+    sp500: calcAnnualized(cumulativeSp500),
+    nasdaq: calcAnnualized(cumulativeNasdaq),
+    dollar: calcAnnualized(cumulativeDollar),
   };
 
   const round = (n: number) => Math.round(n * 10) / 10;

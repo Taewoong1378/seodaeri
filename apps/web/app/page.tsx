@@ -146,9 +146,9 @@ export default function Home() {
             <span className="text-sm font-medium text-slate-400">Seodaeri Inc.</span>
           </div>
           <div className="flex gap-6 text-sm text-slate-500">
-            <Link href="#" className="hover:text-slate-300 transition-colors">개인정보처리방침</Link>
-            <Link href="#" className="hover:text-slate-300 transition-colors">이용약관</Link>
-            <Link href="#" className="hover:text-slate-300 transition-colors">문의하기</Link>
+            <Link href="/privacy" className="hover:text-slate-300 transition-colors">개인정보처리방침</Link>
+            <Link href="/terms" className="hover:text-slate-300 transition-colors">이용약관</Link>
+            <Link href="mailto:support@seodaeri.com" className="hover:text-slate-300 transition-colors">문의하기</Link>
           </div>
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <Globe className="w-4 h-4" />
