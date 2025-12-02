@@ -1246,6 +1246,8 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
   // Debug: 현재 행의 컬럼 값 출력
   console.log('[parseYieldComparisonDollarData] Current date:', currentRow[0]);
   console.log('[parseYieldComparisonDollarData] Row length:', currentRow.length);
+  console.log('[parseYieldComparisonDollarData] Header 20-27 (AA~AH):', headerRow?.slice(20, 28));
+  console.log('[parseYieldComparisonDollarData] Columns 20-27 (AA~AH):', currentRow.slice(20, 28));
   console.log('[parseYieldComparisonDollarData] Columns 28-36 (AI~AQ):', currentRow.slice(28, 37));
 
   // G17:AQ78 범위 기준 컬럼 인덱스 (G=0 기준):
