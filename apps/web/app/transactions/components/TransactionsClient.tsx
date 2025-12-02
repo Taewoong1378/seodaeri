@@ -297,12 +297,23 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
                       </div>
                       <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                         <ClickableTooltip
-                          text={tx.name || (tx.type === 'DEPOSIT' ? '현금 입금' : tx.type === 'WITHDRAW' ? '현금 출금' : tx.ticker)}
+                          text={
+                            (tx.type === 'DEPOSIT' || tx.type === 'WITHDRAW')
+                              ? (tx.account || (tx.type === 'DEPOSIT' ? '입금' : '출금'))
+                              : (tx.name || tx.ticker)
+                          }
                         />
                         <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
                           {tx.ticker && (
                             <>
                               <span className="font-medium text-slate-400">{tx.ticker}</span>
+                              <span className="text-slate-600">·</span>
+                            </>
+                          )}
+                          {/* 입출금의 경우 메모 표시 */}
+                          {(tx.type === 'DEPOSIT' || tx.type === 'WITHDRAW') && tx.name && (
+                            <>
+                              <span className="font-medium text-slate-400">{tx.name}</span>
                               <span className="text-slate-600">·</span>
                             </>
                           )}

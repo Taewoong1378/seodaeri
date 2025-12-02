@@ -618,10 +618,10 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
     }
   }
 
-  // 헤더를 찾지 못한 경우 기본값 (일자=0, 계좌=4, 구분=5, 금액=6, 비고=7)
+  // 헤더를 찾지 못한 경우 기본값 (일자=0, 구분=4, 계좌=5, 금액=6, 비고=7)
   if (dateCol === -1) dateCol = 0;
-  if (accountCol === -1) accountCol = 4; // E열이 계좌(증권사)
-  if (typeCol === -1) typeCol = 5; // F열이 구분 (입금/출금)
+  if (typeCol === -1) typeCol = 4; // E열이 구분 (입금/출금)
+  if (accountCol === -1) accountCol = 5; // F열이 계좌(증권사)
   if (amountCol === -1) amountCol = 6;
   if (memoCol === -1) memoCol = 7;
 
