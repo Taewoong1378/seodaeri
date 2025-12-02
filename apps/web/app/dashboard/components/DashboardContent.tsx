@@ -2,16 +2,22 @@
 
 import { Card, CardContent } from '@repo/design-system/components/card';
 import Link from 'next/link';
-import { useDashboard, defaultDashboardData } from '../../../hooks';
+import { defaultDashboardData, useDashboard } from '../../../hooks';
 import { AccountTrendChart } from './AccountTrendChart';
+import { CumulativeDividendChart } from './CumulativeDividendChart';
 import { DashboardTabs } from './DashboardTabs';
+import { DividendByYearChart } from './DividendByYearChart';
 import { DividendChart } from './DividendChart';
 import { HeroCard } from './HeroCard';
+import { MajorIndexYieldComparisonChart } from './MajorIndexYieldComparisonChart';
 import { MonthlyProfitLossChart } from './MonthlyProfitLossChart';
 import { MonthlyYieldComparisonChart } from './MonthlyYieldComparisonChart';
+import { MonthlyYieldComparisonDollarAppliedChart } from './MonthlyYieldComparisonDollarAppliedChart';
 import { PerformanceComparisonChart } from './PerformanceComparisonChart';
+import { RollingAverageDividendChart } from './RollingAverageDividendChart';
 import { PortfolioDonutChart } from './PortfolioDonutChart';
 import { PortfolioHoldingsChart } from './PortfolioHoldingsChart';
+import { YearlyDividendChart } from './YearlyDividendChart';
 import { YieldComparisonChart } from './YieldComparisonChart';
 import { YieldComparisonDollarChart } from './YieldComparisonDollarChart';
 
@@ -164,6 +170,24 @@ export function DashboardContent() {
                 </Card>
               )}
 
+              {/* Monthly Yield Comparison Dollar Applied Chart (환율 반영) */}
+              {displayData.monthlyYieldComparisonDollarApplied && (
+                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                  <CardContent className="p-6">
+                    <MonthlyYieldComparisonDollarAppliedChart data={displayData.monthlyYieldComparisonDollarApplied} />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Major Index Yield Comparison Line Chart (주요지수 수익률 비교) */}
+              {displayData.majorIndexYieldComparison && (
+                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                  <CardContent className="p-6">
+                    <MajorIndexYieldComparisonChart data={displayData.majorIndexYieldComparison} />
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Monthly Profit/Loss Chart (월별 손익) */}
               {displayData.monthlyProfitLoss.length > 0 ? (
                 <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
@@ -215,6 +239,42 @@ export function DashboardContent() {
                   </div>
                 </div>
               </div>
+              
+              {/* Dividend By Year Chart (월별 배당금 현황) */}
+              {displayData.dividendByYear && (
+                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                  <CardContent className="p-6">
+                    <DividendByYearChart data={displayData.dividendByYear} />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Yearly Dividend Summary Chart (연도별 배당금 현황) */}
+              {displayData.yearlyDividendSummary && (
+                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                  <CardContent className="p-6">
+                    <YearlyDividendChart data={displayData.yearlyDividendSummary} />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Rolling Average Dividend Chart (12개월 월평균 배당금) */}
+              {displayData.rollingAverageDividend && (
+                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                  <CardContent className="p-6">
+                    <RollingAverageDividendChart data={displayData.rollingAverageDividend} />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Cumulative Dividend Chart (배당금 누적 그래프) */}
+              {displayData.cumulativeDividend && (
+                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                  <CardContent className="p-6">
+                    <CumulativeDividendChart data={displayData.cumulativeDividend} />
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Dividend Chart Section */}
               <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">

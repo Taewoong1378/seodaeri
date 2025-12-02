@@ -6,20 +6,32 @@ import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import {
   type AccountSummary,
   type AccountTrendData,
+  type CumulativeDividendData,
+  type DividendByYearData,
   type DividendRecord,
+  type RollingAverageDividendData,
+  type YearlyDividendSummaryData,
+  type MajorIndexYieldComparisonData,
   type MonthlyDividend,
   type MonthlyProfitLoss,
   type MonthlyYieldComparisonData,
+  type MonthlyYieldComparisonDollarAppliedData,
   type PerformanceComparisonData,
   type PortfolioItem,
   type YieldComparisonData,
   type YieldComparisonDollarData,
+  aggregateDividendsByYear,
   aggregateMonthlyDividends,
+  aggregateYearlyDividends,
+  calculateCumulativeDividend,
+  calculateRollingAverageDividend,
   fetchSheetData,
   parseAccountSummary,
   parseAccountTrendData,
   parseDividendData,
+  parseMajorIndexYieldComparison,
   parseMonthlyProfitLoss,
+  parseMonthlyYieldComparisonDollarApplied,
   parseMonthlyYieldComparisonWithDollar,
   parsePerformanceComparisonData,
   parsePortfolioData,
@@ -70,6 +82,10 @@ export interface DashboardData {
   thisMonthDividend: number;
   yearlyDividend: number;
   monthlyDividends: MonthlyDividend[];
+  dividendByYear: DividendByYearData | null;
+  yearlyDividendSummary: YearlyDividendSummaryData | null;
+  rollingAverageDividend: RollingAverageDividendData | null;
+  cumulativeDividend: CumulativeDividendData | null;
   // 포트폴리오 (3. 종목현황 탭에서)
   portfolio: PortfolioItem[];
   // 수익률 비교 (5. 계좌내역(누적) 탭에서)
@@ -84,6 +100,10 @@ export interface DashboardData {
   yieldComparisonDollar: YieldComparisonDollarData | null;
   // 월별 수익률 비교 (이번 달 + 올해 수익률)
   monthlyYieldComparison: MonthlyYieldComparisonData | null;
+  // 월별 수익률 비교 - 환율 반영 (S&P500, NASDAQ 달러환율 적용)
+  monthlyYieldComparisonDollarApplied: MonthlyYieldComparisonDollarAppliedData | null;
+  // 주요지수 수익률 비교 라인차트 (5. 계좌내역(누적) 탭에서)
+  majorIndexYieldComparison: MajorIndexYieldComparisonData | null;
   // 마지막 동기화 시간
   lastSyncAt: string | null;
 }
@@ -128,6 +148,10 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       thisMonthDividend: 0,
       yearlyDividend: 0,
       monthlyDividends: [],
+      dividendByYear: null,
+      yearlyDividendSummary: null,
+      rollingAverageDividend: null,
+      cumulativeDividend: null,
       portfolio: [],
       performanceComparison: [],
       accountTrend: [],
@@ -135,6 +159,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       yieldComparison: null,
       yieldComparisonDollar: null,
       monthlyYieldComparison: null,
+      monthlyYieldComparisonDollarApplied: null,
+      majorIndexYieldComparison: null,
       lastSyncAt: null,
     };
   }
@@ -164,6 +190,10 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       : [];
 
     const monthlyDividends = aggregateMonthlyDividends(dividends);
+    const dividendByYear = aggregateDividendsByYear(dividends);
+    const yearlyDividendSummary = aggregateYearlyDividends(dividends);
+    const rollingAverageDividend = calculateRollingAverageDividend(dividends);
+    const cumulativeDividend = calculateCumulativeDividend(dividends);
 
     // 이번 달 배당금 계산
     const now = new Date();
@@ -252,6 +282,16 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       ? parseMonthlyYieldComparisonWithDollar(dollarYieldRows)
       : null;
 
+    // 월별 수익률 비교 - 환율 반영 파싱 (S&P500, NASDAQ 달러환율 적용)
+    const monthlyYieldComparisonDollarApplied: MonthlyYieldComparisonDollarAppliedData | null = dollarYieldRows
+      ? parseMonthlyYieldComparisonDollarApplied(dollarYieldRows)
+      : null;
+
+    // 주요지수 수익률 비교 라인차트 파싱
+    const majorIndexYieldComparison: MajorIndexYieldComparisonData | null = dollarYieldRows
+      ? parseMajorIndexYieldComparison(dollarYieldRows)
+      : null;
+
     return {
       totalAsset: Math.round(totalAsset),
       totalYield: Number.parseFloat(totalYield.toFixed(2)),
@@ -260,6 +300,10 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       thisMonthDividend,
       yearlyDividend,
       monthlyDividends,
+      dividendByYear,
+      yearlyDividendSummary,
+      rollingAverageDividend,
+      cumulativeDividend,
       portfolio,
       performanceComparison,
       accountTrend,
@@ -267,6 +311,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       yieldComparison,
       yieldComparisonDollar,
       monthlyYieldComparison,
+      monthlyYieldComparisonDollarApplied,
+      majorIndexYieldComparison,
       lastSyncAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -301,6 +347,10 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       thisMonthDividend: 0,
       yearlyDividend: 0,
       monthlyDividends: [],
+      dividendByYear: null,
+      yearlyDividendSummary: null,
+      rollingAverageDividend: null,
+      cumulativeDividend: null,
       portfolio: [],
       performanceComparison: [],
       accountTrend: [],
@@ -308,6 +358,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       yieldComparison: null,
       yieldComparisonDollar: null,
       monthlyYieldComparison: null,
+      monthlyYieldComparisonDollarApplied: null,
+      majorIndexYieldComparison: null,
       lastSyncAt: null,
     };
   }

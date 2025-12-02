@@ -11,12 +11,12 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
-import type { MonthlyYieldComparisonData } from '../../../lib/google-sheets';
+import type { MonthlyYieldComparisonDollarAppliedData } from '../../../lib/google-sheets';
 import { LandscapeChartModal } from './LandscapeChartModal';
 import { ShareChartButton } from './ShareChartButton';
 
-interface MonthlyYieldComparisonChartProps {
-  data: MonthlyYieldComparisonData;
+interface MonthlyYieldComparisonDollarAppliedChartProps {
+  data: MonthlyYieldComparisonDollarAppliedData;
 }
 
 const COLORS = {
@@ -24,10 +24,10 @@ const COLORS = {
   thisYear: '#f97316', // orange
 };
 
-export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChartProps) {
+export function MonthlyYieldComparisonDollarAppliedChart({ data }: MonthlyYieldComparisonDollarAppliedChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
 
-  // 바 차트 데이터 변환
+  // 바 차트 데이터 변환 (DOLLAR 제외)
   const chartData = [
     {
       name: '계좌',
@@ -49,11 +49,6 @@ export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChar
       currentMonth: data.currentMonthYield.nasdaq,
       thisYear: data.thisYearYield.nasdaq,
     },
-    {
-      name: 'DOLLAR',
-      currentMonth: data.currentMonthYield.dollar,
-      thisYear: data.thisYearYield.dollar,
-    },
   ];
 
   const currentYear = new Date().getFullYear();
@@ -68,10 +63,10 @@ export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChar
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-white">{currentYear}년 {data.currentMonth}, 누적 수익률 현황</h4>
+          <h4 className="text-sm font-semibold text-white">{currentYear}년 수익률 현황 (환율 반영)</h4>
           <div className="flex items-center gap-2">
-            <ShareChartButton chartRef={chartRef} title={`${currentYear}년 ${data.currentMonth}, 누적 수익률 현황`} />
-            <LandscapeChartModal title={`${currentYear}년 ${data.currentMonth}, 누적 수익률 현황`}>
+            <ShareChartButton chartRef={chartRef} title={`${currentYear}년 수익률 현황 (환율 반영)`} />
+            <LandscapeChartModal title={`${currentYear}년 수익률 현황 (환율 반영)`}>
               <div className="flex flex-col w-full h-full">
                 {/* Custom Legend for Modal */}
                 <div className="flex items-center justify-center gap-6 mb-4 shrink-0">
@@ -200,19 +195,19 @@ export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChar
         </ResponsiveContainer>
       </div>
 
-      {/* Summary Cards - 5 columns for DOLLAR */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+      {/* Summary Cards - 4 columns (no DOLLAR) */}
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
         {chartData.map((item) => (
           <div
             key={item.name}
-            className="flex-1 min-w-[56px] bg-white/[0.03] border border-white/5 rounded-lg px-1.5 py-2 text-center"
+            className="flex-1 min-w-[70px] bg-white/[0.03] border border-white/5 rounded-lg px-2 py-2 text-center"
           >
-            <span className="text-[8px] text-slate-500 block mb-0.5 truncate">{item.name}</span>
+            <span className="text-[9px] text-slate-500 block mb-0.5 truncate">{item.name}</span>
             <div className="space-y-0">
-              <div className={`text-[10px] font-semibold leading-tight ${item.thisYear >= 0 ? 'text-orange-400' : 'text-slate-400'}`}>
+              <div className={`text-[11px] font-semibold leading-tight ${item.thisYear >= 0 ? 'text-orange-400' : 'text-slate-400'}`}>
                 {item.thisYear >= 0 ? '+' : ''}{item.thisYear.toFixed(1)}%
               </div>
-              <div className={`text-[8px] leading-tight ${item.currentMonth >= 0 ? 'text-gray-400' : 'text-slate-500'}`}>
+              <div className={`text-[9px] leading-tight ${item.currentMonth >= 0 ? 'text-gray-400' : 'text-slate-500'}`}>
                 {data.currentMonth} {item.currentMonth >= 0 ? '+' : ''}{item.currentMonth.toFixed(1)}%
               </div>
             </div>

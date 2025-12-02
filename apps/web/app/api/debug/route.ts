@@ -1,4 +1,4 @@
-import { fetchSheetData } from '@/lib/google-sheets';
+import { fetchSheetData, parseDividendData } from '@/lib/google-sheets';
 import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
 import { NextResponse } from 'next/server';
@@ -12,53 +12,112 @@ export async function GET() {
       userId: session?.user?.id || null,
       userEmail: session?.user?.email || null,
       hasAccessToken: !!session?.accessToken,
-      envVars: {
-        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        hasSupabaseAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      },
     };
 
     if (session?.user?.id) {
       const supabase = createServiceClient();
 
-      // Check if user exists in DB (이메일로 조회)
-      const { data: user, error: userError } = await supabase
+      const { data: user } = await supabase
         .from('users')
         .select('*')
         .eq('email', session.user.email || '')
         .single();
 
-      debugInfo.dbUser = user;
-      debugInfo.dbError = userError?.message || null;
-
-      // Try to list all users (for debugging)
-      const { data: allUsers, error: listError } = await supabase
-        .from('users')
-        .select('id, email, spreadsheet_id')
-        .limit(5);
-
-      debugInfo.allUsers = allUsers;
-      debugInfo.listError = listError?.message || null;
-
-      // "5. 계좌내역(누적)" 시트의 E:Z열 데이터 가져오기 (수익률 비교용)
       if (session?.accessToken && user?.spreadsheet_id) {
         try {
-          // E:Z열 데이터 (17행부터 - 헤더 포함)
-          const sheetData = await fetchSheetData(
+          // 배당내역 가져오기
+          const dividendRows = await fetchSheetData(
             session.accessToken,
             user.spreadsheet_id,
-            "'5. 계좌내역(누적)'!E17:Z50"
+            "'7. 배당내역'!A:J"
           );
-          debugInfo.accountHistoryData = sheetData;
-          console.log('[DEBUG] 5. 계좌내역(누적) E:Z 데이터:', JSON.stringify(sheetData, null, 2));
+
+          const dividends = parseDividendData(dividendRows || []);
+
+          // 월별 배당금 집계
+          const exchangeRate = 1400;
+          const monthlyMap = new Map<string, number>();
+
+          for (const d of dividends) {
+            const date = new Date(d.date);
+            if (Number.isNaN(date.getTime())) continue;
+
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const key = `${year}-${String(month).padStart(2, '0')}`;
+
+            const amountKRW = d.amountKRW + (d.amountUSD * exchangeRate);
+            const existing = monthlyMap.get(key) || 0;
+            monthlyMap.set(key, existing + amountKRW);
+          }
+
+          // 월별 배당금 (정렬)
+          const monthlyDividends: Record<string, number> = {};
+          const sortedEntries = Array.from(monthlyMap.entries()).sort();
+          for (const [key, value] of sortedEntries) {
+            monthlyDividends[key] = Math.round(value);
+          }
+
+          // 12개월 롤링 평균 계산 (실제 데이터가 있는 마지막 월까지만)
+          const allMonths = Array.from(monthlyMap.keys()).sort();
+
+          // 첫 번째 월부터 마지막 배당 월까지 모든 월 생성
+          const firstMonth = allMonths[0];
+          const lastMonth = allMonths[allMonths.length - 1];
+          const [firstYear, firstMon] = (firstMonth ?? '2023-01').split('-').map(Number);
+          const [lastYear, lastMon] = (lastMonth ?? '2025-12').split('-').map(Number);
+
+          const fullMonths: string[] = [];
+          let y = firstYear ?? 2023;
+          let m = firstMon ?? 1;
+          while (y < (lastYear || 2025) || (y === (lastYear || 2025) && m <= (lastMon || 12))) {
+            fullMonths.push(`${y}-${String(m).padStart(2, '0')}`);
+            m++;
+            if (m > 12) { m = 1; y++; }
+          }
+
+          // 최근 3개월 롤링 평균 상세
+          const rollingAvgDetails: Record<string, any> = {};
+
+          for (let i = Math.max(0, fullMonths.length - 3); i < fullMonths.length; i++) {
+            const currentKey = fullMonths[i];
+            if (!currentKey) continue;
+
+            let sum = 0;
+            let count = 0;
+            const includedMonths: Record<string, number> = {};
+
+            for (let j = Math.max(0, i - 11); j <= i; j++) {
+              const monthKey = fullMonths[j];
+              if (monthKey) {
+                const monthValue = monthlyMap.get(monthKey) || 0;
+                sum += monthValue;
+                count++;
+                includedMonths[monthKey] = Math.round(monthValue);
+              }
+            }
+
+            const average = count > 0 ? Math.round(sum / Math.min(count, 12)) : 0;
+
+            rollingAvgDetails[currentKey] = {
+              sum: Math.round(sum),
+              count,
+              average,
+              includedMonths,
+            };
+          }
+
+          debugInfo.dividendCount = dividends.length;
+          debugInfo.monthlyDividends = monthlyDividends;
+          debugInfo.rollingAvgDetails = rollingAvgDetails;
+
         } catch (sheetError: any) {
           debugInfo.sheetError = sheetError?.message || 'Unknown sheet error';
         }
       }
     }
 
-    return NextResponse.json(debugInfo);
+    return NextResponse.json(debugInfo, { status: 200 });
   } catch (error: any) {
     return NextResponse.json({
       error: error.message,

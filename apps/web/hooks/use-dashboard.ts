@@ -52,6 +52,10 @@ export const defaultDashboardData: DashboardData = {
   thisMonthDividend: 0,
   yearlyDividend: 0,
   monthlyDividends: [],
+  dividendByYear: null,
+  yearlyDividendSummary: null,
+  rollingAverageDividend: null,
+  cumulativeDividend: null,
   portfolio: [],
   performanceComparison: [],
   accountTrend: [],
@@ -59,5 +63,7 @@ export const defaultDashboardData: DashboardData = {
   yieldComparison: null,
   yieldComparisonDollar: null,
   monthlyYieldComparison: null,
+  monthlyYieldComparisonDollarApplied: null,
+  majorIndexYieldComparison: null,
   lastSyncAt: null,
 };
