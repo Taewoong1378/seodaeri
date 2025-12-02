@@ -44,6 +44,7 @@ function formatCurrency(amount: number): string {
 
 export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const hiddenChartRef = useRef<HTMLDivElement>(null);
 
   // 상위 5개 + 기타로 그룹화
   const sortedData = [...data].sort((a, b) => b.weight - a.weight);
@@ -72,7 +73,7 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-white">자산 비중</h4>
         <div className="flex items-center gap-2">
-          <ShareChartButton chartRef={chartRef} title="포트폴리오 비중" />
+          <ShareChartButton chartRef={hiddenChartRef} title="포트폴리오 비중" />
           <LandscapeChartModal title="포트폴리오 비중">
           <div className="w-full h-full flex items-center justify-center">
             <div className="w-full h-full max-w-[600px] max-h-[400px] flex items-center gap-8">
@@ -175,6 +176,71 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
               <span className="text-xs font-semibold text-white">{item.weight.toFixed(1)}%</span>
             </div>
           ))}
+        </div>
+      </div>
+
+
+      {/* Hidden Chart for Capture */}
+      <div
+        ref={hiddenChartRef}
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: 0,
+          width: '800px',
+          height: '450px',
+          backgroundColor: '#020617',
+          padding: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div className="w-full h-full max-w-[700px] max-h-[400px] flex items-center gap-12">
+          <div className="relative flex-1 aspect-square max-h-[350px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="60%"
+                  outerRadius="80%"
+                  paddingAngle={2}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${entry.name}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                {/* Tooltip removed for static capture, or can be kept if needed but won't show on hover */}
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-lg text-slate-500">총 자산</span>
+              <span className="text-3xl font-bold text-white">{formatCurrency(totalAsset)}</span>
+            </div>
+          </div>
+          <div className="flex-1 space-y-4">
+            <div className="mb-6">
+              <h3 className="text-2xl font-bold text-white">포트폴리오 비중</h3>
+              <p className="text-slate-400">자산 구성 현황</p>
+            </div>
+            {chartData.map((item, index) => (
+              <div key={item.name} className="flex items-center gap-4">
+                <div
+                  className="w-4 h-4 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                />
+                <span className="text-lg text-slate-300 truncate flex-1">{item.name}</span>
+                <span className="text-lg font-bold text-white">{item.weight.toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

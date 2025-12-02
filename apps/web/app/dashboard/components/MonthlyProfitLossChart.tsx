@@ -58,6 +58,7 @@ function formatYAxisValue(value: number): string {
 
 export function MonthlyProfitLossChart({ data }: MonthlyProfitLossChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const hiddenChartRef = useRef<HTMLDivElement>(null);
 
   if (!data || data.length === 0) return null;
 
@@ -80,8 +81,8 @@ export function MonthlyProfitLossChart({ data }: MonthlyProfitLossChartProps) {
   const yAxisMax = Math.ceil(Math.max(maxProfit, maxLoss) * 1.1);
 
   // 차트 렌더링 함수 (재사용)
-  const renderChart = (height: string = "240px") => (
-    <div className={`relative w-full`} style={{ height }}>
+  const renderChart = (height = "240px") => (
+    <div className={'relative w-full'} style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={chartData}
@@ -171,7 +172,7 @@ export function MonthlyProfitLossChart({ data }: MonthlyProfitLossChartProps) {
               <span className="text-[10px] text-slate-500">손실</span>
             </div>
           </div>
-          <ShareChartButton chartRef={chartRef} title="월별 손익" />
+          <ShareChartButton chartRef={hiddenChartRef} title="월별 손익" />
           <LandscapeChartModal title="월별 손익">
             <div className="w-full h-full">
               {renderChart("100%")}
@@ -208,6 +209,40 @@ export function MonthlyProfitLossChart({ data }: MonthlyProfitLossChartProps) {
 
       {/* Chart */}
       {renderChart()}
+
+      {/* Hidden Chart for Capture */}
+      <div
+        ref={hiddenChartRef}
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: 0,
+          width: '800px',
+          height: '450px',
+          backgroundColor: '#020617',
+          padding: '20px',
+        }}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-bold text-white">월별 손익</h3>
+            <p className="text-sm text-slate-400">순손익 {netTotal >= 0 ? '+' : ''}{netTotal.toLocaleString()}원</p>
+          </div>
+        </div>
+        <div className="w-full h-[350px]">
+          {renderChart("100%")}
+        </div>
+        <div className="flex items-center justify-center gap-6 mt-4">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-sm bg-orange-500" />
+            <span className="text-sm text-slate-400">수익</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-sm bg-slate-600" />
+            <span className="text-sm text-slate-400">손실</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

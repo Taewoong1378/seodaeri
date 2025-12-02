@@ -44,6 +44,7 @@ function formatYAxisValue(value: number): string {
 
 export function DividendChart({ data }: DividendChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const hiddenChartRef = useRef<HTMLDivElement>(null);
 
   // 사용 가능한 연도 목록 추출 (중복 제거, 내림차순)
   const availableYears = [...new Set(data.map(d => d.year))].sort((a, b) => b - a);
@@ -73,7 +74,7 @@ export function DividendChart({ data }: DividendChartProps) {
   const yearTotal = filteredData.reduce((sum, d) => sum + d.amount, 0);
 
   // 차트 렌더링 함수 (재사용)
-  const renderChart = (height: string = "220px", showYAxis: boolean = false) => (
+  const renderChart = (height = "220px", showYAxis = false) => (
     <div className="relative w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={fullYearData} margin={{ top: 10, right: showYAxis ? 10 : 0, left: showYAxis ? -10 : 0, bottom: 0 }}>
@@ -129,7 +130,7 @@ export function DividendChart({ data }: DividendChartProps) {
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-white">월별 배당금</h4>
         <div className="flex items-center gap-2">
-          <ShareChartButton chartRef={chartRef} title={`${selectedYear}년 월별 배당금`} />
+          <ShareChartButton chartRef={hiddenChartRef} title={`${selectedYear}년 월별 배당금`} />
           <LandscapeChartModal title={`${selectedYear}년 월별 배당금`}>
             <div className="w-full h-full">
               {renderChart("100%", true)}
@@ -167,6 +168,30 @@ export function DividendChart({ data }: DividendChartProps) {
 
       {/* Chart */}
       {renderChart()}
+
+      {/* Hidden Chart for Capture */}
+      <div
+        ref={hiddenChartRef}
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          top: 0,
+          width: '800px',
+          height: '450px',
+          backgroundColor: '#020617',
+          padding: '20px',
+        }}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-bold text-white">{selectedYear}년 월별 배당금</h3>
+            <p className="text-sm text-slate-400">총 {yearTotal.toLocaleString()}원</p>
+          </div>
+        </div>
+        <div className="w-full h-[350px]">
+          {renderChart("100%", true)}
+        </div>
+      </div>
     </div>
   );
 }

@@ -34,8 +34,9 @@ async function fetchSheetDataCached(
   userId: string
 ): Promise<any[] | null> {
   const cachedFetch = unstable_cache(
-    async () => {
-      return fetchSheetData(accessToken, spreadsheetId, range);
+    async (): Promise<any[] | null> => {
+      const result = await fetchSheetData(accessToken, spreadsheetId, range);
+      return result ?? null;
     },
     [`sheet-${spreadsheetId}-${range}`],
     {
@@ -45,7 +46,8 @@ async function fetchSheetDataCached(
   );
 
   try {
-    return await cachedFetch();
+    const result = await cachedFetch();
+    return (result as any[] | null) ?? null;
   } catch (e) {
     console.error(`[Sheet] ${range} 읽기 실패:`, e);
     return null;
@@ -336,7 +338,7 @@ export async function syncPortfolio() {
   }
 
   // 캐시 무효화
-  revalidateTag(getDashboardCacheTag(user.id));
+  revalidateTag(getDashboardCacheTag(user.id), 'max');
   revalidatePath('/dashboard');
 
   return { success: true, count: portfolio.length };
