@@ -13,7 +13,8 @@ import { Label } from '@repo/design-system/components/label';
 import { Camera, Check, Loader2, Pen, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { type DividendInput, saveDividend, saveDividends } from '../../actions/dividend';
+import { useSaveDividend, useSaveDividends } from '../../../hooks';
+import type { DividendInput } from '../../actions/dividend';
 import { analyzeDividendImage } from '../../actions/ocr';
 
 type InputMode = 'select' | 'manual' | 'photo-preview' | 'photo-verify';
@@ -23,9 +24,14 @@ export function DividendInputModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<InputMode>('select');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // TanStack Query mutations
+  const { mutate: saveDividend, isPending: isSavingSingle } = useSaveDividend();
+  const { mutate: saveDividends, isPending: isSavingMultiple } = useSaveDividends();
+
+  const isSaving = isSavingSingle || isSavingMultiple;
 
   useEffect(() => {
     setMounted(true);
@@ -117,7 +123,7 @@ export function DividendInputModal() {
     }
   };
 
-  const handleSaveSingle = async () => {
+  const handleSaveSingle = () => {
     if (!singleForm.ticker) {
       alert('종목코드를 입력해주세요.');
       return;
@@ -127,24 +133,23 @@ export function DividendInputModal() {
       return;
     }
 
-    setIsSaving(true);
-    try {
-      const result = await saveDividend(singleForm);
-      if (result.success) {
-        alert('배당내역이 저장되었습니다.');
-        handleOpenChange(false);
-      } else {
-        alert(result.error || '저장에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('Save error:', error);
-      alert('저장 중 오류가 발생했습니다.');
-    } finally {
-      setIsSaving(false);
-    }
+    saveDividend(singleForm, {
+      onSuccess: (result) => {
+        if (result.success) {
+          alert('배당내역이 저장되었습니다.');
+          handleOpenChange(false);
+        } else {
+          alert(result.error || '저장에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('Save error:', error);
+        alert('저장 중 오류가 발생했습니다.');
+      },
+    });
   };
 
-  const handleSaveMultiple = async () => {
+  const handleSaveMultiple = () => {
     const itemsToSave = multipleItems.filter((_, idx) => selectedItems.has(idx));
 
     if (itemsToSave.length === 0) {
@@ -152,21 +157,20 @@ export function DividendInputModal() {
       return;
     }
 
-    setIsSaving(true);
-    try {
-      const result = await saveDividends(itemsToSave);
-      if (result.success) {
-        alert(`${itemsToSave.length}건의 배당내역이 저장되었습니다.`);
-        handleOpenChange(false);
-      } else {
-        alert(result.error || '저장에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('Save error:', error);
-      alert('저장 중 오류가 발생했습니다.');
-    } finally {
-      setIsSaving(false);
-    }
+    saveDividends(itemsToSave, {
+      onSuccess: (result) => {
+        if (result.success) {
+          alert(`${itemsToSave.length}건의 배당내역이 저장되었습니다.`);
+          handleOpenChange(false);
+        } else {
+          alert(result.error || '저장에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('Save error:', error);
+        alert('저장 중 오류가 발생했습니다.');
+      },
+    });
   };
 
   const toggleItemSelection = (idx: number) => {

@@ -132,11 +132,11 @@ export function DividendChart({ data }: DividendChartProps) {
         <div className="flex items-center gap-2">
           <ShareChartButton chartRef={hiddenChartRef} title={`${selectedYear}년 월별 배당금`} />
           <LandscapeChartModal title={`${selectedYear}년 월별 배당금`}>
+            <div className="flex items-center justify-center mb-4">
+              <p className="text-lg text-slate-400">총 <span className="text-white font-bold">{yearTotal.toLocaleString()}원</span></p>
+            </div>
             <div className="w-full h-full">
               {renderChart("100%", true)}
-            </div>
-            <div className="flex items-center justify-center mt-4">
-              <p className="text-lg text-slate-400">총 <span className="text-white font-bold">{yearTotal.toLocaleString()}원</span></p>
             </div>
           </LandscapeChartModal>
         </div>

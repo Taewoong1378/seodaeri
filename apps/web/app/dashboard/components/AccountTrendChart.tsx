@@ -156,6 +156,16 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
           </div>
           <ShareChartButton chartRef={hiddenChartRef} title="월별 계좌추세" />
           <LandscapeChartModal title="월별 계좌추세">
+          <div className="flex items-center justify-center gap-6 mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-sm bg-blue-500/70" />
+              <span className="text-sm text-slate-400">누적입금액</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-sm bg-rose-400/70" />
+              <span className="text-sm text-slate-400">계좌총액</span>
+            </div>
+          </div>
           <div className="w-full h-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
@@ -221,16 +231,6 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                 />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
-          <div className="flex items-center justify-center gap-6 mt-4">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-sm bg-blue-500/70" />
-              <span className="text-sm text-slate-400">누적입금액</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-sm bg-rose-400/70" />
-              <span className="text-sm text-slate-400">계좌총액</span>
-            </div>
           </div>
           </LandscapeChartModal>
         </div>
@@ -363,6 +363,16 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
           <h3 className="text-xl font-bold text-white">월별 계좌추세</h3>
           <p className="text-sm text-slate-400">누적입금액 vs 계좌총액</p>
         </div>
+        <div className="flex items-center justify-start gap-6 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-sm bg-blue-500/70" />
+            <span className="text-sm text-slate-400">누적입금액</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-sm bg-rose-400/70" />
+            <span className="text-sm text-slate-400">계좌총액</span>
+          </div>
+        </div>
         <div className="w-full h-[350px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
@@ -430,16 +440,6 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
               />
             </AreaChart>
           </ResponsiveContainer>
-        </div>
-        <div className="flex items-center justify-center gap-6 mt-4">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-sm bg-blue-500/70" />
-            <span className="text-sm text-slate-400">누적입금액</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-sm bg-rose-400/70" />
-            <span className="text-sm text-slate-400">계좌총액</span>
-          </div>
         </div>
       </div>
     </div>

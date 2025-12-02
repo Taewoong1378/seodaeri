@@ -108,12 +108,26 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
         <div className="flex items-center gap-2">
           <ShareChartButton chartRef={hiddenChartRef} title="수익률 비교" />
           <LandscapeChartModal title="수익률 비교">
-            <div className="w-full h-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={displayData}
-                  margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
-                >
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-4">
+            {LINES.map((line) => (
+              <div key={line.dataKey} className="flex items-center gap-2">
+                <div
+                  className="w-6 h-0.5"
+                  style={{
+                    backgroundColor: line.color,
+                    backgroundImage: line.strokeDasharray ? 'none' : undefined,
+                  }}
+                />
+                <span className="text-sm text-slate-400">{line.name}</span>
+              </div>
+            ))}
+          </div>
+          <div className="w-full h-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={displayData}
+                margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+              >
                 <defs>
                   <linearGradient id="portfolioGradientModal" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#ffffff" stopOpacity={0.1} />
@@ -166,20 +180,6 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                 ))}
               </LineChart>
             </ResponsiveContainer>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-4">
-            {LINES.map((line) => (
-              <div key={line.dataKey} className="flex items-center gap-2">
-                <div
-                  className="w-6 h-0.5"
-                  style={{
-                    backgroundColor: line.color,
-                    backgroundImage: line.strokeDasharray ? 'none' : undefined,
-                  }}
-                />
-                <span className="text-sm text-slate-400">{line.name}</span>
-              </div>
-            ))}
           </div>
           </LandscapeChartModal>
         </div>
@@ -291,6 +291,20 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
           <h3 className="text-xl font-bold text-white">수익률 비교</h3>
           <p className="text-sm text-slate-400">vs 주요 지수</p>
         </div>
+        <div className="flex flex-wrap items-center justify-start gap-x-6 gap-y-2 mb-4">
+          {LINES.map((line) => (
+            <div key={line.dataKey} className="flex items-center gap-2">
+              <div
+                className="w-6 h-0.5"
+                style={{
+                  backgroundColor: line.color,
+                  backgroundImage: line.strokeDasharray ? 'none' : undefined,
+                }}
+              />
+              <span className="text-sm text-slate-400">{line.name}</span>
+            </div>
+          ))}
+        </div>
         <div className="w-full h-[350px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
@@ -351,20 +365,6 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                />
             </LineChart>
           </ResponsiveContainer>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-4">
-          {LINES.map((line) => (
-            <div key={line.dataKey} className="flex items-center gap-2">
-              <div
-                className="w-6 h-0.5"
-                style={{
-                  backgroundColor: line.color,
-                  backgroundImage: line.strokeDasharray ? 'none' : undefined,
-                }}
-              />
-              <span className="text-sm text-slate-400">{line.name}</span>
-            </div>
-          ))}
         </div>
       </div>
     </div>

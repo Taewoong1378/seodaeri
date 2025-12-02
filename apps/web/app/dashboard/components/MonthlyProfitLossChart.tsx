@@ -174,10 +174,7 @@ export function MonthlyProfitLossChart({ data }: MonthlyProfitLossChartProps) {
           </div>
           <ShareChartButton chartRef={hiddenChartRef} title="월별 손익" />
           <LandscapeChartModal title="월별 손익">
-            <div className="w-full h-full">
-              {renderChart("100%")}
-            </div>
-            <div className="flex items-center justify-center gap-6 mt-4">
+            <div className="flex items-center justify-center gap-6 mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-sm bg-orange-500" />
                 <span className="text-sm text-slate-400">수익</span>
@@ -186,6 +183,9 @@ export function MonthlyProfitLossChart({ data }: MonthlyProfitLossChartProps) {
                 <div className="w-4 h-4 rounded-sm bg-slate-600" />
                 <span className="text-sm text-slate-400">손실</span>
               </div>
+            </div>
+            <div className="w-full h-full">
+              {renderChart("100%")}
             </div>
           </LandscapeChartModal>
         </div>
@@ -242,10 +242,7 @@ export function MonthlyProfitLossChart({ data }: MonthlyProfitLossChartProps) {
             <p className="text-sm text-slate-400">순손익 {netTotal >= 0 ? '+' : ''}{netTotal.toLocaleString()}원</p>
           </div>
         </div>
-        <div className="w-full h-[350px]">
-          {renderChart("100%")}
-        </div>
-        <div className="flex items-center justify-center gap-6 mt-4">
+        <div className="flex items-center justify-start gap-6 mb-4">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded-sm bg-orange-500" />
             <span className="text-sm text-slate-400">수익</span>
@@ -254,6 +251,9 @@ export function MonthlyProfitLossChart({ data }: MonthlyProfitLossChartProps) {
             <div className="w-4 h-4 rounded-sm bg-slate-600" />
             <span className="text-sm text-slate-400">손실</span>
           </div>
+        </div>
+        <div className="w-full h-[350px]">
+          {renderChart("100%")}
         </div>
       </div>
     </div>
