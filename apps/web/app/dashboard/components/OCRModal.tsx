@@ -15,7 +15,11 @@ import { useEffect, useRef, useState } from 'react';
 import { sendMessageToNative } from '../../../lib/native-bridge';
 import { type OCRResult, analyzeTradeImage, saveTransaction } from '../../actions/ocr';
 
-export function OCRModal() {
+interface OCRModalProps {
+  mode?: 'trade' | 'dividend';
+}
+
+export function OCRModal({ mode = 'trade' }: OCRModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<'initial' | 'preview' | 'verify'>('initial');
   const [imageSrc, setImageSrc] = useState<string | null>(null);
@@ -50,13 +54,18 @@ export function OCRModal() {
   }, []);
 
   const handleButtonClick = () => {
+    // 먼저 모달 열기
+    setIsOpen(true);
+
     // 네이티브 앱 환경인지 확인
     if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
       // 네이티브 앱에 갤러리 열기 요청
       sendMessageToNative({ type: 'OPEN_GALLERY' });
     } else {
-      // 웹 환경에서는 file input 사용
-      fileInputRef.current?.click();
+      // 웹 환경에서는 약간의 딜레이 후 file input 열기 (모달 애니메이션 후)
+      setTimeout(() => {
+        fileInputRef.current?.click();
+      }, 100);
     }
   };
 
@@ -92,10 +101,14 @@ export function OCRModal() {
 
     setIsAnalyzing(true);
     try {
-      const result = await analyzeTradeImage(imageSrc);
+      const result = await analyzeTradeImage(imageSrc, mode);
       if (result) {
-        setOcrResult(result);
-        setEditedResult(result);
+        // mode가 dividend면 type을 DIVIDEND로, quantity를 1로 설정
+        const adjustedResult = mode === 'dividend'
+          ? { ...result, type: 'DIVIDEND' as const, quantity: 1 }
+          : result;
+        setOcrResult(adjustedResult);
+        setEditedResult(adjustedResult);
         setStep('verify');
       } else {
         alert('이미지 분석에 실패했습니다. 다시 시도해주세요.');
@@ -154,7 +167,7 @@ export function OCRModal() {
       <Button
         size="icon"
         onClick={handleButtonClick}
-        className="h-14 w-14 rounded-full shadow-xl bg-blue-600 hover:bg-blue-700 text-white fixed bottom-24 right-5 z-50 animate-in zoom-in duration-300"
+        className="h-14 w-14 rounded-full shadow-xl bg-blue-600 hover:bg-blue-700 active:scale-90 active:bg-blue-800 text-white fixed bottom-24 right-[max(1.25rem,calc(50%-250px+1.25rem))] z-50 animate-in zoom-in duration-300 transition-transform"
       >
         <ImagePlus size={28} />
       </Button>
@@ -163,7 +176,7 @@ export function OCRModal() {
         <DialogContent className="sm:max-w-[425px] h-[90vh] sm:h-auto flex flex-col p-0 gap-0 overflow-hidden rounded-t-[20px] sm:rounded-lg bottom-0 sm:bottom-auto translate-y-0 sm:translate-y-[-50%] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:data-[state=open]:slide-in-from-bottom-0">
           <div className="p-6 pb-2">
             <DialogHeader className="flex flex-row items-center justify-between">
-              <DialogTitle>매매 인증</DialogTitle>
+              <DialogTitle>{mode === 'dividend' ? '배당 인증' : '매매 인증'}</DialogTitle>
               <DialogClose asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <X size={20} />
@@ -259,46 +272,65 @@ export function OCRModal() {
                     placeholder="종목명 입력 (선택)"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                {mode === 'dividend' ? (
                   <div className="space-y-2">
-                    <Label htmlFor="price">단가</Label>
+                    <Label htmlFor="price">배당금액 (원)</Label>
                     <Input
                       id="price"
                       type="number"
                       value={editedResult.price}
                       onChange={(e) => updateField('price', Number(e.target.value))}
+                      placeholder="세후 배당금액"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="quantity">수량</Label>
-                    <Input
-                      id="quantity"
-                      type="number"
-                      value={editedResult.quantity}
-                      onChange={(e) => updateField('quantity', Number(e.target.value))}
-                    />
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="price">단가</Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        value={editedResult.price}
+                        onChange={(e) => updateField('price', Number(e.target.value))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="quantity">수량</Label>
+                      <Input
+                        id="quantity"
+                        type="number"
+                        value={editedResult.quantity}
+                        onChange={(e) => updateField('quantity', Number(e.target.value))}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="space-y-2">
                   <Label>거래유형</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant={editedResult.type === 'BUY' ? 'default' : 'outline'}
-                      className={editedResult.type === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-                      onClick={() => updateField('type', 'BUY')}
-                    >
-                      매수
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={editedResult.type === 'SELL' ? 'default' : 'outline'}
-                      className={editedResult.type === 'SELL' ? 'bg-red-600 hover:bg-red-700' : ''}
-                      onClick={() => updateField('type', 'SELL')}
-                    >
-                      매도
-                    </Button>
-                  </div>
+                  {mode === 'dividend' ? (
+                    <div className="p-3 rounded-lg bg-blue-600/20 border border-blue-500/30 text-center">
+                      <span className="text-blue-400 font-medium">배당</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant={editedResult.type === 'BUY' ? 'default' : 'outline'}
+                        className={editedResult.type === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                        onClick={() => updateField('type', 'BUY')}
+                      >
+                        매수
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={editedResult.type === 'SELL' ? 'default' : 'outline'}
+                        className={editedResult.type === 'SELL' ? 'bg-red-600 hover:bg-red-700' : ''}
+                        onClick={() => updateField('type', 'SELL')}
+                      >
+                        매도
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-4 space-y-2">

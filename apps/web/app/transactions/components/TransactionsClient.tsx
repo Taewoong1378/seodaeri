@@ -249,7 +249,7 @@ export function TransactionsClient({ transactions }: TransactionsClientProps) {
         )}
       </div>
 
-      {activeTab === 'trade' && <OCRModal />}
+      <OCRModal mode={activeTab === 'dividend' ? 'dividend' : 'trade'} />
     </div>
   );
 }

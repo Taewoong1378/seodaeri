@@ -1,4 +1,4 @@
-export default function MobileLayout({
+export default function OnboardingLayout({
   children,
 }: {
   children: React.ReactNode;

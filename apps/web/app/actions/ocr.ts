@@ -22,7 +22,7 @@ export interface OCRResult {
   name?: string;
   price: number;
   quantity: number;
-  type: 'BUY' | 'SELL';
+  type: 'BUY' | 'SELL' | 'DIVIDEND';
 }
 
 export interface SaveTransactionResult {
@@ -31,11 +31,39 @@ export interface SaveTransactionResult {
   error?: string;
 }
 
-export async function analyzeTradeImage(imageBase64: string): Promise<OCRResult | null> {
+export async function analyzeTradeImage(imageBase64: string, mode: 'trade' | 'dividend' = 'trade'): Promise<OCRResult | null> {
   if (!process.env.OPENAI_API_KEY) {
     console.error('OPENAI_API_KEY is not set');
     return null;
   }
+
+  const tradePrompt = `You are a financial data extraction assistant.
+Analyze the provided image of a stock trading screen (likely from a Korean brokerage app).
+Extract the following details:
+- Date (YYYY-MM-DD format)
+- Ticker (Stock Symbol, e.g., AAPL, TSLA, or Korean stock code like 005930)
+- Name (Stock name, e.g., "Apple Inc", "삼성전자")
+- Price (Unit price per share)
+- Quantity (Number of shares)
+- Type (BUY or SELL - look for keywords like 매수/매도, Buy/Sell, 체결)
+
+Return ONLY a valid JSON object with keys: "date", "ticker", "name", "price", "quantity", "type".
+If you cannot find a value, use null.
+Ensure price and quantity are numbers (remove commas and currency symbols).
+For Korean stocks, ticker should be the 6-digit code.`;
+
+  const dividendPrompt = `You are a financial data extraction assistant.
+Analyze the provided image of a dividend payment notification (likely from a Korean brokerage app).
+Extract the following details:
+- Date (YYYY-MM-DD format, 배당 지급일 or 입금일)
+- Ticker (Stock Symbol, e.g., AAPL, TSLA, or Korean stock code like 005930)
+- Name (Stock name, e.g., "Apple Inc", "삼성전자")
+- Price (Dividend amount AFTER tax in KRW, 세후 배당금. If shown in USD, convert to KRW using 1400)
+
+Return ONLY a valid JSON object with keys: "date", "ticker", "name", "price".
+If you cannot find a value, use null.
+Ensure price is a number (remove commas and currency symbols).
+For Korean stocks, ticker should be the 6-digit code.`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -43,25 +71,12 @@ export async function analyzeTradeImage(imageBase64: string): Promise<OCRResult 
       messages: [
         {
           role: "system",
-          content: `You are a financial data extraction assistant.
-          Analyze the provided image of a stock trading screen (likely from a Korean brokerage app).
-          Extract the following details:
-          - Date (YYYY-MM-DD format)
-          - Ticker (Stock Symbol, e.g., AAPL, TSLA, or Korean stock code like 005930)
-          - Name (Stock name, e.g., "Apple Inc", "삼성전자")
-          - Price (Unit price per share)
-          - Quantity (Number of shares)
-          - Type (BUY or SELL - look for keywords like 매수/매도, Buy/Sell, 체결)
-
-          Return ONLY a valid JSON object with keys: "date", "ticker", "name", "price", "quantity", "type".
-          If you cannot find a value, use null.
-          Ensure price and quantity are numbers (remove commas and currency symbols).
-          For Korean stocks, ticker should be the 6-digit code.`
+          content: mode === 'dividend' ? dividendPrompt : tradePrompt
         },
         {
           role: "user",
           content: [
-            { type: "text", text: "Extract trade details from this image." },
+            { type: "text", text: mode === 'dividend' ? "Extract dividend details from this image." : "Extract trade details from this image." },
             {
               type: "image_url",
               image_url: {
@@ -84,8 +99,8 @@ export async function analyzeTradeImage(imageBase64: string): Promise<OCRResult 
       ticker: result.ticker || '',
       name: result.name || '',
       price: Number.parseFloat(result.price) || 0,
-      quantity: Number.parseFloat(result.quantity) || 0,
-      type: result.type || 'BUY',
+      quantity: mode === 'dividend' ? 1 : (Number.parseFloat(result.quantity) || 0),
+      type: mode === 'dividend' ? 'DIVIDEND' : (result.type || 'BUY'),
     };
   } catch (error) {
     console.error('OCR Analysis failed:', error);

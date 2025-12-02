@@ -1,4 +1,4 @@
-export default function MobileLayout({
+export default function PortfolioLayout({
   children,
 }: {
   children: React.ReactNode;

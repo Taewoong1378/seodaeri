@@ -88,7 +88,7 @@ export default async function SettingsPage() {
         {/* App Info */}
         <div className="text-center pt-4">
           <p className="text-xs text-slate-600">서대리 v1.0.0</p>
-          <p className="text-xs text-slate-700 mt-1">Made with Claude Code</p>
+          <p className="text-xs text-slate-700 mt-1">Made By Taewoong Kang</p>
         </div>
       </main>
 
