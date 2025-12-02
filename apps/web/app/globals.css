@@ -60,12 +60,21 @@
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
-    
+
     /* Native-like Touch Interactions */
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* Remove focus outline on charts and interactive elements */
+  .recharts-wrapper,
+  .recharts-surface,
+  .recharts-wrapper *:focus,
+  .recharts-wrapper *:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
   }
 
   /* Hide scrollbars but keep functionality */
