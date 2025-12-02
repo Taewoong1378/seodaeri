@@ -238,14 +238,14 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
     // ID로 먼저 조회, 실패하면 이메일로 fallback
     let { data: user } = await supabase
       .from('users')
-      .select('spreadsheet_id')
+      .select('id, spreadsheet_id')
       .eq('id', session.user.id)
       .single();
 
     if (!user && session.user.email) {
       const { data: userByEmail } = await supabase
         .from('users')
-        .select('spreadsheet_id')
+        .select('id, spreadsheet_id')
         .eq('email', session.user.email)
         .single();
 
@@ -264,7 +264,7 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
     const { data: insertedTransaction, error: insertError } = await supabase
       .from('transactions')
       .insert({
-        user_id: session.user.id,
+        user_id: user.id,
         ticker: transaction.ticker,
         name: transaction.name || null,
         type: transaction.type,

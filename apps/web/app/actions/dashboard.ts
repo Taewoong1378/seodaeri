@@ -53,14 +53,14 @@ export async function getDashboardData(): Promise<DashboardData | null> {
   // ID로 먼저 조회, 실패하면 이메일로 fallback
   let { data: user } = await supabase
     .from('users')
-    .select('spreadsheet_id')
+    .select('id, spreadsheet_id')
     .eq('id', session.user.id)
     .single();
 
   if (!user && session.user.email) {
     const { data: userByEmail } = await supabase
       .from('users')
-      .select('spreadsheet_id')
+      .select('id, spreadsheet_id')
       .eq('email', session.user.email)
       .single();
 
@@ -216,12 +216,12 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       ? ((totalAsset - totalInvested) / totalInvested) * 100
       : accountSummary.totalYield; // 시트의 수익률 fallback
 
-    console.log('[Calculated from Portfolio] 총자산:', totalAsset, '투자원금:', totalInvested, '수익금:', totalProfit, '수익률:', totalYield.toFixed(2) + '%');
+    console.log('[Calculated from Portfolio] 총자산:', totalAsset, '투자원금:', totalInvested, '수익금:', totalProfit, '수익률:', `${totalYield.toFixed(2)}%`);
 
     // 포트폴리오 캐시 업데이트 (백그라운드)
     if (portfolio.length > 0) {
       const upsertData = portfolio.map((item) => ({
-        user_id: session.user.id,
+        user_id: user.id,
         ticker: item.ticker,
         avg_price: item.avgPrice,
         quantity: item.quantity,
@@ -323,14 +323,14 @@ export async function syncPortfolio() {
   // ID로 먼저 조회, 실패하면 이메일로 fallback
   let { data: user } = await supabase
     .from('users')
-    .select('spreadsheet_id')
+    .select('id, spreadsheet_id')
     .eq('id', session.user.id)
     .single();
 
   if (!user && session.user.email) {
     const { data: userByEmail } = await supabase
       .from('users')
-      .select('spreadsheet_id')
+      .select('id, spreadsheet_id')
       .eq('email', session.user.email)
       .single();
 
@@ -355,7 +355,7 @@ export async function syncPortfolio() {
   // 포트폴리오 캐시 업데이트
   if (portfolio.length > 0) {
     const upsertData = portfolio.map((item) => ({
-      user_id: session.user.id,
+      user_id: user.id,
       ticker: item.ticker,
       avg_price: item.avgPrice,
       quantity: item.quantity,

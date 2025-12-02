@@ -3,11 +3,11 @@
 import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
 import {
-  type DepositRecord,
-  type DividendRecord,
-  fetchSheetData,
-  parseDepositData,
-  parseDividendData,
+    type DepositRecord,
+    type DividendRecord,
+    fetchSheetData,
+    parseDepositData,
+    parseDividendData,
 } from '../../lib/google-sheets';
 
 export interface Transaction {
@@ -43,11 +43,34 @@ export async function getTransactions(): Promise<TransactionsResult> {
   const supabase = createServiceClient();
 
   try {
-    // 1. Supabase에서 앱으로 기록한 거래내역 조회
+    // 1. 사용자 정보 조회 (ID 또는 이메일)
+    let { data: user } = await supabase
+      .from('users')
+      .select('id, spreadsheet_id')
+      .eq('id', session.user.id)
+      .single();
+
+    if (!user && session.user.email) {
+      const { data: userByEmail } = await supabase
+        .from('users')
+        .select('id, spreadsheet_id')
+        .eq('email', session.user.email)
+        .single();
+
+      if (userByEmail) {
+        user = userByEmail;
+      }
+    }
+
+    if (!user) {
+      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' };
+    }
+
+    // 2. Supabase에서 앱으로 기록한 거래내역 조회
     const { data: dbTransactions, error: dbError } = await supabase
       .from('transactions')
       .select('*')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .order('trade_date', { ascending: false })
       .order('created_at', { ascending: false });
 
@@ -66,25 +89,7 @@ export async function getTransactions(): Promise<TransactionsResult> {
       source: 'app' as const,
     }));
 
-    // 2. Google Sheets에서 입금내역, 배당내역 조회
-    // ID로 먼저 조회, 실패하면 이메일로 fallback
-    let { data: user } = await supabase
-      .from('users')
-      .select('spreadsheet_id')
-      .eq('id', session.user.id)
-      .single();
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('spreadsheet_id')
-        .eq('email', session.user.email)
-        .single();
-
-      if (userByEmail) {
-        user = userByEmail;
-      }
-    }
+    // 3. Google Sheets에서 입금내역, 배당내역 조회
 
     const sheetTransactions: Transaction[] = [];
 

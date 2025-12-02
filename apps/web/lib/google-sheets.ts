@@ -505,13 +505,78 @@ export interface DepositRecord {
   memo: string;
 }
 
+/**
+ * 계좌 목록 가져오기
+ * "6. 입금내역" 시트의 E열 (계좌구분) 데이터 검증 목록 또는
+ * 별도의 계좌 목록 시트에서 가져옴
+ */
+export function parseAccountList(rows: any[]): string[] {
+  if (!rows || rows.length === 0) return [];
+
+  const accounts: Set<string> = new Set();
+
+  for (const row of rows) {
+    if (!row || !Array.isArray(row)) continue;
+    // 첫 번째 컬럼에서 계좌명 추출
+    const accountName = String(row[0] || '').trim();
+    if (accountName && !accountName.includes('계좌') && accountName !== '구분') {
+      accounts.add(accountName);
+    }
+  }
+
+  // Set을 배열로 변환
+  const result = Array.from(accounts);
+  console.log('[parseAccountList] Parsed accounts:', result);
+  return result;
+}
+
+/**
+ * 입금내역에서 사용된 계좌 목록 추출
+ */
+export function extractAccountsFromDeposits(rows: any[]): string[] {
+  if (!rows || rows.length <= 1) return [];
+
+  const accounts: Set<string> = new Set();
+
+  // E열(index 4)이 계좌 컬럼으로 추정
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    // 여러 컬럼에서 계좌 찾기 (보통 4~5번째 컬럼)
+    for (let col = 3; col <= 5; col++) {
+      const cellValue = String(row[col] || '').trim();
+      // 계좌명처럼 보이는 값 (일반계좌, 개인연금, IRP 등)
+      if (cellValue &&
+          (cellValue.includes('계좌') ||
+           cellValue.includes('연금') ||
+           cellValue.includes('IRP') ||
+           cellValue.includes('ISA') ||
+           cellValue.includes('DC'))) {
+        accounts.add(cellValue);
+      }
+    }
+  }
+
+  const result = Array.from(accounts);
+  console.log('[extractAccountsFromDeposits] Extracted accounts:', result);
+  return result;
+}
+
 export function parseDepositData(rows: any[]): DepositRecord[] {
   if (!rows || rows.length <= 1) return [];
 
   const parseNumber = (val: any): number => {
     if (!val) return 0;
+    // - 기호도 제거하되, 음수인지 기록
     const cleaned = String(val).replace(/[₩$,\s]/g, '');
     return Number.parseFloat(cleaned) || 0;
+  };
+
+  const isNegativeAmount = (val: any): boolean => {
+    if (!val) return false;
+    const str = String(val);
+    return str.includes('-') || str.startsWith('-');
   };
 
   const parseDate = (val: any): string | null => {
@@ -532,6 +597,7 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
   // 헤더 행 분석
   const headerRow = rows[0] || [];
   let dateCol = -1;
+  let typeCol = -1; // 구분 컬럼 (입금/출금)
   let amountCol = -1;
   let memoCol = -1;
 
@@ -539,6 +605,8 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
     const header = String(headerRow[i] || '').toLowerCase();
     if (header.includes('날짜') || header.includes('일자') || header.includes('date')) {
       dateCol = i;
+    } else if (header.includes('구분') || header.includes('type')) {
+      typeCol = i;
     } else if (header.includes('금액') || header.includes('입금') || header.includes('amount')) {
       if (amountCol === -1) amountCol = i;
     } else if (header.includes('메모') || header.includes('비고') || header.includes('memo')) {
@@ -546,13 +614,14 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
     }
   }
 
-  // 헤더를 찾지 못한 경우 기본값 (일자=0, 입금=6, 비고=7)
+  // 헤더를 찾지 못한 경우 기본값 (일자=0, 구분=4, 금액=6, 비고=7)
   if (dateCol === -1) dateCol = 0;
+  if (typeCol === -1) typeCol = 4; // E열이 보통 구분
   if (amountCol === -1) amountCol = 6;
   if (memoCol === -1) memoCol = 7;
 
   console.log('[parseDepositData] Header row:', JSON.stringify(headerRow));
-  console.log('[parseDepositData] Column indices:', { dateCol, amountCol, memoCol });
+  console.log('[parseDepositData] Column indices:', { dateCol, typeCol, amountCol, memoCol });
 
   // 첫 10개 행 디버깅 (구조 파악)
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
@@ -581,11 +650,13 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
     // 금액 찾기 - ₩ 기호가 포함된 컬럼 찾기
     let amount = 0;
     let memoValue = '';
+    let isWithdraw = false;
 
     for (let col = 0; col < row.length; col++) {
       const cellValue = String(row[col] || '');
       // ₩ 기호가 있는 컬럼이 금액
       if (cellValue.includes('₩') || cellValue.includes('\\')) {
+        isWithdraw = isNegativeAmount(cellValue);
         const parsed = parseNumber(cellValue);
         if (parsed > 0) {
           amount = parsed;
@@ -601,7 +672,9 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
     // ₩ 기호가 없으면 큰 숫자(10000 이상) 찾기
     if (amount === 0) {
       for (let col = dateColIdx + 1; col < row.length; col++) {
-        const parsed = parseNumber(row[col]);
+        const cellValue = String(row[col] || '');
+        isWithdraw = isNegativeAmount(cellValue);
+        const parsed = parseNumber(cellValue);
         if (parsed >= 10000) {
           amount = parsed;
           if (col + 1 < row.length) {
@@ -614,8 +687,16 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
 
     if (amount === 0) continue;
 
-    // 입금/출금 구분 (금액이 음수면 출금)
-    const type: 'DEPOSIT' | 'WITHDRAW' = amount > 0 ? 'DEPOSIT' : 'WITHDRAW';
+    // 구분 컬럼에서 입금/출금 확인 (더 정확한 방법)
+    const typeValue = String(row[typeCol] || '').trim().toLowerCase();
+    if (typeValue.includes('출금') || typeValue === 'withdraw') {
+      isWithdraw = true;
+    } else if (typeValue.includes('입금') || typeValue === 'deposit') {
+      isWithdraw = false;
+    }
+    // typeValue가 비어있으면 금액의 음수 여부로 판단 (위에서 이미 설정됨)
+
+    const type: 'DEPOSIT' | 'WITHDRAW' = isWithdraw ? 'WITHDRAW' : 'DEPOSIT';
 
     const record = {
       date,

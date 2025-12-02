@@ -7,8 +7,7 @@ import { redirect } from 'next/navigation';
 import { checkSheetConnection } from '../actions/onboarding';
 import { getTransactions } from '../actions/transactions';
 import { BottomNav } from '../dashboard/components/BottomNav';
-import { DividendInputModal } from '../dashboard/components/DividendInputModal';
-import { TransactionsClient } from './components/TransactionsClient';
+import { TransactionsWrapper } from './components/TransactionsWrapper';
 
 export default async function TransactionsPage() {
   const session = await auth();
@@ -62,10 +61,9 @@ export default async function TransactionsPage() {
           </div>
         )}
 
-        <TransactionsClient transactions={transactions || []} />
+        <TransactionsWrapper transactions={transactions || []} />
       </main>
 
-      <DividendInputModal />
       <BottomNav />
     </div>
   );

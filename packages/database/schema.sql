@@ -6,9 +6,13 @@ CREATE TABLE IF NOT EXISTS public.users (
     name TEXT,
     image TEXT,
     spreadsheet_id TEXT, -- 연동된 구글 시트 ID
+    auto_deposit_settings JSONB, -- 자동 입금 설정 { amount, dayOfMonth, memo, enabled }
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
+
+-- 기존 테이블에 auto_deposit_settings 컬럼 추가 (마이그레이션용)
+-- ALTER TABLE public.users ADD COLUMN IF NOT EXISTS auto_deposit_settings JSONB;
 
 -- 2. Transactions (매매 내역 로그 - Source of Truth for History)
 CREATE TABLE IF NOT EXISTS public.transactions (
