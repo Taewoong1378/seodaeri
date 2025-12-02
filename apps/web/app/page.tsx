@@ -1,16 +1,8 @@
-import { auth } from '@repo/auth/server'
 import { Button } from '@repo/design-system/components/button'
 import { ArrowRight, Globe, Lock, PieChart, Smartphone } from 'lucide-react'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 
-export default async function Home() {
-  const session = await auth()
-
-  // 이미 로그인된 경우 대시보드로 리다이렉트
-  if (session?.user) {
-    redirect('/dashboard')
-  }
+export default function Home() {
   return (
     <main className="flex min-h-screen flex-col relative overflow-hidden bg-[#020617] text-slate-50 selection:bg-indigo-500/30">
       {/* Background Subtle Grid */}
