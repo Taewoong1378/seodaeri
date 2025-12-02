@@ -3,7 +3,6 @@
 import { useRef } from 'react';
 import {
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -48,7 +47,7 @@ export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparis
   const yMin = Math.floor(minValue / 25) * 25 - 25;
   const yMax = Math.ceil(maxValue / 25) * 25 + 25;
 
-  const renderChart = (isModal: boolean = false) => (
+  const renderChart = (isModal = false) => (
     <LineChart
       data={chartData}
       margin={isModal
@@ -157,8 +156,13 @@ export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparis
 
   // 현재 값 (마지막 데이터)
   const latestIdx = data.months.length - 1;
+  
+  const latestSp500 = data.sp500[latestIdx];
+  const latestNasdaq = data.nasdaq[latestIdx];
+  const latestKospi = data.kospi[latestIdx];
+
   // 투자의 마지막 유효 값 찾기
-  const lastValidAccountIdx = data.account.reduce((lastIdx, val, idx) => val !== null ? idx : lastIdx, 0);
+  const lastValidAccountIdx = data.account.reduce<number>((lastIdx, val, idx) => val !== null ? idx : lastIdx, 0);
   const lastValidAccountValue = data.account[lastValidAccountIdx];
 
   return (
@@ -201,25 +205,37 @@ export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparis
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
         <div className="flex-1 min-w-[70px] bg-white/[0.03] border border-white/5 rounded-lg px-2 py-2 text-center">
           <span className="text-[9px] text-slate-500 block mb-0.5">S&P500</span>
-          <div className={`text-[11px] font-semibold ${data.sp500[latestIdx] >= 0 ? 'text-red-400' : 'text-slate-400'}`}>
-            {data.sp500[latestIdx] >= 0 ? '+' : ''}{data.sp500[latestIdx].toFixed(1)}%
-          </div>
+          {latestSp500 !== undefined ? (
+            <div className={`text-[11px] font-semibold ${latestSp500 >= 0 ? 'text-red-400' : 'text-slate-400'}`}>
+              {latestSp500 >= 0 ? '+' : ''}{latestSp500.toFixed(1)}%
+            </div>
+          ) : (
+            <div className="text-[11px] font-semibold text-slate-500">-</div>
+          )}
         </div>
         <div className="flex-1 min-w-[70px] bg-white/[0.03] border border-white/5 rounded-lg px-2 py-2 text-center">
           <span className="text-[9px] text-slate-500 block mb-0.5">나스닥</span>
-          <div className={`text-[11px] font-semibold ${data.nasdaq[latestIdx] >= 0 ? 'text-gray-300' : 'text-slate-400'}`}>
-            {data.nasdaq[latestIdx] >= 0 ? '+' : ''}{data.nasdaq[latestIdx].toFixed(1)}%
-          </div>
+          {latestNasdaq !== undefined ? (
+            <div className={`text-[11px] font-semibold ${latestNasdaq >= 0 ? 'text-gray-300' : 'text-slate-400'}`}>
+              {latestNasdaq >= 0 ? '+' : ''}{latestNasdaq.toFixed(1)}%
+            </div>
+          ) : (
+            <div className="text-[11px] font-semibold text-slate-500">-</div>
+          )}
         </div>
         <div className="flex-1 min-w-[70px] bg-white/[0.03] border border-white/5 rounded-lg px-2 py-2 text-center">
           <span className="text-[9px] text-slate-500 block mb-0.5">코스피</span>
-          <div className={`text-[11px] font-semibold ${data.kospi[latestIdx] >= 0 ? 'text-blue-400' : 'text-slate-400'}`}>
-            {data.kospi[latestIdx] >= 0 ? '+' : ''}{data.kospi[latestIdx].toFixed(1)}%
-          </div>
+          {latestKospi !== undefined ? (
+            <div className={`text-[11px] font-semibold ${latestKospi >= 0 ? 'text-blue-400' : 'text-slate-400'}`}>
+              {latestKospi >= 0 ? '+' : ''}{latestKospi.toFixed(1)}%
+            </div>
+          ) : (
+            <div className="text-[11px] font-semibold text-slate-500">-</div>
+          )}
         </div>
         <div className="flex-1 min-w-[70px] bg-white/[0.03] border border-white/5 rounded-lg px-2 py-2 text-center">
           <span className="text-[9px] text-slate-500 block mb-0.5">투자</span>
-          {lastValidAccountValue !== null ? (
+          {lastValidAccountValue != null ? (
             <div className={`text-[11px] font-semibold ${lastValidAccountValue >= 0 ? 'text-green-400' : 'text-slate-400'}`}>
               {lastValidAccountValue >= 0 ? '+' : ''}{lastValidAccountValue.toFixed(1)}%
             </div>
