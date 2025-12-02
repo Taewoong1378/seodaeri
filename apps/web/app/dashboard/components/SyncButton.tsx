@@ -2,22 +2,20 @@
 
 import { Button } from '@repo/design-system/components/button';
 import { RefreshCw } from 'lucide-react';
-import { useState, useTransition } from 'react';
-import { syncPortfolio } from '../../actions/dashboard';
+import { useState } from 'react';
+import { useSyncPortfolio } from '../../../hooks';
 
 export function SyncButton() {
-  const [isPending, startTransition] = useTransition();
   const [isAnimating, setIsAnimating] = useState(false);
+  const { mutate: sync, isPending } = useSyncPortfolio();
 
   const handleSync = () => {
     setIsAnimating(true);
-    startTransition(async () => {
-      try {
-        await syncPortfolio();
-      } finally {
+    sync(undefined, {
+      onSettled: () => {
         // 최소 1초는 애니메이션 유지
         setTimeout(() => setIsAnimating(false), 1000);
-      }
+      },
     });
   };
 

@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { checkSheetConnection } from '../actions/onboarding';
-import { getTransactions } from '../actions/transactions';
 import { BottomNav } from '../dashboard/components/BottomNav';
 import { TransactionsWrapper } from './components/TransactionsWrapper';
 
@@ -21,7 +20,6 @@ export default async function TransactionsPage() {
     redirect('/onboarding');
   }
 
-  const { transactions, error } = await getTransactions();
   const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit#gid=0` : null;
 
   return (
@@ -55,13 +53,7 @@ export default async function TransactionsPage() {
       </header>
 
       <main className="p-5 space-y-4">
-        {error && (
-          <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-            <p className="text-sm text-red-400">{error}</p>
-          </div>
-        )}
-
-        <TransactionsWrapper transactions={transactions || []} />
+        <TransactionsWrapper />
       </main>
 
       <BottomNav />
