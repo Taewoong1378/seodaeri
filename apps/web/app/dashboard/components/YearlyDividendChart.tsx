@@ -40,7 +40,7 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
   const maxValue = Math.max(...data.data.map(d => d.amount), 0);
   const yMax = Math.ceil(maxValue / 100000) * 100000 + 100000;
 
-  const renderChart = (isModal: boolean = false) => (
+  const renderChart = (isModal = false) => (
     <BarChart
       data={data.data}
       margin={isModal
@@ -86,10 +86,10 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
           position="top"
           fill="#94a3b8"
           fontSize={isModal ? 12 : 10}
-          formatter={formatCurrency}
+          formatter={(value: any) => formatCurrency(value)}
         />
         {data.data.map((entry, index) => (
-          <Cell key={`cell-${index}`} fill={BAR_COLOR} />
+          <Cell key={`cell-${entry.amount === null ? 'null' : index}`} fill={BAR_COLOR} />
         ))}
       </Bar>
     </BarChart>
