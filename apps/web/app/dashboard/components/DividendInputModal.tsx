@@ -1,7 +1,6 @@
 'use client';
 
 import { Button } from '@repo/design-system/components/button';
-import { createPortal } from 'react-dom';
 import {
   Dialog,
   DialogClose,
@@ -13,7 +12,8 @@ import { Input } from '@repo/design-system/components/input';
 import { Label } from '@repo/design-system/components/label';
 import { Camera, Check, Loader2, Pen, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { saveDividend, saveDividends, type DividendInput } from '../../actions/dividend';
+import { createPortal } from 'react-dom';
+import { type DividendInput, saveDividend, saveDividends } from '../../actions/dividend';
 import { analyzeDividendImage } from '../../actions/ocr';
 
 type InputMode = 'select' | 'manual' | 'photo-preview' | 'photo-verify';
@@ -199,13 +199,13 @@ export function DividendInputModal() {
     newSelected.delete(idx);
     // Adjust indices
     const adjusted = new Set<number>();
-    newSelected.forEach((i) => {
+    for (const i of newSelected) {
       if (i > idx) {
         adjusted.add(i - 1);
       } else {
         adjusted.add(i);
       }
-    });
+    };
     setSelectedItems(adjusted);
   };
 
@@ -463,7 +463,7 @@ export function DividendInputModal() {
                 <div className="space-y-3 max-h-[40vh] overflow-y-auto">
                   {multipleItems.map((item, idx) => (
                     <div
-                      key={idx}
+                      key={`${item.name}-${item.date}`}
                       className={`p-3 rounded-xl border transition-colors ${
                         selectedItems.has(idx)
                           ? 'bg-blue-600/10 border-blue-500/30'

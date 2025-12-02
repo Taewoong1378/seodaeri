@@ -11,6 +11,7 @@ import { AccountTrendChart } from './components/AccountTrendChart';
 import { BottomNav } from './components/BottomNav';
 import { DividendChart } from './components/DividendChart';
 import { HeroCard } from './components/HeroCard';
+import { MonthlyProfitLossChart } from './components/MonthlyProfitLossChart';
 import { PerformanceComparisonChart } from './components/PerformanceComparisonChart';
 import { PortfolioDonutChart } from './components/PortfolioDonutChart';
 import { PortfolioHoldingsChart } from './components/PortfolioHoldingsChart';
@@ -49,6 +50,7 @@ export default async function DashboardPage() {
     portfolio: [],
     performanceComparison: [],
     accountTrend: [],
+    monthlyProfitLoss: [],
     lastSyncAt: null,
   };
 
@@ -103,6 +105,17 @@ export default async function DashboardPage() {
                   currentTotalAsset={displayData.totalAsset}
                   currentTotalInvested={displayData.totalInvested}
                 />
+              </CardContent>
+            </Card>
+          </section>
+        )}
+
+        {/* Monthly Profit/Loss Chart (월별 손익) */}
+        {displayData.monthlyProfitLoss.length > 0 && (
+          <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
+            <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+              <CardContent className="p-6">
+                <MonthlyProfitLossChart data={displayData.monthlyProfitLoss} />
               </CardContent>
             </Card>
           </section>

@@ -8,6 +8,7 @@ import {
   type AccountTrendData,
   type DividendRecord,
   type MonthlyDividend,
+  type MonthlyProfitLoss,
   type PerformanceComparisonData,
   type PortfolioItem,
   aggregateMonthlyDividends,
@@ -15,6 +16,7 @@ import {
   parseAccountSummary,
   parseAccountTrendData,
   parseDividendData,
+  parseMonthlyProfitLoss,
   parsePerformanceComparisonData,
   parsePortfolioData,
 } from '../../lib/google-sheets';
@@ -35,6 +37,8 @@ export interface DashboardData {
   performanceComparison: PerformanceComparisonData[];
   // 계좌 추세 (5. 계좌내역(누적) 탭에서 - 누적입금액 vs 계좌총액)
   accountTrend: AccountTrendData[];
+  // 월별 손익 (1. 계좌현황(누적) 탭에서 B49:M50)
+  monthlyProfitLoss: MonthlyProfitLoss[];
   // 마지막 동기화 시간
   lastSyncAt: string | null;
 }
@@ -82,13 +86,14 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       portfolio: [],
       performanceComparison: [],
       accountTrend: [],
+      monthlyProfitLoss: [],
       lastSyncAt: null,
     };
   }
 
   try {
     // 시트에서 데이터 읽기 (병렬 처리)
-    const [accountRows, dividendRows, portfolioRows, performanceRows] = await Promise.all([
+    const [accountRows, dividendRows, portfolioRows, performanceRows, profitLossRows] = await Promise.all([
       fetchSheetData(session.accessToken, user.spreadsheet_id, "'1. 계좌현황(누적)'!A:K").catch((e) => {
         console.error('[Sheet] 1. 계좌현황(누적) 읽기 실패:', e);
         return null;
@@ -104,6 +109,12 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       // 수익률 비교 데이터는 "5. 계좌내역(누적)" 시트에 있음
       fetchSheetData(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AB78").catch((e) => {
         console.error('[Sheet] 5. 계좌내역(누적) 수익률 비교 읽기 실패:', e);
+        return null;
+      }),
+      // 월별 손익 데이터는 "2. 계좌현황(올해)" 시트의 B48:M50
+      // B48=연도, B49=월라벨, B50=손익데이터
+      fetchSheetData(session.accessToken, user.spreadsheet_id, "'2. 계좌현황(올해)'!B48:M50").catch((e) => {
+        console.error('[Sheet] 2. 계좌현황(올해) 월별 손익 읽기 실패:', e);
         return null;
       }),
     ]);
@@ -256,6 +267,15 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
     console.log('[Parsed] 계좌 추세 데이터 수:', accountTrend.length);
 
+    // 월별 손익 파싱
+    console.log('[Sheet] 월별 손익 원본 데이터:', JSON.stringify(profitLossRows));
+    const monthlyProfitLoss: MonthlyProfitLoss[] = profitLossRows
+      ? parseMonthlyProfitLoss(profitLossRows)
+      : [];
+
+    console.log('[Parsed] 월별 손익 데이터 수:', monthlyProfitLoss.length);
+    console.log('[Parsed] 월별 손익 데이터:', JSON.stringify(monthlyProfitLoss));
+
     return {
       totalAsset: Math.round(totalAsset),
       totalYield: Number.parseFloat(totalYield.toFixed(2)),
@@ -267,6 +287,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       portfolio,
       performanceComparison,
       accountTrend,
+      monthlyProfitLoss,
       lastSyncAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -304,6 +325,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       portfolio: [],
       performanceComparison: [],
       accountTrend: [],
+      monthlyProfitLoss: [],
       lastSyncAt: null,
     };
   }

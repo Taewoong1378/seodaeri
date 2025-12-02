@@ -235,6 +235,89 @@ export function parseAccountSummary(rows: any[]): AccountSummary {
 }
 
 /**
+ * 월별 손익 데이터 타입
+ */
+export interface MonthlyProfitLoss {
+  month: string; // "1월", "2월", ...
+  profit: number; // 수익 (양수일 때)
+  loss: number; // 손실 (음수일 때의 절대값)
+}
+
+/**
+ * '2. 계좌현황(올해)' 시트의 월별 손익 데이터 파싱
+ * 범위: B48:M50
+ * - B48:M48 = 연도 (2025)
+ * - B49:M49 = 월 라벨 (1월~12월)
+ * - B50:M50 = 순손익 값 (양수=수익, 음수=손실)
+ */
+export function parseMonthlyProfitLoss(rows: any[]): MonthlyProfitLoss[] {
+  console.log('[parseMonthlyProfitLoss] Input rows:', JSON.stringify(rows));
+
+  if (!rows || rows.length === 0) return [];
+
+  const parseNumber = (val: any): number => {
+    if (!val || val === '-') return 0;
+    const str = String(val);
+
+    // 음수 표현 감지: ▼, 괄호(), 또는 - 기호
+    let isNegative = false;
+    if (str.includes('▼') || str.includes('▽') || /^\(.*\)$/.test(str.trim())) {
+      isNegative = true;
+    }
+
+    // 숫자만 추출 (쉼표, 통화기호, 특수문자 제거)
+    const cleaned = str.replace(/[₩$,%\s▼▽()]/g, '').replace(/,/g, '');
+    let num = Number.parseFloat(cleaned) || 0;
+
+    // 음수 처리 (원래 음수 부호가 있거나 특수 표현이 있는 경우)
+    if (isNegative && num > 0) {
+      num = -num;
+    }
+
+    console.log(`[parseNumber] Input: "${val}" -> Output: ${num}`);
+    return num;
+  };
+
+  const results: MonthlyProfitLoss[] = [];
+
+  // 3행 구조: rows[0]=연도, rows[1]=월라벨, rows[2]=손익데이터
+  // 2행 구조: rows[0]=월라벨, rows[1]=손익데이터
+  let labelRow: any[];
+  let dataRow: any[];
+
+  if (rows.length >= 3) {
+    // 3행 구조 (연도, 월라벨, 데이터)
+    labelRow = rows[1] || [];
+    dataRow = rows[2] || [];
+  } else if (rows.length === 2) {
+    // 2행 구조 (월라벨, 데이터)
+    labelRow = rows[0] || [];
+    dataRow = rows[1] || [];
+  } else {
+    // 1행만 있는 경우
+    labelRow = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+    dataRow = rows[0] || [];
+  }
+
+  console.log('[parseMonthlyProfitLoss] Label row:', JSON.stringify(labelRow));
+  console.log('[parseMonthlyProfitLoss] Data row:', JSON.stringify(dataRow));
+
+  for (let i = 0; i < 12; i++) {
+    const netValue = parseNumber(dataRow[i]);
+    const month = String(labelRow[i] || `${i + 1}월`);
+
+    results.push({
+      month,
+      profit: netValue > 0 ? netValue : 0,
+      loss: netValue < 0 ? Math.abs(netValue) : 0,
+    });
+  }
+
+  console.log('[parseMonthlyProfitLoss] Parsed results:', JSON.stringify(results));
+  return results;
+}
+
+/**
  * '7. 배당내역' 탭에서 배당금 데이터 파싱
  * 시트 구조가 다를 수 있으므로 유연하게 처리
  */
