@@ -1,6 +1,12 @@
 'use client';
 
 import { Card, CardContent } from '@repo/design-system/components/card';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@repo/design-system/components/tooltip';
 import { cn } from '@repo/design-system/lib/utils';
 import { ArrowDownLeft, ArrowUpRight, Banknote, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import { useState } from 'react';
@@ -64,6 +70,7 @@ export function TransactionsClient({ transactions }: TransactionsClientProps) {
     .reduce((sum, tx) => sum + tx.total_amount, 0);
 
   return (
+    <TooltipProvider>
     <div className="space-y-4">
       {/* Tabs */}
       <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/5">
@@ -193,10 +200,17 @@ export function TransactionsClient({ transactions }: TransactionsClientProps) {
                           <TrendingUp className="w-6 h-6" />
                         )}
                       </div>
-                      <div className="flex flex-col gap-1.5 flex-1 min-w-0 mr-4">
-                        <span className="text-base font-bold text-white leading-none truncate">
-                          {tx.name || (tx.type === 'DEPOSIT' ? '현금 입금' : tx.type === 'WITHDRAW' ? '현금 출금' : tx.ticker)}
-                        </span>
+                      <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-base font-bold text-white leading-none truncate cursor-pointer max-w-[180px]">
+                              {tx.name || (tx.type === 'DEPOSIT' ? '현금 입금' : tx.type === 'WITHDRAW' ? '현금 출금' : tx.ticker)}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="bg-slate-800 text-white border-slate-700 max-w-[280px]">
+                            <p className="text-sm">{tx.name || (tx.type === 'DEPOSIT' ? '현금 입금' : tx.type === 'WITHDRAW' ? '현금 출금' : tx.ticker)}</p>
+                          </TooltipContent>
+                        </Tooltip>
                         <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
                           {tx.ticker && (
                             <>
@@ -249,5 +263,6 @@ export function TransactionsClient({ transactions }: TransactionsClientProps) {
       </div>
 
     </div>
+    </TooltipProvider>
   );
 }
