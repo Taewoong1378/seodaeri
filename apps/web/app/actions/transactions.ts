@@ -22,6 +22,7 @@ export interface Transaction {
   sheet_synced: boolean;
   created_at: string;
   source: 'app' | 'sheet';
+  account?: string; // 계좌(증권사) 정보 (입출금 전용)
 }
 
 export interface TransactionsResult {
@@ -132,6 +133,7 @@ export async function getTransactions(): Promise<TransactionsResult> {
               sheet_synced: true,
               created_at: d.date,
               source: 'sheet' as const,
+              account: d.account, // 계좌(증권사) 정보
             })
           );
           sheetTransactions.push(...depositTransactions);

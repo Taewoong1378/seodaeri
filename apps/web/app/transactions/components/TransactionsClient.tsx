@@ -21,7 +21,7 @@ function ClickableTooltip({ text }: { text: string }) {
     <Tooltip open={open} onOpenChange={setOpen}>
       <TooltipTrigger asChild>
         <span
-          className="text-base font-bold text-white leading-none truncate cursor-pointer block max-w-[180px]"
+          className="text-base font-bold text-white leading-none truncate cursor-pointer block max-w-[160px]"
           onClick={() => setOpen(!open)}
           onTouchStart={() => setOpen(true)}
         >
@@ -51,6 +51,7 @@ interface Transaction {
   sheet_synced: boolean;
   created_at: string;
   source: 'app' | 'sheet';
+  account?: string; // 계좌(증권사) 정보
 }
 
 interface TransactionsClientProps {
@@ -263,7 +264,7 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
                 className="bg-white/5 border-white/5 shadow-none rounded-2xl overflow-hidden"
               >
                 <CardContent className="p-5">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
                       <div
                         className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 mt-0.5 ${
@@ -309,7 +310,7 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
                         </div>
                       </div>
                     </div>
-                    <div className="text-right flex flex-col items-end gap-1">
+                    <div className="text-right flex flex-col items-end gap-1 whitespace-nowrap">
                       <div
                         className={`text-lg font-bold tracking-tight ${
                           tx.type === 'BUY'

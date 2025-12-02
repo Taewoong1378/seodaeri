@@ -503,6 +503,7 @@ export interface DepositRecord {
   type: 'DEPOSIT' | 'WITHDRAW';
   amount: number;
   memo: string;
+  account: string; // 계좌(증권사) 정보
 }
 
 /**
@@ -597,6 +598,7 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
   // 헤더 행 분석
   const headerRow = rows[0] || [];
   let dateCol = -1;
+  let accountCol = -1; // 계좌(증권사) 컬럼
   let typeCol = -1; // 구분 컬럼 (입금/출금)
   let amountCol = -1;
   let memoCol = -1;
@@ -605,6 +607,8 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
     const header = String(headerRow[i] || '').toLowerCase();
     if (header.includes('날짜') || header.includes('일자') || header.includes('date')) {
       dateCol = i;
+    } else if (header.includes('계좌') || header.includes('증권사') || header.includes('account')) {
+      accountCol = i;
     } else if (header.includes('구분') || header.includes('type')) {
       typeCol = i;
     } else if (header.includes('금액') || header.includes('입금') || header.includes('amount')) {
@@ -616,6 +620,7 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
 
   // 헤더를 찾지 못한 경우 기본값 (일자=0, 계좌=4, 구분=5, 금액=6, 비고=7)
   if (dateCol === -1) dateCol = 0;
+  if (accountCol === -1) accountCol = 4; // E열이 계좌(증권사)
   if (typeCol === -1) typeCol = 5; // F열이 구분 (입금/출금)
   if (amountCol === -1) amountCol = 6;
   if (memoCol === -1) memoCol = 7;
@@ -698,11 +703,15 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
 
     const type: 'DEPOSIT' | 'WITHDRAW' = isWithdraw ? 'WITHDRAW' : 'DEPOSIT';
 
-    const record = {
+    // 계좌 정보 추출
+    const accountValue = String(row[accountCol] || '').trim();
+
+    const record: DepositRecord = {
       date,
       type,
       amount: Math.abs(amount),
       memo: memoValue,
+      account: accountValue,
     };
 
     // 처음 5개 결과 디버깅
