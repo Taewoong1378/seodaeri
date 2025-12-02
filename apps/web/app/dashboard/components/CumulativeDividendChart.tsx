@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { type ReactElement, useRef } from 'react';
 import {
   Bar,
   BarChart,
@@ -31,7 +31,7 @@ function formatCurrencyShort(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(amount);
 }
 
-export function CumulativeDividendChart({ data }: CumulativeDividendChartProps) {
+export function CumulativeDividendChart({ data }: CumulativeDividendChartProps): ReactElement {
   const chartRef = useRef<HTMLDivElement>(null);
 
   // Y축 최대값 계산
