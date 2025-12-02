@@ -65,74 +65,78 @@ export function YieldComparisonDollarChart({ data }: YieldComparisonDollarChartP
   return (
     <div ref={chartRef} className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-white">수익률 비교 (달러환율 적용)</h4>
-        <div className="flex items-center gap-2">
-          {/* Legend */}
-          <div className="flex items-center gap-3 mr-1">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
-              <span className="text-[11px] text-slate-400">올해 수익률</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.annualized }} />
-              <span className="text-[11px] text-slate-400">연평균 수익률</span>
-            </div>
+      {/* Header */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-semibold text-white">수익률 비교 (달러환율 적용)</h4>
+          <div className="flex items-center gap-2">
+            <ShareChartButton chartRef={chartRef} title="수익률 비교 (달러환율 적용)" />
+            <LandscapeChartModal title="수익률 비교 (달러환율 적용)">
+              <div className="w-full h-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={chartData}
+                    margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#94a3b8', fontSize: 14 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748b', fontSize: 12 }}
+                      tickFormatter={(value) => `${value}%`}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                      contentStyle={{
+                        backgroundColor: '#1e293b',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                        padding: '12px',
+                      }}
+                      labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                      formatter={(value: number, name: string) => {
+                        const label = name === 'thisYear' ? '올해 수익률' : '연평균 수익률';
+                        return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
+                      }}
+                    />
+                    <Legend
+                      formatter={(value) => (value === 'thisYear' ? '올해 수익률' : '연평균 수익률')}
+                      wrapperStyle={{ paddingTop: 20 }}
+                    />
+                    <Bar dataKey="thisYear" fill={COLORS.thisYear} radius={[4, 4, 0, 0]}>
+                      {chartData.map((entry) => (
+                        <Cell key={`thisYear-${entry.name}`} fill={getBarColor(entry.thisYear, COLORS.thisYear)} />
+                      ))}
+                    </Bar>
+                    <Bar dataKey="annualized" fill={COLORS.annualized} radius={[4, 4, 0, 0]}>
+                      {chartData.map((entry) => (
+                        <Cell key={`annualized-${entry.name}`} fill={getBarColor(entry.annualized, COLORS.annualized)} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </LandscapeChartModal>
           </div>
-          <ShareChartButton chartRef={chartRef} title="수익률 비교 (달러환율 적용)" />
-          <LandscapeChartModal title="수익률 비교 (달러환율 적용)">
-            <div className="w-full h-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={chartData}
-                  margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#94a3b8', fontSize: 14 }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#64748b', fontSize: 12 }}
-                    tickFormatter={(value) => `${value}%`}
-                  />
-                  <Tooltip
-                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                    contentStyle={{
-                      backgroundColor: '#1e293b',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '12px',
-                      boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
-                      padding: '12px',
-                    }}
-                    labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
-                    formatter={(value: number, name: string) => {
-                      const label = name === 'thisYear' ? '올해 수익률' : '연평균 수익률';
-                      return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
-                    }}
-                  />
-                  <Legend
-                    formatter={(value) => (value === 'thisYear' ? '올해 수익률' : '연평균 수익률')}
-                    wrapperStyle={{ paddingTop: 20 }}
-                  />
-                  <Bar dataKey="thisYear" fill={COLORS.thisYear} radius={[4, 4, 0, 0]}>
-                    {chartData.map((entry) => (
-                      <Cell key={`thisYear-${entry.name}`} fill={getBarColor(entry.thisYear, COLORS.thisYear)} />
-                    ))}
-                  </Bar>
-                  <Bar dataKey="annualized" fill={COLORS.annualized} radius={[4, 4, 0, 0]}>
-                    {chartData.map((entry) => (
-                      <Cell key={`annualized-${entry.name}`} fill={getBarColor(entry.annualized, COLORS.annualized)} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </LandscapeChartModal>
+        </div>
+
+        {/* Legend - Moved below title */}
+        <div className="flex items-center justify-end gap-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
+            <span className="text-[11px] text-slate-400">올해 수익률</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.annualized }} />
+            <span className="text-[11px] text-slate-400">연평균 수익률</span>
+          </div>
         </div>
       </div>
 
@@ -155,7 +159,7 @@ export function YieldComparisonDollarChart({ data }: YieldComparisonDollarChartP
               tickLine={false}
               tick={{ fill: '#64748b', fontSize: 10 }}
               tickFormatter={(value) => `${value}%`}
-              width={40}
+              width={45}
             />
             <Tooltip
               cursor={{ fill: 'rgba(255,255,255,0.05)' }}
