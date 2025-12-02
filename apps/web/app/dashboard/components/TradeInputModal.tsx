@@ -13,7 +13,8 @@ import { Input } from '@repo/design-system/components/input';
 import { Label } from '@repo/design-system/components/label';
 import { Camera, Check, Loader2, Pen, Trash2, X, TrendingUp, TrendingDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { analyzeTradeImages, saveTradeTransactions, type TradeOCRItem } from '../../actions/trade';
+import { useSaveTradeTransactions } from '../../../hooks';
+import { analyzeTradeImages } from '../../actions/trade';
 
 type InputMode = 'select' | 'manual' | 'photo-preview' | 'photo-verify';
 type TradeType = 'BUY' | 'SELL';
@@ -32,9 +33,11 @@ export function TradeInputModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<InputMode>('select');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // TanStack Query mutation
+  const { mutate: saveTradeTransactions, isPending: isSaving } = useSaveTradeTransactions();
 
   useEffect(() => {
     setMounted(true);
@@ -134,7 +137,7 @@ export function TradeInputModal() {
     }
   };
 
-  const handleSaveSingle = async () => {
+  const handleSaveSingle = () => {
     if (!singleForm.ticker) {
       alert('종목코드를 입력해주세요.');
       return;
@@ -144,24 +147,23 @@ export function TradeInputModal() {
       return;
     }
 
-    setIsSaving(true);
-    try {
-      const result = await saveTradeTransactions([singleForm]);
-      if (result.success) {
-        alert('거래내역이 저장되었습니다.');
-        handleOpenChange(false);
-      } else {
-        alert(result.error || '저장에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('Save error:', error);
-      alert('저장 중 오류가 발생했습니다.');
-    } finally {
-      setIsSaving(false);
-    }
+    saveTradeTransactions([singleForm], {
+      onSuccess: (result) => {
+        if (result.success) {
+          alert('거래내역이 저장되었습니다.');
+          handleOpenChange(false);
+        } else {
+          alert(result.error || '저장에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('Save error:', error);
+        alert('저장 중 오류가 발생했습니다.');
+      },
+    });
   };
 
-  const handleSaveMultiple = async () => {
+  const handleSaveMultiple = () => {
     const itemsToSave = multipleItems.filter((_, idx) => selectedItems.has(idx));
 
     if (itemsToSave.length === 0) {
@@ -169,21 +171,20 @@ export function TradeInputModal() {
       return;
     }
 
-    setIsSaving(true);
-    try {
-      const result = await saveTradeTransactions(itemsToSave);
-      if (result.success) {
-        alert(`${itemsToSave.length}건의 거래내역이 저장되었습니다.`);
-        handleOpenChange(false);
-      } else {
-        alert(result.error || '저장에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('Save error:', error);
-      alert('저장 중 오류가 발생했습니다.');
-    } finally {
-      setIsSaving(false);
-    }
+    saveTradeTransactions(itemsToSave, {
+      onSuccess: (result) => {
+        if (result.success) {
+          alert(`${itemsToSave.length}건의 거래내역이 저장되었습니다.`);
+          handleOpenChange(false);
+        } else {
+          alert(result.error || '저장에 실패했습니다.');
+        }
+      },
+      onError: (error) => {
+        console.error('Save error:', error);
+        alert('저장 중 오류가 발생했습니다.');
+      },
+    });
   };
 
   const toggleItemSelection = (idx: number) => {
