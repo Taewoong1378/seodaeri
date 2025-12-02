@@ -568,8 +568,8 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
 
   const parseNumber = (val: any): number => {
     if (!val) return 0;
-    // - 기호도 제거하되, 음수인지 기록
-    const cleaned = String(val).replace(/[₩$,\s]/g, '');
+    // - 기호도 제거하고 절대값으로 반환
+    const cleaned = String(val).replace(/[₩$,\s-]/g, '');
     return Number.parseFloat(cleaned) || 0;
   };
 
@@ -614,9 +614,9 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
     }
   }
 
-  // 헤더를 찾지 못한 경우 기본값 (일자=0, 구분=4, 금액=6, 비고=7)
+  // 헤더를 찾지 못한 경우 기본값 (일자=0, 계좌=4, 구분=5, 금액=6, 비고=7)
   if (dateCol === -1) dateCol = 0;
-  if (typeCol === -1) typeCol = 4; // E열이 보통 구분
+  if (typeCol === -1) typeCol = 5; // F열이 구분 (입금/출금)
   if (amountCol === -1) amountCol = 6;
   if (memoCol === -1) memoCol = 7;
 

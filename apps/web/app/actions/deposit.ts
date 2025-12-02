@@ -66,14 +66,14 @@ export async function saveDeposit(input: DepositInput): Promise<SaveDepositResul
     const day = dateParts[2] || '';
 
     // 시트에 추가할 데이터
-    // 구조: 일자 | 연도 | 월 | 일 | 구분 | 계좌 | 금액 | 비고
+    // 구조: 일자 | 연도 | 월 | 일 | 계좌(증권사) | 구분 | 금액 | 비고
     const rowData = [
       input.date, // A: 일자
       year, // B: 연도
       `${month}월`, // C: 월
       `${day}일`, // D: 일
-      input.type === 'DEPOSIT' ? '입금' : '출금', // E: 구분
-      input.account || '일반계좌1', // F: 계좌
+      input.account || '일반계좌1', // E: 계좌(증권사)
+      input.type === 'DEPOSIT' ? '입금' : '출금', // F: 구분
       input.type === 'DEPOSIT' ? `₩${input.amount.toLocaleString()}` : `-₩${input.amount.toLocaleString()}`, // G: 금액
       input.memo || '', // H: 비고
     ];
