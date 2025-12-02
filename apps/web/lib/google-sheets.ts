@@ -1034,6 +1034,29 @@ export interface YieldComparisonDollarData {
 }
 
 /**
+ * 월별 수익률 비교 데이터 타입 (12월 수익률 + 올해 수익률)
+ */
+export interface MonthlyYieldComparisonData {
+  currentMonthYield: {
+    // 이번 달(12월) 수익률
+    account: number;
+    kospi: number;
+    sp500: number;
+    nasdaq: number;
+    dollar: number;
+  };
+  thisYearYield: {
+    // 올해 수익률
+    account: number;
+    kospi: number;
+    sp500: number;
+    nasdaq: number;
+    dollar: number;
+  };
+  currentMonth: string; // "8월" 형식
+}
+
+/**
  * "5. 계좌내역(누적)" 시트에서 수익률 비교 데이터 파싱
  * 현재 연월의 데이터에서 올해 수익률과 연평균 수익률 계산
  */
@@ -1378,6 +1401,350 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
   };
 
   console.log('[parseYieldComparisonDollarData] Result:', JSON.stringify(result));
+
+  return result;
+}
+
+/**
+ * "5. 계좌내역(누적)" 시트에서 월별 수익률 비교 데이터 파싱
+ * 이번 달 수익률 + 올해 수익률
+ *
+ * 범위: E17:AD (또는 G17:AQ78과 같은 범위)
+ * - E열(0) = 연도, F열(1) = 월, G열(2) = 날짜(YY.MM)
+ * - K열(6) = 월수익률
+ * - O열(10) = 계좌종합 지수, P열(11) = 코스피, Q열(12) = S&P500, R열(13) = 나스닥
+ */
+export function parseMonthlyYieldComparisonData(rows: any[]): MonthlyYieldComparisonData | null {
+  if (!rows || rows.length === 0) return null;
+
+  const parsePercent = (val: any): number => {
+    if (!val || val === '#NUM!' || val === '#VALUE!' || val === '#DIV/0!' || val === '#REF!') return 0;
+    const str = String(val);
+
+    // 음수 표현 감지: ▼
+    const isNegative = str.includes('▼') || str.includes('▽');
+
+    const cleaned = str.replace(/[%,\s▼▽]/g, '');
+    let num = Number.parseFloat(cleaned);
+    if (Number.isNaN(num)) return 0;
+
+    if (isNegative && num > 0) num = -num;
+
+    return num;
+  };
+
+  const parseNumber = (val: any): number => {
+    if (!val || val === '#NUM!' || val === '#VALUE!') return 0;
+    const str = String(val).replace(/[₩$,\s]/g, '');
+    const num = Number.parseFloat(str);
+    return Number.isNaN(num) ? 0 : num;
+  };
+
+  // 현재 연월 계산
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  // 컬럼 인덱스 (E열 시작 기준)
+  const COL_YEAR = 0; // E열 - 연도
+  const COL_MONTH = 1; // F열 - 월
+  const COL_MONTHLY_YIELD = 6; // K열 - 월수익률
+  const COL_ACCOUNT_IDX = 10; // O열 - 계좌종합 지수
+  const COL_KOSPI_IDX = 11; // P열 - 코스피 지수
+  const COL_SP500_IDX = 12; // Q열 - S&P500 지수
+  const COL_NASDAQ_IDX = 13; // R열 - 나스닥 지수
+
+  // 데이터 행 찾기
+  let currentRow: any[] | null = null;
+  let prevMonthRow: any[] | null = null;
+  let prevYearDecRow: any[] | null = null; // 작년 12월
+
+  // 전월 계산
+  const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+  const prevMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+
+  for (const row of rows) {
+    if (!row || !Array.isArray(row) || row.length < 14) continue;
+
+    const yearVal = String(row[COL_YEAR] || '').trim();
+    const monthVal = String(row[COL_MONTH] || '').trim();
+
+    const year = Number.parseInt(yearVal.replace(/[^0-9]/g, ''), 10);
+    const monthMatch = monthVal.match(/(\d+)/);
+    if (!monthMatch) continue;
+    const month = Number.parseInt(monthMatch[1] || '', 10);
+
+    // 현재 월 데이터
+    if (year === currentYear && month === currentMonth) {
+      currentRow = row;
+    }
+    // 전월 데이터
+    if (year === prevMonthYear && month === prevMonth) {
+      prevMonthRow = row;
+    }
+    // 작년 12월 데이터
+    if (year === currentYear - 1 && month === 12) {
+      prevYearDecRow = row;
+    }
+  }
+
+  // 현재 월 데이터가 없으면 가장 최근 데이터 사용
+  if (!currentRow) {
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const row = rows[i];
+      if (!row || !Array.isArray(row) || row.length < 14) continue;
+      const yearVal = String(row[COL_YEAR] || '').trim();
+      if (/^\d{4}$/.test(yearVal)) {
+        currentRow = row;
+        // 전월도 찾기
+        const monthVal = String(row[COL_MONTH] || '').trim();
+        const monthMatch = monthVal.match(/(\d+)/);
+        if (monthMatch) {
+          const foundMonth = Number.parseInt(monthMatch[1] || '', 10);
+          const foundYear = Number.parseInt(yearVal, 10);
+          // 전월 찾기
+          const targetPrevMonth = foundMonth === 1 ? 12 : foundMonth - 1;
+          const targetPrevYear = foundMonth === 1 ? foundYear - 1 : foundYear;
+          for (let j = i - 1; j >= 0; j--) {
+            const prevRow = rows[j];
+            if (!prevRow || !Array.isArray(prevRow)) continue;
+            const pYear = Number.parseInt(String(prevRow[COL_YEAR] || '').replace(/[^0-9]/g, ''), 10);
+            const pMonthMatch = String(prevRow[COL_MONTH] || '').match(/(\d+)/);
+            if (pMonthMatch) {
+              const pMonth = Number.parseInt(pMonthMatch[1] || '', 10);
+              if (pYear === targetPrevYear && pMonth === targetPrevMonth) {
+                prevMonthRow = prevRow;
+                break;
+              }
+            }
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  if (!currentRow) return null;
+
+  // 현재 데이터
+  const accountMonthlyYield = parsePercent(currentRow[COL_MONTHLY_YIELD]);
+  const accountIdx = parseNumber(currentRow[COL_ACCOUNT_IDX]);
+  const kospiIdx = parseNumber(currentRow[COL_KOSPI_IDX]);
+  const sp500Idx = parseNumber(currentRow[COL_SP500_IDX]);
+  const nasdaqIdx = parseNumber(currentRow[COL_NASDAQ_IDX]);
+
+  // 전월 데이터
+  const prevKospiIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_KOSPI_IDX]) : kospiIdx;
+  const prevSp500Idx = prevMonthRow ? parseNumber(prevMonthRow[COL_SP500_IDX]) : sp500Idx;
+  const prevNasdaqIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_NASDAQ_IDX]) : nasdaqIdx;
+
+  // 작년 12월 데이터
+  const prevYearAccountIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_ACCOUNT_IDX]) : 100;
+  const prevYearKospiIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_KOSPI_IDX]) : 100;
+  const prevYearSp500Idx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_SP500_IDX]) : 100;
+  const prevYearNasdaqIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_NASDAQ_IDX]) : 100;
+
+  // 이번 달 수익률 계산
+  const currentMonthYield = {
+    account: accountMonthlyYield,
+    kospi: prevKospiIdx > 0 ? ((kospiIdx / prevKospiIdx) - 1) * 100 : 0,
+    sp500: prevSp500Idx > 0 ? ((sp500Idx / prevSp500Idx) - 1) * 100 : 0,
+    nasdaq: prevNasdaqIdx > 0 ? ((nasdaqIdx / prevNasdaqIdx) - 1) * 100 : 0,
+    dollar: 0, // 별도 계산 필요
+  };
+
+  // 올해 수익률 계산 (작년 12월 대비)
+  const thisYearYield = {
+    account: prevYearAccountIdx > 0 ? ((accountIdx / prevYearAccountIdx) - 1) * 100 : 0,
+    kospi: prevYearKospiIdx > 0 ? ((kospiIdx / prevYearKospiIdx) - 1) * 100 : 0,
+    sp500: prevYearSp500Idx > 0 ? ((sp500Idx / prevYearSp500Idx) - 1) * 100 : 0,
+    nasdaq: prevYearNasdaqIdx > 0 ? ((nasdaqIdx / prevYearNasdaqIdx) - 1) * 100 : 0,
+    dollar: 0, // 별도 계산 필요
+  };
+
+  // 현재 월 추출
+  const currentMonthVal = String(currentRow[COL_MONTH] || '').trim();
+  const monthMatch = currentMonthVal.match(/(\d+)/);
+  const displayMonth = monthMatch ? `${monthMatch[1]}월` : `${currentMonth}월`;
+
+  const round = (n: number) => Math.round(n * 10) / 10;
+
+  const result: MonthlyYieldComparisonData = {
+    currentMonthYield: {
+      account: round(currentMonthYield.account),
+      kospi: round(currentMonthYield.kospi),
+      sp500: round(currentMonthYield.sp500),
+      nasdaq: round(currentMonthYield.nasdaq),
+      dollar: round(currentMonthYield.dollar),
+    },
+    thisYearYield: {
+      account: round(thisYearYield.account),
+      kospi: round(thisYearYield.kospi),
+      sp500: round(thisYearYield.sp500),
+      nasdaq: round(thisYearYield.nasdaq),
+      dollar: round(thisYearYield.dollar),
+    },
+    currentMonth: displayMonth,
+  };
+
+  console.log('[parseMonthlyYieldComparisonData] Result:', JSON.stringify(result));
+
+  return result;
+}
+
+/**
+ * "5. 계좌내역(누적)" 시트에서 월별 수익률 비교 데이터 파싱 (DOLLAR 포함)
+ * G17:AQ78 범위 사용 (기존 dollarYieldRows)
+ */
+export function parseMonthlyYieldComparisonWithDollar(rows: any[]): MonthlyYieldComparisonData | null {
+  if (!rows || rows.length === 0) return null;
+
+  const parsePercent = (val: any): number => {
+    if (!val || val === '#NUM!' || val === '#VALUE!' || val === '#DIV/0!' || val === '#REF!') return 0;
+    const str = String(val);
+    const isNegative = str.includes('▼') || str.includes('▽');
+    const cleaned = str.replace(/[%,\s▼▽]/g, '');
+    let num = Number.parseFloat(cleaned);
+    if (Number.isNaN(num)) return 0;
+    if (isNegative && num > 0) num = -num;
+    return num;
+  };
+
+  const parseNumber = (val: any): number => {
+    if (!val || val === '#NUM!' || val === '#VALUE!') return 0;
+    const str = String(val).replace(/[₩$,\s]/g, '');
+    const num = Number.parseFloat(str);
+    return Number.isNaN(num) ? 0 : num;
+  };
+
+  const now = new Date();
+  const currentYY = String(now.getFullYear()).slice(2);
+  const currentMM = String(now.getMonth() + 1).padStart(2, '0');
+  const currentDateStr = `${currentYY}.${currentMM}`;
+
+  // 전월 계산
+  const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
+  const prevMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  const prevMonthDateStr = `${String(prevMonthYear).slice(2)}.${String(prevMonth).padStart(2, '0')}`;
+
+  // 작년 12월
+  const prevYearDateStr = `${String(now.getFullYear() - 1).slice(2)}.12`;
+
+  // G17:AQ78 범위 기준 컬럼 인덱스 (G=0)
+  const COL_DATE = 0; // G열 - 날짜
+  const COL_MONTHLY_YIELD = 4; // K열 - 월수익률
+  const COL_ACCOUNT_IDX = 8; // O열 - 계좌종합 지수
+  const COL_KOSPI_IDX = 9; // P열 - 코스피 지수
+  const COL_SP500_IDX = 10; // Q열 - S&P500 지수
+  const COL_NASDAQ_IDX = 11; // R열 - 나스닥 지수
+  const COL_DOLLAR = 23; // AD열 - 달러 환율값
+
+  let currentRow: any[] | null = null;
+  let prevMonthRow: any[] | null = null;
+  let prevYearDecRow: any[] | null = null;
+
+  for (const row of rows) {
+    if (!row || !Array.isArray(row) || row.length === 0) continue;
+    const dateCell = String(row[COL_DATE] || '').trim();
+
+    if (dateCell === currentDateStr) currentRow = row;
+    if (dateCell === prevMonthDateStr) prevMonthRow = row;
+    if (dateCell === prevYearDateStr) prevYearDecRow = row;
+  }
+
+  // 현재 월 데이터가 없으면 가장 최근 데이터 사용
+  if (!currentRow) {
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const row = rows[i];
+      if (!row || !Array.isArray(row) || row.length === 0) continue;
+      const dateCell = String(row[COL_DATE] || '').trim();
+      if (/^\d{2}\.\d{2}$/.test(dateCell)) {
+        currentRow = row;
+        // 전월도 찾기
+        const [yy, mm] = dateCell.split('.').map(Number);
+        const targetPrevMM = mm === 1 ? 12 : (mm ?? 0) - 1;
+        const targetPrevYY = mm === 1 ? (yy ?? 0) - 1 : yy;
+        const targetPrevDateStr = `${String(targetPrevYY).padStart(2, '0')}.${String(targetPrevMM).padStart(2, '0')}`;
+        for (let j = i - 1; j >= 0; j--) {
+          const prevRow = rows[j];
+          if (!prevRow) continue;
+          if (String(prevRow[COL_DATE] || '').trim() === targetPrevDateStr) {
+            prevMonthRow = prevRow;
+            break;
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  if (!currentRow) return null;
+
+  // 현재 데이터
+  const accountMonthlyYield = parsePercent(currentRow[COL_MONTHLY_YIELD]);
+  const accountIdx = parseNumber(currentRow[COL_ACCOUNT_IDX]);
+  const kospiIdx = parseNumber(currentRow[COL_KOSPI_IDX]);
+  const sp500Idx = parseNumber(currentRow[COL_SP500_IDX]);
+  const nasdaqIdx = parseNumber(currentRow[COL_NASDAQ_IDX]);
+  const dollarRate = parseNumber(currentRow[COL_DOLLAR]);
+
+  // 전월 데이터
+  const prevKospiIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_KOSPI_IDX]) : kospiIdx;
+  const prevSp500Idx = prevMonthRow ? parseNumber(prevMonthRow[COL_SP500_IDX]) : sp500Idx;
+  const prevNasdaqIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_NASDAQ_IDX]) : nasdaqIdx;
+  const prevDollarRate = prevMonthRow ? parseNumber(prevMonthRow[COL_DOLLAR]) : dollarRate;
+
+  // 작년 12월 데이터
+  const prevYearAccountIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_ACCOUNT_IDX]) : 100;
+  const prevYearKospiIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_KOSPI_IDX]) : 100;
+  const prevYearSp500Idx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_SP500_IDX]) : 100;
+  const prevYearNasdaqIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_NASDAQ_IDX]) : 100;
+  const prevYearDollarRate = prevYearDecRow ? parseNumber(prevYearDecRow[COL_DOLLAR]) : dollarRate;
+
+  // 이번 달 수익률
+  const currentMonthYield = {
+    account: accountMonthlyYield,
+    kospi: prevKospiIdx > 0 ? ((kospiIdx / prevKospiIdx) - 1) * 100 : 0,
+    sp500: prevSp500Idx > 0 ? ((sp500Idx / prevSp500Idx) - 1) * 100 : 0,
+    nasdaq: prevNasdaqIdx > 0 ? ((nasdaqIdx / prevNasdaqIdx) - 1) * 100 : 0,
+    dollar: prevDollarRate > 0 ? ((dollarRate / prevDollarRate) - 1) * 100 : 0,
+  };
+
+  // 올해 수익률
+  const thisYearYield = {
+    account: prevYearAccountIdx > 0 ? ((accountIdx / prevYearAccountIdx) - 1) * 100 : 0,
+    kospi: prevYearKospiIdx > 0 ? ((kospiIdx / prevYearKospiIdx) - 1) * 100 : 0,
+    sp500: prevYearSp500Idx > 0 ? ((sp500Idx / prevYearSp500Idx) - 1) * 100 : 0,
+    nasdaq: prevYearNasdaqIdx > 0 ? ((nasdaqIdx / prevYearNasdaqIdx) - 1) * 100 : 0,
+    dollar: prevYearDollarRate > 0 ? ((dollarRate / prevYearDollarRate) - 1) * 100 : 0,
+  };
+
+  // 현재 월 추출
+  const dateCell = String(currentRow[COL_DATE] || '').trim();
+  const monthMatch = dateCell.match(/\.(\d{2})$/);
+  const displayMonth = monthMatch ? `${Number.parseInt(monthMatch[1] || '0', 10)}월` : `${now.getMonth() + 1}월`;
+
+  const round = (n: number) => Math.round(n * 10) / 10;
+
+  const result: MonthlyYieldComparisonData = {
+    currentMonthYield: {
+      account: round(currentMonthYield.account),
+      kospi: round(currentMonthYield.kospi),
+      sp500: round(currentMonthYield.sp500),
+      nasdaq: round(currentMonthYield.nasdaq),
+      dollar: round(currentMonthYield.dollar),
+    },
+    thisYearYield: {
+      account: round(thisYearYield.account),
+      kospi: round(thisYearYield.kospi),
+      sp500: round(thisYearYield.sp500),
+      nasdaq: round(thisYearYield.nasdaq),
+      dollar: round(thisYearYield.dollar),
+    },
+    currentMonth: displayMonth,
+  };
+
+  console.log('[parseMonthlyYieldComparisonWithDollar] Result:', JSON.stringify(result));
 
   return result;
 }

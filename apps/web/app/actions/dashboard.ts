@@ -9,6 +9,7 @@ import {
   type DividendRecord,
   type MonthlyDividend,
   type MonthlyProfitLoss,
+  type MonthlyYieldComparisonData,
   type PerformanceComparisonData,
   type PortfolioItem,
   type YieldComparisonData,
@@ -19,6 +20,7 @@ import {
   parseAccountTrendData,
   parseDividendData,
   parseMonthlyProfitLoss,
+  parseMonthlyYieldComparisonWithDollar,
   parsePerformanceComparisonData,
   parsePortfolioData,
   parseYieldComparisonData,
@@ -80,6 +82,8 @@ export interface DashboardData {
   yieldComparison: YieldComparisonData | null;
   // 수익률 비교 달러환율 적용 (4. 수익률 비교(달러환율 적용) 탭에서)
   yieldComparisonDollar: YieldComparisonDollarData | null;
+  // 월별 수익률 비교 (이번 달 + 올해 수익률)
+  monthlyYieldComparison: MonthlyYieldComparisonData | null;
   // 마지막 동기화 시간
   lastSyncAt: string | null;
 }
@@ -130,6 +134,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       monthlyProfitLoss: [],
       yieldComparison: null,
       yieldComparisonDollar: null,
+      monthlyYieldComparison: null,
       lastSyncAt: null,
     };
   }
@@ -242,6 +247,11 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       ? parseYieldComparisonDollarData(dollarYieldRows)
       : null;
 
+    // 월별 수익률 비교 파싱 (이번 달 + 올해 수익률, DOLLAR 포함)
+    const monthlyYieldComparison: MonthlyYieldComparisonData | null = dollarYieldRows
+      ? parseMonthlyYieldComparisonWithDollar(dollarYieldRows)
+      : null;
+
     return {
       totalAsset: Math.round(totalAsset),
       totalYield: Number.parseFloat(totalYield.toFixed(2)),
@@ -256,6 +266,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       monthlyProfitLoss,
       yieldComparison,
       yieldComparisonDollar,
+      monthlyYieldComparison,
       lastSyncAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -296,6 +307,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       monthlyProfitLoss: [],
       yieldComparison: null,
       yieldComparisonDollar: null,
+      monthlyYieldComparison: null,
       lastSyncAt: null,
     };
   }
