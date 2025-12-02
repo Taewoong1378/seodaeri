@@ -135,9 +135,18 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-white">월별 계좌추세</h4>
-        <LandscapeChartModal title="월별 계좌추세">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm bg-blue-500/70" />
+            <span className="text-[11px] text-slate-400">누적입금액</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm bg-rose-400/70" />
+            <span className="text-[11px] text-slate-400">계좌총액</span>
+          </div>
+          <LandscapeChartModal title="월별 계좌추세">
           <div className="w-full h-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
@@ -204,18 +213,7 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </LandscapeChartModal>
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-6">
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-blue-500/70" />
-          <span className="text-[11px] text-slate-400">누적입금액</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-rose-400/70" />
-          <span className="text-[11px] text-slate-400">계좌총액</span>
+          </LandscapeChartModal>
         </div>
       </div>
 

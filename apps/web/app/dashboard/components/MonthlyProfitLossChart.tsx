@@ -1,6 +1,7 @@
 'use client';
 
 import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { LandscapeChartModal } from './LandscapeChartModal';
 
 interface MonthlyProfitLoss {
   month: string;
@@ -74,6 +75,82 @@ export function MonthlyProfitLossChart({ data }: MonthlyProfitLossChartProps) {
   const maxLoss = Math.max(...chartData.map(d => Math.abs(d.lossNegative)), 0);
   const yAxisMax = Math.ceil(Math.max(maxProfit, maxLoss) * 1.1);
 
+  // 차트 렌더링 함수 (재사용)
+  const renderChart = (height: string = "240px") => (
+    <div className={`relative w-full`} style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={chartData}
+          margin={{ top: 20, right: 10, left: -10, bottom: 0 }}
+          stackOffset="sign"
+        >
+          <defs>
+            <linearGradient id="profitGradientPL" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#f97316" stopOpacity={1} />
+              <stop offset="100%" stopColor="#ea580c" stopOpacity={0.8} />
+            </linearGradient>
+            <linearGradient id="lossGradientPL" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%" stopColor="#475569" stopOpacity={1} />
+              <stop offset="100%" stopColor="#334155" stopOpacity={0.8} />
+            </linearGradient>
+          </defs>
+          <XAxis
+            dataKey="month"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: '#64748b', fontSize: 10, fontWeight: 500 }}
+            dy={8}
+            tickFormatter={(value) => value.replace('월', '')}
+          />
+          <YAxis
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: '#64748b', fontSize: 9 }}
+            tickFormatter={formatYAxisValue}
+            domain={[-yAxisMax, yAxisMax]}
+          />
+          <ReferenceLine y={0} stroke="rgba(255,255,255,0.1)" />
+          <Tooltip
+            content={<CustomTooltip />}
+            cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }}
+          />
+          {/* 수익 막대 (위로) */}
+          <Bar
+            dataKey="profit"
+            stackId="stack"
+            radius={[4, 4, 0, 0]}
+            maxBarSize={24}
+            animationDuration={1000}
+            animationEasing="ease-out"
+          >
+            {chartData.map((entry, index) => (
+              <Cell
+                key={`profit-${index}`}
+                fill={entry.profit > 0 ? 'url(#profitGradientPL)' : 'transparent'}
+              />
+            ))}
+          </Bar>
+          {/* 손실 막대 (아래로) */}
+          <Bar
+            dataKey="lossNegative"
+            stackId="stack"
+            radius={[0, 0, 4, 4]}
+            maxBarSize={24}
+            animationDuration={1000}
+            animationEasing="ease-out"
+          >
+            {chartData.map((entry, index) => (
+              <Cell
+                key={`loss-${index}`}
+                fill={entry.lossNegative < 0 ? 'url(#lossGradientPL)' : 'transparent'}
+              />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -88,102 +165,42 @@ export function MonthlyProfitLossChart({ data }: MonthlyProfitLossChartProps) {
             <div className="w-2 h-2 rounded-sm bg-slate-600" />
             <span className="text-[10px] text-slate-500">손실</span>
           </div>
+          <LandscapeChartModal title="월별 손익">
+            <div className="w-full h-full">
+              {renderChart("100%")}
+            </div>
+          </LandscapeChartModal>
         </div>
       </div>
 
-      {/* Summary */}
-      <div className="flex items-center justify-between bg-white/[0.02] rounded-xl p-3">
-        <div className="flex items-center gap-4">
+      {/* Summary - 2행 레이아웃 */}
+      <div className="bg-white/[0.02] rounded-xl p-4 space-y-3">
+        {/* 첫 번째 줄: 총 수익, 총 손실 */}
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <span className="text-[10px] text-slate-500 block">총 수익</span>
-            <span className="text-sm font-bold text-orange-400">+{totalProfit.toLocaleString()}원</span>
+            <span className="text-[10px] text-slate-500 block mb-1">총 수익</span>
+            <span className="text-sm font-bold text-orange-400">
+              +{totalProfit.toLocaleString()}원
+            </span>
           </div>
           <div>
-            <span className="text-[10px] text-slate-500 block">총 손실</span>
-            <span className="text-sm font-bold text-slate-400">-{totalLoss.toLocaleString()}원</span>
+            <span className="text-[10px] text-slate-500 block mb-1">총 손실</span>
+            <span className="text-sm font-bold text-slate-400">
+              -{totalLoss.toLocaleString()}원
+            </span>
           </div>
         </div>
-        <div className="text-right">
-          <span className="text-[10px] text-slate-500 block">순손익</span>
-          <span className={`text-base font-bold ${netTotal >= 0 ? 'text-orange-400' : 'text-red-400'}`}>
+        {/* 두 번째 줄: 순손익 (강조) */}
+        <div className="pt-3 border-t border-white/5">
+          <span className="text-[10px] text-slate-500 block mb-1">순손익</span>
+          <span className={`text-xl font-bold ${netTotal >= 0 ? 'text-orange-400' : 'text-red-400'}`}>
             {netTotal >= 0 ? '+' : ''}{netTotal.toLocaleString()}원
           </span>
         </div>
       </div>
 
       {/* Chart */}
-      <div className="relative w-full h-[240px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={chartData}
-            margin={{ top: 20, right: 10, left: -10, bottom: 0 }}
-            stackOffset="sign"
-          >
-            <defs>
-              <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#f97316" stopOpacity={1} />
-                <stop offset="100%" stopColor="#ea580c" stopOpacity={0.8} />
-              </linearGradient>
-              <linearGradient id="lossGradient" x1="0" y1="1" x2="0" y2="0">
-                <stop offset="0%" stopColor="#475569" stopOpacity={1} />
-                <stop offset="100%" stopColor="#334155" stopOpacity={0.8} />
-              </linearGradient>
-            </defs>
-            <XAxis
-              dataKey="month"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10, fontWeight: 500 }}
-              dy={8}
-              tickFormatter={(value) => value.replace('월', '')}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 9 }}
-              tickFormatter={formatYAxisValue}
-              domain={[-yAxisMax, yAxisMax]}
-            />
-            <ReferenceLine y={0} stroke="rgba(255,255,255,0.1)" />
-            <Tooltip
-              content={<CustomTooltip />}
-              cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }}
-            />
-            {/* 수익 막대 (위로) */}
-            <Bar
-              dataKey="profit"
-              stackId="stack"
-              radius={[4, 4, 0, 0]}
-              maxBarSize={24}
-              animationDuration={1000}
-              animationEasing="ease-out"
-            >
-              {chartData.map((entry, index) => (
-                <Cell
-                  key={`profit-${index}`}
-                  fill={entry.profit > 0 ? 'url(#profitGradient)' : 'transparent'}
-                />
-              ))}
-            </Bar>
-            {/* 손실 막대 (아래로) */}
-            <Bar
-              dataKey="lossNegative"
-              stackId="stack"
-              radius={[0, 0, 4, 4]}
-              maxBarSize={24}
-              animationDuration={1000}
-              animationEasing="ease-out"
-            >
-              {chartData.map((entry, index) => (
-                <Cell
-                  key={`loss-${index}`}
-                  fill={entry.lossNegative < 0 ? 'url(#lossGradient)' : 'transparent'}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {renderChart()}
     </div>
   );
 }

@@ -90,7 +90,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         {/* Legend */}
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {LINES.map((line) => (
             <div key={line.dataKey} className="flex items-center gap-1.5">
               <div
@@ -104,13 +104,8 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
             </div>
           ))}
         </div>
-        
 
-      </div>
-
-      <div className="relative">
-        <div className="absolute -top-5 -right-5 z-10">
-          <LandscapeChartModal title="수익률 비교">
+        <LandscapeChartModal title="수익률 비교">
             <div className="w-full h-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
@@ -172,7 +167,6 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
           </div>
         </LandscapeChartModal>
       </div>
-    </div>
 
       {/* Scrollable Chart Container */}
       <div
