@@ -58,5 +58,6 @@ export const defaultDashboardData: DashboardData = {
   monthlyProfitLoss: [],
   yieldComparison: null,
   yieldComparisonDollar: null,
+  monthlyYieldComparison: null,
   lastSyncAt: null,
 };

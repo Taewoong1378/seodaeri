@@ -1,0 +1,215 @@
+'use client';
+
+import { useRef } from 'react';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import type { MonthlyYieldComparisonData } from '../../../lib/google-sheets';
+import { LandscapeChartModal } from './LandscapeChartModal';
+import { ShareChartButton } from './ShareChartButton';
+
+interface MonthlyYieldComparisonChartProps {
+  data: MonthlyYieldComparisonData;
+}
+
+const COLORS = {
+  currentMonth: '#9ca3af', // gray
+  thisYear: '#f97316', // orange
+};
+
+export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChartProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  // 바 차트 데이터 변환
+  const chartData = [
+    {
+      name: '계좌',
+      currentMonth: data.currentMonthYield.account,
+      thisYear: data.thisYearYield.account,
+    },
+    {
+      name: 'KOSPI',
+      currentMonth: data.currentMonthYield.kospi,
+      thisYear: data.thisYearYield.kospi,
+    },
+    {
+      name: 'S&P500',
+      currentMonth: data.currentMonthYield.sp500,
+      thisYear: data.thisYearYield.sp500,
+    },
+    {
+      name: 'NASDAQ',
+      currentMonth: data.currentMonthYield.nasdaq,
+      thisYear: data.thisYearYield.nasdaq,
+    },
+    {
+      name: 'DOLLAR',
+      currentMonth: data.currentMonthYield.dollar,
+      thisYear: data.thisYearYield.dollar,
+    },
+  ];
+
+  const currentYear = new Date().getFullYear();
+
+  // 바 색상 결정 (양수: 해당 색상, 음수: 회색 계열)
+  const getBarColor = (value: number, baseColor: string) => {
+    return value >= 0 ? baseColor : '#64748b';
+  };
+
+  return (
+    <div ref={chartRef} className="space-y-4">
+      {/* Header */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-semibold text-white">{currentYear}년 월, 누적 수익률 현황</h4>
+          <div className="flex items-center gap-2">
+            <ShareChartButton chartRef={chartRef} title={`${currentYear}년 월, 누적 수익률 현황`} />
+            <LandscapeChartModal title={`${currentYear}년 월, 누적 수익률 현황`}>
+              <div className="w-full h-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={chartData}
+                    margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#94a3b8', fontSize: 14 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748b', fontSize: 12 }}
+                      tickFormatter={(value) => `${value}%`}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                      contentStyle={{
+                        backgroundColor: '#1e293b',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                        padding: '12px',
+                      }}
+                      labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                      formatter={(value: number, name: string) => {
+                        const label = name === 'currentMonth' ? `${data.currentMonth} 수익률` : '올해 수익률';
+                        return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
+                      }}
+                    />
+                    <Legend
+                      formatter={(value) => (value === 'currentMonth' ? `${data.currentMonth} 수익률` : '올해 수익률')}
+                      wrapperStyle={{ paddingTop: 20 }}
+                    />
+                    <Bar dataKey="currentMonth" fill={COLORS.currentMonth} radius={[4, 4, 0, 0]}>
+                      {chartData.map((entry) => (
+                        <Cell key={`currentMonth-${entry.name}`} fill={getBarColor(entry.currentMonth, COLORS.currentMonth)} />
+                      ))}
+                    </Bar>
+                    <Bar dataKey="thisYear" fill={COLORS.thisYear} radius={[4, 4, 0, 0]}>
+                      {chartData.map((entry) => (
+                        <Cell key={`thisYear-${entry.name}`} fill={getBarColor(entry.thisYear, COLORS.thisYear)} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </LandscapeChartModal>
+          </div>
+        </div>
+
+        {/* Legend - Moved below title */}
+        <div className="flex items-center justify-end gap-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.currentMonth }} />
+            <span className="text-[11px] text-slate-400">{data.currentMonth} 수익률</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
+            <span className="text-[11px] text-slate-400">올해 수익률</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div className="h-[250px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={chartData}
+            margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <XAxis
+              dataKey="name"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#94a3b8', fontSize: 10 }}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#64748b', fontSize: 10 }}
+              tickFormatter={(value) => `${value}%`}
+              width={45}
+            />
+            <Tooltip
+              cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+              contentStyle={{
+                backgroundColor: '#1e293b',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                padding: '12px',
+              }}
+              labelStyle={{ color: '#94a3b8', fontSize: 11, marginBottom: 8 }}
+              formatter={(value: number, name: string) => {
+                const label = name === 'currentMonth' ? `${data.currentMonth} 수익률` : '올해 수익률';
+                return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
+              }}
+            />
+            <Bar dataKey="currentMonth" fill={COLORS.currentMonth} radius={[4, 4, 0, 0]}>
+              {chartData.map((entry) => (
+                <Cell key={`currentMonth-${entry.name}`} fill={getBarColor(entry.currentMonth, COLORS.currentMonth)} />
+              ))}
+            </Bar>
+            <Bar dataKey="thisYear" fill={COLORS.thisYear} radius={[4, 4, 0, 0]}>
+              {chartData.map((entry) => (
+                <Cell key={`thisYear-${entry.name}`} fill={getBarColor(entry.thisYear, COLORS.thisYear)} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Summary Cards - 5 columns for DOLLAR */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+        {chartData.map((item) => (
+          <div
+            key={item.name}
+            className="flex-1 min-w-[56px] bg-white/[0.03] border border-white/5 rounded-lg px-1.5 py-2 text-center"
+          >
+            <span className="text-[8px] text-slate-500 block mb-0.5 truncate">{item.name}</span>
+            <div className="space-y-0">
+              <div className={`text-[10px] font-semibold leading-tight ${item.thisYear >= 0 ? 'text-orange-400' : 'text-slate-400'}`}>
+                {item.thisYear >= 0 ? '+' : ''}{item.thisYear.toFixed(1)}%
+              </div>
+              <div className={`text-[8px] leading-tight ${item.currentMonth >= 0 ? 'text-gray-400' : 'text-slate-500'}`}>
+                {data.currentMonth} {item.currentMonth >= 0 ? '+' : ''}{item.currentMonth.toFixed(1)}%
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

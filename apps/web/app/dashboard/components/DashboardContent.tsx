@@ -8,6 +8,7 @@ import { DashboardTabs } from './DashboardTabs';
 import { DividendChart } from './DividendChart';
 import { HeroCard } from './HeroCard';
 import { MonthlyProfitLossChart } from './MonthlyProfitLossChart';
+import { MonthlyYieldComparisonChart } from './MonthlyYieldComparisonChart';
 import { PerformanceComparisonChart } from './PerformanceComparisonChart';
 import { PortfolioDonutChart } from './PortfolioDonutChart';
 import { PortfolioHoldingsChart } from './PortfolioHoldingsChart';
@@ -154,6 +155,15 @@ export function DashboardContent() {
           /* 탭 2: 계좌현황(올해) */
           yearly: (
             <div className="space-y-6">
+              {/* Monthly Yield Comparison Chart (월, 누적 수익률 현황) */}
+              {displayData.monthlyYieldComparison && (
+                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                  <CardContent className="p-6">
+                    <MonthlyYieldComparisonChart data={displayData.monthlyYieldComparison} />
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Monthly Profit/Loss Chart (월별 손익) */}
               {displayData.monthlyProfitLoss.length > 0 ? (
                 <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
