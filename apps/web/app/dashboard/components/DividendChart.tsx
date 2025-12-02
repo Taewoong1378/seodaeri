@@ -135,6 +135,9 @@ export function DividendChart({ data }: DividendChartProps) {
             <div className="w-full h-full">
               {renderChart("100%", true)}
             </div>
+            <div className="flex items-center justify-center mt-4">
+              <p className="text-lg text-slate-400">총 <span className="text-white font-bold">{yearTotal.toLocaleString()}원</span></p>
+            </div>
           </LandscapeChartModal>
         </div>
       </div>

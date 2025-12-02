@@ -167,6 +167,20 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
               </LineChart>
             </ResponsiveContainer>
           </div>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-4">
+            {LINES.map((line) => (
+              <div key={line.dataKey} className="flex items-center gap-2">
+                <div
+                  className="w-6 h-0.5"
+                  style={{
+                    backgroundColor: line.color,
+                    backgroundImage: line.strokeDasharray ? 'none' : undefined,
+                  }}
+                />
+                <span className="text-sm text-slate-400">{line.name}</span>
+              </div>
+            ))}
+          </div>
           </LandscapeChartModal>
         </div>
       </div>

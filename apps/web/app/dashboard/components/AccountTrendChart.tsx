@@ -222,6 +222,16 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
               </AreaChart>
             </ResponsiveContainer>
           </div>
+          <div className="flex items-center justify-center gap-6 mt-4">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-sm bg-blue-500/70" />
+              <span className="text-sm text-slate-400">누적입금액</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-sm bg-rose-400/70" />
+              <span className="text-sm text-slate-400">계좌총액</span>
+            </div>
+          </div>
           </LandscapeChartModal>
         </div>
       </div>

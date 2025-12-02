@@ -18,9 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@repo/design-system/components/select';
-import { Check, Loader2, Pen, X, Calendar, RefreshCw, ArrowDownLeft, ArrowUpRight, ChevronDown } from 'lucide-react';
+import { Check, Loader2, Pen, X, Calendar, RefreshCw, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { saveDeposit, getAccountList, type DepositInput } from '../../actions/deposit';
+import { useSaveDeposit, useAccountList } from '../../../hooks';
+import type { DepositInput } from '../../actions/deposit';
 
 type InputMode = 'select' | 'single' | 'recurring';
 
@@ -40,35 +41,17 @@ export function DepositInputModal() {
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<InputMode>('select');
-  const [isSaving, setIsSaving] = useState(false);
   const [isWithdraw, setIsWithdraw] = useState(false);
-  const [accounts, setAccounts] = useState<string[]>(DEFAULT_ACCOUNTS);
-  const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
+
+  // TanStack Query hooks
+  const { mutate: saveDeposit, isPending: isSaving } = useSaveDeposit();
+  const { data: accountList, isLoading: isLoadingAccounts } = useAccountList();
+
+  const accounts = accountList && accountList.length > 0 ? accountList : DEFAULT_ACCOUNTS;
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  // 모달이 열릴 때 계좌 목록 로드
-  useEffect(() => {
-    if (isOpen && accounts.length === DEFAULT_ACCOUNTS.length) {
-      loadAccounts();
-    }
-  }, [isOpen]);
-
-  const loadAccounts = async () => {
-    setIsLoadingAccounts(true);
-    try {
-      const accountList = await getAccountList();
-      if (accountList.length > 0) {
-        setAccounts(accountList);
-      }
-    } catch (error) {
-      console.error('Failed to load accounts:', error);
-    } finally {
-      setIsLoadingAccounts(false);
-    }
-  };
 
   // 단일 입금 폼
   const [form, setForm] = useState<DepositInput>({
@@ -107,68 +90,71 @@ export function DepositInputModal() {
     });
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (form.amount <= 0) {
       alert('금액을 입력해주세요.');
       return;
     }
 
-    setIsSaving(true);
-    try {
-      const result = await saveDeposit({
+    saveDeposit(
+      {
         ...form,
         type: isWithdraw ? 'WITHDRAW' : 'DEPOSIT',
-      });
-      if (result.success) {
-        alert(isWithdraw ? '출금내역이 저장되었습니다.' : '입금내역이 저장되었습니다.');
-        handleOpenChange(false);
-      } else {
-        alert(result.error || '저장에 실패했습니다.');
+      },
+      {
+        onSuccess: (result) => {
+          if (result.success) {
+            alert(isWithdraw ? '출금내역이 저장되었습니다.' : '입금내역이 저장되었습니다.');
+            handleOpenChange(false);
+          } else {
+            alert(result.error || '저장에 실패했습니다.');
+          }
+        },
+        onError: (error) => {
+          console.error('Save error:', error);
+          alert('저장 중 오류가 발생했습니다.');
+        },
       }
-    } catch (error) {
-      console.error('Save error:', error);
-      alert('저장 중 오류가 발생했습니다.');
-    } finally {
-      setIsSaving(false);
-    }
+    );
   };
 
-  const handleSaveRecurring = async () => {
+  const handleSaveRecurring = () => {
     if (recurringForm.amount <= 0) {
       alert('금액을 입력해주세요.');
       return;
     }
 
-    setIsSaving(true);
-    try {
-      // 현재 날짜 기준으로 이번 달 입금 생성
-      const today = new Date();
-      const targetDate = new Date(today.getFullYear(), today.getMonth(), recurringForm.dayOfMonth);
+    // 현재 날짜 기준으로 이번 달 입금 생성
+    const today = new Date();
+    const targetDate = new Date(today.getFullYear(), today.getMonth(), recurringForm.dayOfMonth);
 
-      // 오늘 이전이면 입금 생성
-      if (targetDate <= today) {
-        const result = await saveDeposit({
+    // 오늘 이전이면 입금 생성
+    if (targetDate <= today) {
+      saveDeposit(
+        {
           date: targetDate.toISOString().split('T')[0] || '',
           amount: recurringForm.amount,
           memo: recurringForm.memo,
           type: 'DEPOSIT',
           account: recurringForm.account,
-        });
-
-        if (result.success) {
-          alert('입금내역이 저장되었습니다. 매월 자동 입금을 사용하시려면 설정에서 추가로 설정해주세요.');
-          handleOpenChange(false);
-        } else {
-          alert(result.error || '저장에 실패했습니다.');
+        },
+        {
+          onSuccess: (result) => {
+            if (result.success) {
+              alert('입금내역이 저장되었습니다. 매월 자동 입금을 사용하시려면 설정에서 추가로 설정해주세요.');
+              handleOpenChange(false);
+            } else {
+              alert(result.error || '저장에 실패했습니다.');
+            }
+          },
+          onError: (error) => {
+            console.error('Save error:', error);
+            alert('저장 중 오류가 발생했습니다.');
+          },
         }
-      } else {
-        alert('선택한 날짜가 아직 도래하지 않았습니다.');
-      }
-    } catch (error) {
-      console.error('Save error:', error);
-      alert('저장 중 오류가 발생했습니다.');
-    } finally {
-      setIsSaving(false);
+      );
+    } else {
+      alert('선택한 날짜가 아직 도래하지 않았습니다.');
     }
   };
 
