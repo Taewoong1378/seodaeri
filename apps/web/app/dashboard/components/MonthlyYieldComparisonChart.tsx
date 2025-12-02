@@ -26,6 +26,7 @@ const COLORS = {
 
 export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const hiddenChartRef = useRef<HTMLDivElement>(null);
 
   // 바 차트 데이터 변환
   const chartData = [
@@ -70,7 +71,7 @@ export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChar
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-semibold text-white">{currentYear}년 {data.currentMonth}, 누적 수익률 현황</h4>
           <div className="flex items-center gap-2">
-            <ShareChartButton chartRef={chartRef} title={`${currentYear}년 ${data.currentMonth}, 누적 수익률 현황`} />
+            <ShareChartButton chartRef={hiddenChartRef} title={`${currentYear}년 ${data.currentMonth}, 누적 수익률 현황`} />
             <LandscapeChartModal title={`${currentYear}년 ${data.currentMonth}, 누적 수익률 현황`}>
               <div className="flex flex-col w-full h-full">
                 {/* Custom Legend for Modal */}
@@ -218,6 +219,84 @@ export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChar
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Hidden Chart for Capture */}
+      <div
+        ref={hiddenChartRef}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          zIndex: -50,
+          opacity: 0,
+          width: '800px',
+          height: '450px',
+          backgroundColor: '#020617',
+          padding: '20px',
+          pointerEvents: 'none',
+        }}
+      >
+        <div className="mb-4">
+          <h3 className="text-xl font-bold text-white">{currentYear}년 {data.currentMonth}, 누적 수익률 현황</h3>
+          <p className="text-sm text-slate-400">vs 주요 지수</p>
+        </div>
+        <div className="flex items-center justify-start gap-6 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: COLORS.currentMonth }} />
+            <span className="text-sm text-slate-400">{data.currentMonth} 수익률</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
+            <span className="text-sm text-slate-400">올해 수익률</span>
+          </div>
+        </div>
+        <div className="w-full h-[350px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={chartData}
+              margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis
+                dataKey="name"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#94a3b8', fontSize: 14 }}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#64748b', fontSize: 12 }}
+                tickFormatter={(value) => `${value}%`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1e293b',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                  padding: '12px',
+                }}
+                labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                formatter={(value: number, name: string) => {
+                  const label = name === 'currentMonth' ? `${data.currentMonth} 수익률` : '올해 수익률';
+                  return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
+                }}
+              />
+              <Bar dataKey="currentMonth" fill={COLORS.currentMonth} radius={[4, 4, 0, 0]}>
+                {chartData.map((entry) => (
+                  <Cell key={`currentMonth-${entry.name}`} fill={getBarColor(entry.currentMonth, COLORS.currentMonth)} />
+                ))}
+              </Bar>
+              <Bar dataKey="thisYear" fill={COLORS.thisYear} radius={[4, 4, 0, 0]}>
+                {chartData.map((entry) => (
+                  <Cell key={`thisYear-${entry.name}`} fill={getBarColor(entry.thisYear, COLORS.thisYear)} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );

@@ -111,7 +111,7 @@ export default function PrivacyPolicyPage() {
               아래와 같이 개인정보 보호책임자를 지정하고 있습니다.
             </p>
             <div className="mt-3 p-4 bg-white/5 rounded-lg">
-              <p className="text-slate-400">이메일: support@seodaeri.com</p>
+              <p className="text-slate-400">이메일: xodndxnxnx@gmail.com</p>
             </div>
           </section>
 

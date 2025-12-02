@@ -26,6 +26,7 @@ const COLORS = {
 
 export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const hiddenChartRef = useRef<HTMLDivElement>(null);
 
   // 바 차트 데이터 변환
   const chartData = [
@@ -73,7 +74,7 @@ export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
               <span className="text-[11px] text-slate-400">연평균 수익률</span>
             </div>
           </div>
-          <ShareChartButton chartRef={chartRef} title="수익률 비교" />
+          <ShareChartButton chartRef={hiddenChartRef} title="수익률 비교" />
           <LandscapeChartModal title="수익률 비교">
             <div className="flex flex-col w-full h-full">
               {/* Custom Legend for Modal */}
@@ -208,6 +209,83 @@ export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
             </div>
           </div>
         ))}
+      </div>
+      {/* Hidden Chart for Capture */}
+      <div
+        ref={hiddenChartRef}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          zIndex: -50,
+          opacity: 0,
+          width: '800px',
+          height: '450px',
+          backgroundColor: '#020617',
+          padding: '20px',
+          pointerEvents: 'none',
+        }}
+      >
+        <div className="mb-4">
+          <h3 className="text-xl font-bold text-white">수익률 비교</h3>
+          <p className="text-sm text-slate-400">vs 주요 지수</p>
+        </div>
+        <div className="flex items-center justify-start gap-6 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
+            <span className="text-sm text-slate-400">올해 수익률</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: COLORS.annualized }} />
+            <span className="text-sm text-slate-400">연평균 수익률</span>
+          </div>
+        </div>
+        <div className="w-full h-[350px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={chartData}
+              margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis
+                dataKey="name"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#94a3b8', fontSize: 14 }}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#64748b', fontSize: 12 }}
+                tickFormatter={(value) => `${value}%`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1e293b',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                  padding: '12px',
+                }}
+                labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                formatter={(value: number, name: string) => {
+                  const label = name === 'thisYear' ? '올해 수익률' : '연평균 수익률';
+                  return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
+                }}
+              />
+              <Bar dataKey="thisYear" fill={COLORS.thisYear} radius={[4, 4, 0, 0]}>
+                {chartData.map((entry) => (
+                  <Cell key={`thisYear-${entry.name}`} fill={getBarColor(entry.thisYear, COLORS.thisYear)} />
+                ))}
+              </Bar>
+              <Bar dataKey="annualized" fill={COLORS.annualized} radius={[4, 4, 0, 0]}>
+                {chartData.map((entry) => (
+                  <Cell key={`annualized-${entry.name}`} fill={getBarColor(entry.annualized, COLORS.annualized)} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );

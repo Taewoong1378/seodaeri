@@ -33,6 +33,7 @@ function formatCurrencyShort(amount: number): string {
 
 export function RollingAverageDividendChart({ data }: RollingAverageDividendChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const hiddenChartRef = useRef<HTMLDivElement>(null);
 
   // Y축 최대값 계산
   const maxValue = Math.max(...data.data.map(d => d.average), 0);
@@ -102,7 +103,7 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
           <p className="text-xs text-slate-500 mt-0.5">현재 월평균: {formatCurrency(currentAverage)}</p>
         </div>
         <div className="flex items-center gap-2">
-          <ShareChartButton chartRef={chartRef} title="12개월 월평균 배당금" />
+          <ShareChartButton chartRef={hiddenChartRef} title="12개월 월평균 배당금" />
           <LandscapeChartModal title="12개월 월평균 배당금">
             <div className="flex flex-col w-full h-full">
               <div className="flex-1 min-h-0 overflow-x-auto">
@@ -122,6 +123,32 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
         <div style={{ width: chartWidth, height: '100%' }}>
           <ResponsiveContainer width="100%" height="100%">
             {renderChart(false)}
+          </ResponsiveContainer>
+        </div>
+      </div>
+      {/* Hidden Chart for Capture */}
+      <div
+        ref={hiddenChartRef}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          zIndex: -50,
+          opacity: 0,
+          width: '800px',
+          height: '450px',
+          backgroundColor: '#020617',
+          padding: '20px',
+          pointerEvents: 'none',
+        }}
+      >
+        <div className="mb-4">
+          <h3 className="text-xl font-bold text-white">12개월 월평균 배당금</h3>
+          <p className="text-sm text-slate-400">최근 12개월 추이</p>
+        </div>
+        <div className="w-full h-[350px]">
+          <ResponsiveContainer width="100%" height="100%">
+            {renderChart(true)}
           </ResponsiveContainer>
         </div>
       </div>

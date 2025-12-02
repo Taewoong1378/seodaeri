@@ -27,6 +27,7 @@ const COLORS = {
 
 export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparisonChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const hiddenChartRef = useRef<HTMLDivElement>(null);
 
   // 라인 차트 데이터 변환
   const chartData = data.months.map((month, idx) => ({
@@ -172,7 +173,7 @@ export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparis
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-semibold text-white">{currentYear}년 주요지수 수익률 비교</h4>
           <div className="flex items-center gap-2">
-            <ShareChartButton chartRef={chartRef} title={`${currentYear}년 주요지수 수익률 비교`} />
+            <ShareChartButton chartRef={hiddenChartRef} title={`${currentYear}년 주요지수 수익률 비교`} />
             <LandscapeChartModal title={`${currentYear}년 주요지수 수익률 비교`}>
               <div className="flex flex-col w-full h-full">
                 {/* Custom Legend for Modal */}
@@ -242,6 +243,35 @@ export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparis
           ) : (
             <div className="text-[11px] font-semibold text-slate-500">-</div>
           )}
+        </div>
+      </div>
+      {/* Hidden Chart for Capture */}
+      <div
+        ref={hiddenChartRef}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          zIndex: -50,
+          opacity: 0,
+          width: '800px',
+          height: '450px',
+          backgroundColor: '#020617',
+          padding: '20px',
+          pointerEvents: 'none',
+        }}
+      >
+        <div className="mb-4">
+          <h3 className="text-xl font-bold text-white">{currentYear}년 주요지수 수익률 비교</h3>
+          <p className="text-sm text-slate-400">vs S&P500, NASDAQ, KOSPI</p>
+        </div>
+        <div className="mb-4">
+          <CustomLegend isModal />
+        </div>
+        <div className="w-full h-[350px]">
+          <ResponsiveContainer width="100%" height="100%">
+            {renderChart(true)}
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

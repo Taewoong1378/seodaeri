@@ -35,6 +35,7 @@ function formatCurrencyShort(amount: number): string {
 
 export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const hiddenChartRef = useRef<HTMLDivElement>(null);
 
   // Y축 최대값 계산
   const maxValue = Math.max(...data.data.map(d => d.amount), 0);
@@ -101,7 +102,7 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-white">연도별 배당금 현황</h4>
         <div className="flex items-center gap-2">
-          <ShareChartButton chartRef={chartRef} title="연도별 배당금 현황" />
+          <ShareChartButton chartRef={hiddenChartRef} title="연도별 배당금 현황" />
           <LandscapeChartModal title="연도별 배당금 현황">
             <div className="flex flex-col w-full h-full">
               <div className="flex-1 min-h-0">
@@ -134,6 +135,32 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
           <div className="text-[12px] font-semibold text-slate-300">
             {formatCurrency(Math.round(data.data.reduce((sum, d) => sum + d.amount, 0) / data.data.length))}
           </div>
+        </div>
+      </div>
+      {/* Hidden Chart for Capture */}
+      <div
+        ref={hiddenChartRef}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          zIndex: -50,
+          opacity: 0,
+          width: '800px',
+          height: '450px',
+          backgroundColor: '#020617',
+          padding: '20px',
+          pointerEvents: 'none',
+        }}
+      >
+        <div className="mb-4">
+          <h3 className="text-xl font-bold text-white">연도별 배당금 현황</h3>
+          <p className="text-sm text-slate-400">연도별 배당금 추이</p>
+        </div>
+        <div className="w-full h-[350px]">
+          <ResponsiveContainer width="100%" height="100%">
+            {renderChart(true)}
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
