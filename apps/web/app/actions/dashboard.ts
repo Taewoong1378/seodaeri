@@ -74,7 +74,7 @@ export interface DashboardData {
   performanceComparison: PerformanceComparisonData[];
   // 계좌 추세 (5. 계좌내역(누적) 탭에서 - 누적입금액 vs 계좌총액)
   accountTrend: AccountTrendData[];
-  // 월별 손익 (1. 계좌현황(누적) 탭에서 B49:M50)
+  // 월별 손익 (5. 계좌내역(누적) 탭 원본 데이터 E:J열)
   monthlyProfitLoss: MonthlyProfitLoss[];
   // 수익률 비교 바 차트 (5. 계좌내역(누적) 탭에서)
   yieldComparison: YieldComparisonData | null;
@@ -142,8 +142,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'3. 종목현황'!A:P", user.id),
       // 수익률 비교 데이터는 "5. 계좌내역(누적)" 시트에 있음
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AB78", user.id),
-      // 월별 손익 데이터는 "2. 계좌현황(올해)" 시트의 B48:M50
-      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'2. 계좌현황(올해)'!B48:M50", user.id),
+      // 월별 손익 데이터는 "5. 계좌내역(누적)" 시트 원본 입력 데이터 (E:J열)
+      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!E:J", user.id),
       // 수익률 비교(달러환율 적용) 데이터 - "5. 계좌내역(누적)" 시트의 AI~AM 컬럼 (달러환율 적용 지수)
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AQ78", user.id),
     ]);

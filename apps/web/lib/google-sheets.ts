@@ -244,16 +244,21 @@ export interface MonthlyProfitLoss {
 }
 
 /**
- * '2. 계좌현황(올해)' 시트의 월별 손익 데이터 파싱
- * 범위: B48:M50
- * - B48:M48 = 연도 (2025)
- * - B49:M49 = 월 라벨 (1월~12월)
- * - B50:M50 = 순손익 값 (양수=수익, 음수=손실)
+ * '5. 계좌내역(누적)' 시트의 원본 데이터에서 월별 손익 파싱
+ * 범위: E17:J (입력 원본 데이터)
+ * - E열 = 연도 (2025)
+ * - F열 = 월 (1월, 2월, ...)
+ * - J열 = 월수익 (₩10,525 또는 ▼₩1,428,545)
+ *
+ * @param rows - E:J 범위 데이터
+ * @param targetYear - 조회할 연도 (기본값: 현재 연도)
  */
-export function parseMonthlyProfitLoss(rows: any[]): MonthlyProfitLoss[] {
-  console.log('[parseMonthlyProfitLoss] Input rows:', JSON.stringify(rows));
+export function parseMonthlyProfitLoss(rows: any[], targetYear?: number): MonthlyProfitLoss[] {
+  console.log('[parseMonthlyProfitLoss] Input rows count:', rows?.length);
 
   if (!rows || rows.length === 0) return [];
+
+  const currentYear = targetYear || new Date().getFullYear();
 
   const parseNumber = (val: any): number => {
     if (!val || val === '-') return 0;
@@ -269,45 +274,48 @@ export function parseMonthlyProfitLoss(rows: any[]): MonthlyProfitLoss[] {
     const cleaned = str.replace(/[₩$,%\s▼▽()]/g, '').replace(/,/g, '');
     let num = Number.parseFloat(cleaned) || 0;
 
-    // 음수 처리 (원래 음수 부호가 있거나 특수 표현이 있는 경우)
+    // 음수 처리
     if (isNegative && num > 0) {
       num = -num;
     }
 
-    console.log(`[parseNumber] Input: "${val}" -> Output: ${num}`);
     return num;
   };
 
-  const results: MonthlyProfitLoss[] = [];
+  // 월별 데이터를 담을 Map (1월~12월)
+  const monthlyData = new Map<number, number>();
 
-  // 3행 구조: rows[0]=연도, rows[1]=월라벨, rows[2]=손익데이터
-  // 2행 구조: rows[0]=월라벨, rows[1]=손익데이터
-  let labelRow: any[];
-  let dataRow: any[];
+  for (const row of rows) {
+    if (!row || !Array.isArray(row) || row.length < 6) continue;
 
-  if (rows.length >= 3) {
-    // 3행 구조 (연도, 월라벨, 데이터)
-    labelRow = rows[1] || [];
-    dataRow = rows[2] || [];
-  } else if (rows.length === 2) {
-    // 2행 구조 (월라벨, 데이터)
-    labelRow = rows[0] || [];
-    dataRow = rows[1] || [];
-  } else {
-    // 1행만 있는 경우
-    labelRow = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
-    dataRow = rows[0] || [];
+    // E열(index 0) = 연도, F열(index 1) = 월, J열(index 5) = 월수익
+    const yearVal = String(row[0] || '').trim();
+    const monthVal = String(row[1] || '').trim();
+    const profitVal = row[5];
+
+    // 연도 파싱 (숫자만 추출)
+    const year = Number.parseInt(yearVal.replace(/[^0-9]/g, ''), 10);
+    if (year !== currentYear) continue;
+
+    // 월 파싱 ("1월" -> 1, "12월" -> 12)
+    const monthMatch = monthVal.match(/(\d+)/);
+    if (!monthMatch) continue;
+    const month = Number.parseInt(monthMatch[1] || '', 10);
+    if (month < 1 || month > 12) continue;
+
+    // 월수익 파싱
+    const profit = parseNumber(profitVal);
+    monthlyData.set(month, profit);
   }
 
-  console.log('[parseMonthlyProfitLoss] Label row:', JSON.stringify(labelRow));
-  console.log('[parseMonthlyProfitLoss] Data row:', JSON.stringify(dataRow));
+  console.log('[parseMonthlyProfitLoss] Found data for months:', Array.from(monthlyData.keys()));
 
-  for (let i = 0; i < 12; i++) {
-    const netValue = parseNumber(dataRow[i]);
-    const month = String(labelRow[i] || `${i + 1}월`);
-
+  // 1월~12월 결과 생성
+  const results: MonthlyProfitLoss[] = [];
+  for (let i = 1; i <= 12; i++) {
+    const netValue = monthlyData.get(i) || 0;
     results.push({
-      month,
+      month: `${i}월`,
       profit: netValue > 0 ? netValue : 0,
       loss: netValue < 0 ? Math.abs(netValue) : 0,
     });
