@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@repo/design-system/components/button';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { Share2 } from 'lucide-react';
 import { type RefObject, useState } from 'react';
 
@@ -19,21 +19,16 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
     setIsCapturing(true);
 
     try {
-      // 차트를 이미지로 캡처
-      const canvas = await html2canvas(chartRef.current, {
+      // 차트를 이미지로 캡처 (html-to-image 사용)
+      const dataUrl = await toPng(chartRef.current, {
         backgroundColor: '#020617', // 배경색
-        scale: 2, // 고해상도
-        logging: false,
-        useCORS: true,
+        pixelRatio: 2, // 고해상도
+        cacheBust: true,
       });
 
-      // Canvas를 Blob으로 변환
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((blob) => {
-          if (blob) resolve(blob);
-          else reject(new Error('Failed to create blob'));
-        }, 'image/png', 1.0);
-      });
+      // DataURL을 Blob으로 변환
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
 
       const file = new File([blob], `${title}.png`, { type: 'image/png' });
 

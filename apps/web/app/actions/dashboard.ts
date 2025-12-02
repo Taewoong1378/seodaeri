@@ -2,7 +2,7 @@
 
 import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import {
   type AccountSummary,
   type AccountTrendData,
@@ -20,6 +20,37 @@ import {
   parsePerformanceComparisonData,
   parsePortfolioData,
 } from '../../lib/google-sheets';
+
+// 사용자별 캐시 태그 생성
+function getDashboardCacheTag(userId: string) {
+  return `dashboard-${userId}`;
+}
+
+// 시트 데이터를 캐시하는 함수 (60초 동안 캐시)
+async function fetchSheetDataCached(
+  accessToken: string,
+  spreadsheetId: string,
+  range: string,
+  userId: string
+): Promise<any[] | null> {
+  const cachedFetch = unstable_cache(
+    async () => {
+      return fetchSheetData(accessToken, spreadsheetId, range);
+    },
+    [`sheet-${spreadsheetId}-${range}`],
+    {
+      revalidate: 60, // 60초 캐시
+      tags: [getDashboardCacheTag(userId)],
+    }
+  );
+
+  try {
+    return await cachedFetch();
+  } catch (e) {
+    console.error(`[Sheet] ${range} 읽기 실패:`, e);
+    return null;
+  }
+}
 
 export interface DashboardData {
   // 계좌 요약 (1. 계좌현황(누적) 탭에서)
@@ -92,100 +123,28 @@ export async function getDashboardData(): Promise<DashboardData | null> {
   }
 
   try {
-    // 시트에서 데이터 읽기 (병렬 처리)
+    // 시트에서 데이터 읽기 (병렬 처리, 60초 캐시)
     const [accountRows, dividendRows, portfolioRows, performanceRows, profitLossRows] = await Promise.all([
-      fetchSheetData(session.accessToken, user.spreadsheet_id, "'1. 계좌현황(누적)'!A:K").catch((e) => {
-        console.error('[Sheet] 1. 계좌현황(누적) 읽기 실패:', e);
-        return null;
-      }),
-      fetchSheetData(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!A:J").catch((e) => {
-        console.error('[Sheet] 7. 배당내역 읽기 실패:', e);
-        return null;
-      }),
-      fetchSheetData(session.accessToken, user.spreadsheet_id, "'3. 종목현황'!A:P").catch((e) => {
-        console.error('[Sheet] 3. 종목현황 읽기 실패:', e);
-        return null;
-      }),
+      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'1. 계좌현황(누적)'!A:K", user.id),
+      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!A:J", user.id),
+      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'3. 종목현황'!A:P", user.id),
       // 수익률 비교 데이터는 "5. 계좌내역(누적)" 시트에 있음
-      fetchSheetData(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AB78").catch((e) => {
-        console.error('[Sheet] 5. 계좌내역(누적) 수익률 비교 읽기 실패:', e);
-        return null;
-      }),
+      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AB78", user.id),
       // 월별 손익 데이터는 "2. 계좌현황(올해)" 시트의 B48:M50
-      // B48=연도, B49=월라벨, B50=손익데이터
-      fetchSheetData(session.accessToken, user.spreadsheet_id, "'2. 계좌현황(올해)'!B48:M50").catch((e) => {
-        console.error('[Sheet] 2. 계좌현황(올해) 월별 손익 읽기 실패:', e);
-        return null;
-      }),
+      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'2. 계좌현황(올해)'!B48:M50", user.id),
     ]);
-
-    // 디버깅: 시트에서 가져온 원본 데이터 출력 (데이터가 있는 행만)
-    console.log('\n========== 시트 데이터 디버깅 ==========');
-
-    console.log('[Sheet] 1. 계좌현황(누적) 행 수:', accountRows?.length || 0);
-    if (accountRows && accountRows.length > 0) {
-      console.log('[Sheet] 계좌현황 - 라벨이 있는 행들:');
-      accountRows.forEach((row, i) => {
-        // 빈 배열이 아닌 행 중에서 주요 라벨 포함 여부 확인
-        if (row && row.length > 0 && row.some((cell: any) => cell !== '' && cell !== undefined)) {
-          const rowStr = row.join(' | ');
-          // 주요 라벨이 포함된 행만 출력
-          if (rowStr.includes('총자산') || rowStr.includes('투자원금') ||
-              rowStr.includes('수익률') || rowStr.includes('수익금') ||
-              rowStr.includes('평가금액') || rowStr.includes('원금')) {
-            console.log(`  Row ${i + 1}:`, JSON.stringify(row));
-          }
-        }
-      });
-    }
-
-    console.log('\n[Sheet] 7. 배당내역 행 수:', dividendRows?.length || 0);
-    if (dividendRows && dividendRows.length > 0) {
-      console.log('[Sheet] 배당내역 - 헤더 행:', JSON.stringify(dividendRows[0]));
-      console.log('[Sheet] 배당내역 - 데이터가 있는 행들 (첫 15개):');
-      let count = 0;
-      dividendRows.forEach((row, i) => {
-        if (count >= 15) return;
-        if (row && row.length > 0 && row.some((cell: any) => cell !== '' && cell !== undefined)) {
-          console.log(`  Row ${i + 1} (${row.length} cols):`, JSON.stringify(row));
-          count++;
-        }
-      });
-    }
-
-    console.log('\n[Sheet] 3. 종목현황 행 수:', portfolioRows?.length || 0);
-    if (portfolioRows && portfolioRows.length > 0) {
-      console.log('[Sheet] 종목현황 - 모든 데이터 행 (최대 50개):');
-      let count = 0;
-      portfolioRows.forEach((row, i) => {
-        if (count >= 50) return;
-        if (row && row.length > 0 && row.some((cell: any) => cell !== '' && cell !== undefined)) {
-          console.log(`  Row ${i + 1} (${row.length} cols):`, JSON.stringify(row));
-          count++;
-        }
-      });
-    }
-    console.log('==========================================\n');
 
     // 계좌 요약 파싱
     const accountSummary: AccountSummary = accountRows
       ? parseAccountSummary(accountRows)
       : { totalAsset: 0, totalYield: 0, totalInvested: 0, totalProfit: 0 };
 
-    console.log('[Parsed] 계좌 요약:', accountSummary);
-
     // 배당 데이터 파싱
     const dividends: DividendRecord[] = dividendRows
       ? parseDividendData(dividendRows)
       : [];
 
-    console.log('[Parsed] 배당 내역 수:', dividends.length);
-    if (dividends.length > 0) {
-      console.log('[Parsed] 배당 샘플 (첫 3건):', dividends.slice(0, 3));
-    }
-
     const monthlyDividends = aggregateMonthlyDividends(dividends);
-    console.log('[Parsed] 월별 배당금:', JSON.stringify(monthlyDividends));
 
     // 이번 달 배당금 계산
     const now = new Date();
@@ -201,17 +160,10 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       .filter((m) => m.year === thisYear)
       .reduce((sum, m) => sum + m.amount, 0);
 
-    console.log('[Parsed] 이번달 배당:', thisMonthDividend, '올해 배당:', yearlyDividend);
-
     // 포트폴리오 파싱
     const portfolio: PortfolioItem[] = portfolioRows
       ? parsePortfolioData(portfolioRows)
       : [];
-
-    console.log('[Parsed] 포트폴리오 종목 수:', portfolio.length);
-    if (portfolio.length > 0) {
-      console.log('[Parsed] 포트폴리오 샘플 (첫 3종목):', portfolio.slice(0, 3));
-    }
 
     // 포트폴리오에서 총자산 계산 (시트의 평가액 합계)
     let totalAsset = 0;
@@ -226,8 +178,6 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     const totalYield = totalInvested > 0
       ? ((totalAsset - totalInvested) / totalInvested) * 100
       : accountSummary.totalYield; // 시트의 수익률 fallback
-
-    console.log('[Calculated from Portfolio] 총자산:', totalAsset, '투자원금:', totalInvested, '수익금:', totalProfit, '수익률:', `${totalYield.toFixed(2)}%`);
 
     // 포트폴리오 캐시 업데이트 (백그라운드)
     if (portfolio.length > 0) {
@@ -258,23 +208,15 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       ? parsePerformanceComparisonData(performanceRows)
       : [];
 
-    console.log('[Parsed] 수익률 비교 데이터 수:', performanceComparison.length);
-
     // 계좌 추세 파싱 (같은 performanceRows에서)
     const accountTrend: AccountTrendData[] = performanceRows
       ? parseAccountTrendData(performanceRows)
       : [];
 
-    console.log('[Parsed] 계좌 추세 데이터 수:', accountTrend.length);
-
     // 월별 손익 파싱
-    console.log('[Sheet] 월별 손익 원본 데이터:', JSON.stringify(profitLossRows));
     const monthlyProfitLoss: MonthlyProfitLoss[] = profitLossRows
       ? parseMonthlyProfitLoss(profitLossRows)
       : [];
-
-    console.log('[Parsed] 월별 손익 데이터 수:', monthlyProfitLoss.length);
-    console.log('[Parsed] 월별 손익 데이터:', JSON.stringify(monthlyProfitLoss));
 
     return {
       totalAsset: Math.round(totalAsset),
@@ -393,6 +335,8 @@ export async function syncPortfolio() {
     if (error) throw error;
   }
 
+  // 캐시 무효화
+  revalidateTag(getDashboardCacheTag(user.id));
   revalidatePath('/dashboard');
 
   return { success: true, count: portfolio.length };
