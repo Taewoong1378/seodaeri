@@ -37,8 +37,35 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
       // DataURL을 Blob으로 변환
       const res = await fetch(dataUrl);
       const blob = await res.blob();
+      
+      // 이미지를 로드하여 회전 처리
+      const img = new Image();
+      img.src = URL.createObjectURL(blob);
+      
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
 
-      const file = new File([blob], `${title}.png`, { type: 'image/png' });
+      // 캔버스를 사용하여 90도 회전
+      const canvas = document.createElement('canvas');
+      canvas.width = img.height;
+      canvas.height = img.width;
+      
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(90 * Math.PI / 180);
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      }
+      
+      // 회전된 이미지를 Blob으로 변환
+      const rotatedBlob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((b) => {
+          resolve(b!);
+        }, 'image/png');
+      });
+
+      const file = new File([rotatedBlob], `${title}.png`, { type: 'image/png' });
 
       // Web Share API 지원 확인
       if (navigator.share && navigator.canShare({ files: [file] })) {
@@ -48,7 +75,7 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
         });
       } else {
         // Web Share API 미지원 시 다운로드
-        const url = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(rotatedBlob);
         const link = document.createElement('a');
         link.href = url;
         link.download = `서대리_${title}_${new Date().toISOString().split('T')[0]}.png`;

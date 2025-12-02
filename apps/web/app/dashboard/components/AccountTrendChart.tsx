@@ -342,24 +342,22 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
           left: 0,
           zIndex: -50,
           opacity: 0,
-          width: '400px',
-          height: 'auto',
-          minHeight: '800px',
+          width: '800px',
+          height: '450px',
           backgroundColor: '#020617',
-          padding: '24px',
+          padding: '20px',
           pointerEvents: 'none',
         }}
       >
-        <div className="mb-8">
-          <h3 className="text-2xl font-bold text-white mb-1">월별 계좌추세</h3>
+        <div className="mb-4">
+          <h3 className="text-xl font-bold text-white">월별 계좌추세</h3>
           <p className="text-sm text-slate-400">누적입금액 vs 계좌총액</p>
         </div>
-
-        <div className="w-full h-[500px] mb-8">
+        <div className="w-full h-[350px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={displayData}
-              margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+              margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
             >
               <defs>
                 <linearGradient id="depositGradientHidden" x1="0" y1="0" x2="0" y2="1">
@@ -376,15 +374,29 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                 dataKey="date"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: '#64748b', fontSize: 11 }}
+                tick={{ fill: '#64748b', fontSize: 12 }}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: '#64748b', fontSize: 11 }}
+                tick={{ fill: '#64748b', fontSize: 12 }}
                 tickFormatter={(value) => formatCurrency(value)}
                 domain={[0, yMax]}
-                width={35}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#1e293b',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                  padding: '12px',
+                }}
+                labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                formatter={(value: number, name: string) => {
+                  const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액';
+                  return [`₩${value.toLocaleString()}`, label];
+                }}
+                labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
               />
               <Area
                 type="monotone"
@@ -393,7 +405,7 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                 strokeWidth={2}
                 fill="url(#depositGradientHidden)"
                 dot={false}
-                activeDot={false}
+                activeDot={{ r: 6, fill: '#3b82f6', stroke: '#020617', strokeWidth: 2 }}
                 isAnimationActive={false}
               />
               <Area
@@ -403,40 +415,21 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                 strokeWidth={2}
                 fill="url(#accountGradientHidden)"
                 dot={false}
-                activeDot={false}
+                activeDot={{ r: 6, fill: '#fb7185', stroke: '#020617', strokeWidth: 2 }}
                 isAnimationActive={false}
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col p-4 rounded-xl bg-white/5 border border-white/5">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-3 h-3 rounded-sm bg-blue-500/70" />
-              <span className="text-xs text-slate-400">누적입금액</span>
-            </div>
-            <span className="text-lg font-bold text-white">
-              {formatCurrency(displayData[displayData.length - 1]?.cumulativeDeposit || 0)}
-            </span>
+        <div className="flex items-center justify-center gap-6 mt-4">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-sm bg-blue-500/70" />
+            <span className="text-sm text-slate-400">누적입금액</span>
           </div>
-          <div className="flex flex-col p-4 rounded-xl bg-white/5 border border-white/5">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-3 h-3 rounded-sm bg-rose-400/70" />
-              <span className="text-xs text-slate-400">계좌총액</span>
-            </div>
-            <span className="text-lg font-bold text-white">
-              {formatCurrency(displayData[displayData.length - 1]?.totalAccount || 0)}
-            </span>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-sm bg-rose-400/70" />
+            <span className="text-sm text-slate-400">계좌총액</span>
           </div>
-        </div>
-
-        <div className="mt-8 pt-4 border-t border-white/10 flex justify-between items-end">
-          <div>
-            <p className="text-[10px] text-slate-500 mb-0.5">Generated by</p>
-            <p className="text-xs font-bold text-white">서대리</p>
-          </div>
-          <p className="text-[10px] text-slate-600">{new Date().toLocaleDateString()}</p>
         </div>
       </div>
     </div>

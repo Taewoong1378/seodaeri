@@ -96,6 +96,7 @@ export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
                     tickFormatter={(value) => `${value}%`}
                   />
                   <Tooltip
+                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                     contentStyle={{
                       backgroundColor: '#1e293b',
                       border: '1px solid rgba(255,255,255,0.1)',
@@ -152,6 +153,7 @@ export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
               width={40}
             />
             <Tooltip
+              cursor={{ fill: 'rgba(255,255,255,0.05)' }}
               contentStyle={{
                 backgroundColor: '#1e293b',
                 border: '1px solid rgba(255,255,255,0.1)',

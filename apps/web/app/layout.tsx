@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { SessionProvider } from '@repo/auth/providers'
 import { Toaster } from '@repo/design-system'
+import { QueryProvider } from '../lib/query-client'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -37,8 +38,10 @@ export default function RootLayout({
     <html lang="ko">
       <body className="overscroll-none">
         <SessionProvider>
-          {children}
-          <Toaster />
+          <QueryProvider>
+            {children}
+            <Toaster />
+          </QueryProvider>
         </SessionProvider>
       </body>
     </html>
