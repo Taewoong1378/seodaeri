@@ -92,10 +92,98 @@ export async function saveDividend(input: DividendInput): Promise<SaveDividendRe
     );
 
     revalidatePath('/dashboard');
+    revalidatePath('/transactions');
 
     return { success: true };
   } catch (error) {
     console.error('saveDividend error:', error);
+    return { success: false, error: '저장 중 오류가 발생했습니다.' };
+  }
+}
+
+/**
+ * 여러 배당내역을 한번에 Google Sheet에 저장
+ */
+export async function saveDividends(inputs: DividendInput[]): Promise<SaveDividendResult> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: '로그인이 필요합니다.' };
+  }
+
+  if (!session.accessToken) {
+    return { success: false, error: 'Google 인증이 필요합니다.' };
+  }
+
+  if (inputs.length === 0) {
+    return { success: false, error: '저장할 배당내역이 없습니다.' };
+  }
+
+  const supabase = createServiceClient();
+
+  try {
+    // 사용자의 spreadsheet_id 조회
+    let { data: user } = await supabase
+      .from('users')
+      .select('spreadsheet_id')
+      .eq('id', session.user.id)
+      .single();
+
+    if (!user && session.user.email) {
+      const { data: userByEmail } = await supabase
+        .from('users')
+        .select('spreadsheet_id')
+        .eq('email', session.user.email)
+        .single();
+
+      if (userByEmail) {
+        user = userByEmail;
+      }
+    }
+
+    if (!user?.spreadsheet_id) {
+      return { success: false, error: '연동된 스프레드시트가 없습니다.' };
+    }
+
+    const exchangeRate = 1400; // USD to KRW
+
+    // 모든 배당내역을 행 데이터로 변환
+    const rows = inputs.map((input) => {
+      const dateParts = input.date.split('-');
+      const year = dateParts[0] || '';
+      const month = dateParts[1] || '';
+      const day = dateParts[2] || '';
+
+      const convertedKRW = input.amountUSD > 0 ? Math.round(input.amountUSD * exchangeRate) : 0;
+      const totalKRW = input.amountKRW + convertedKRW;
+
+      return [
+        input.date, // A: 일자
+        year, // B: 연도
+        `${month}월`, // C: 월
+        `${day}일`, // D: 일
+        input.ticker, // E: 종목코드
+        input.name || input.ticker, // F: 종목명
+        input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : '', // G: 원화 배당금
+        input.amountUSD > 0 ? input.amountUSD : '', // H: 외화 배당금
+        totalKRW > 0 ? `₩${totalKRW.toLocaleString()}` : '', // I: 원화환산
+      ];
+    });
+
+    // 한번에 여러 행 추가
+    await appendSheetData(
+      session.accessToken,
+      user.spreadsheet_id,
+      "'7. 배당내역'!A:I",
+      rows
+    );
+
+    revalidatePath('/dashboard');
+    revalidatePath('/transactions');
+
+    return { success: true };
+  } catch (error) {
+    console.error('saveDividends error:', error);
     return { success: false, error: '저장 중 오류가 발생했습니다.' };
   }
 }

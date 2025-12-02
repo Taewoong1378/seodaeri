@@ -11,10 +11,10 @@ import {
 } from '@repo/design-system/components/dialog';
 import { Input } from '@repo/design-system/components/input';
 import { Label } from '@repo/design-system/components/label';
-import { Camera, Check, Loader2, Pen, X } from 'lucide-react';
+import { Camera, Check, Loader2, Pen, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { saveDividend, type DividendInput } from '../../actions/dividend';
-import { analyzeTradeImage } from '../../actions/ocr';
+import { saveDividend, saveDividends, type DividendInput } from '../../actions/dividend';
+import { analyzeDividendImage } from '../../actions/ocr';
 
 type InputMode = 'select' | 'manual' | 'photo-preview' | 'photo-verify';
 
@@ -31,14 +31,18 @@ export function DividendInputModal() {
     setMounted(true);
   }, []);
 
-  // Form state
-  const [formData, setFormData] = useState<DividendInput>({
+  // 단일 입력용 (직접 입력)
+  const [singleForm, setSingleForm] = useState<DividendInput>({
     date: new Date().toISOString().split('T')[0] || '',
     ticker: '',
     name: '',
     amountKRW: 0,
     amountUSD: 0,
   });
+
+  // 다중 입력용 (사진 분석)
+  const [multipleItems, setMultipleItems] = useState<DividendInput[]>([]);
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
@@ -50,13 +54,15 @@ export function DividendInputModal() {
   const resetState = () => {
     setMode('select');
     setImageSrc(null);
-    setFormData({
+    setSingleForm({
       date: new Date().toISOString().split('T')[0] || '',
       ticker: '',
       name: '',
       amountKRW: 0,
       amountUSD: 0,
     });
+    setMultipleItems([]);
+    setSelectedItems(new Set());
   };
 
   const handleManualMode = () => {
@@ -64,7 +70,6 @@ export function DividendInputModal() {
   };
 
   const handlePhotoMode = () => {
-    // 바로 파일 선택 열기
     fileInputRef.current?.click();
   };
 
@@ -95,18 +100,14 @@ export function DividendInputModal() {
 
     setIsAnalyzing(true);
     try {
-      const result = await analyzeTradeImage(imageSrc, 'dividend');
-      if (result) {
-        setFormData({
-          date: result.date,
-          ticker: result.ticker,
-          name: result.name || '',
-          amountKRW: result.price, // OCR에서는 price로 반환
-          amountUSD: 0,
-        });
+      const results = await analyzeDividendImage(imageSrc);
+      if (results.length > 0) {
+        setMultipleItems(results);
+        // 모든 항목 선택
+        setSelectedItems(new Set(results.map((_, idx) => idx)));
         setMode('photo-verify');
       } else {
-        alert('이미지 분석에 실패했습니다. 다시 시도해주세요.');
+        alert('배당내역을 찾을 수 없습니다. 다시 시도해주세요.');
       }
     } catch (error) {
       console.error('Analysis error:', error);
@@ -116,19 +117,19 @@ export function DividendInputModal() {
     }
   };
 
-  const handleSave = async () => {
-    if (!formData.ticker) {
+  const handleSaveSingle = async () => {
+    if (!singleForm.ticker) {
       alert('종목코드를 입력해주세요.');
       return;
     }
-    if (formData.amountKRW === 0 && formData.amountUSD === 0) {
+    if (singleForm.amountKRW === 0 && singleForm.amountUSD === 0) {
       alert('배당금을 입력해주세요.');
       return;
     }
 
     setIsSaving(true);
     try {
-      const result = await saveDividend(formData);
+      const result = await saveDividend(singleForm);
       if (result.success) {
         alert('배당내역이 저장되었습니다.');
         handleOpenChange(false);
@@ -143,8 +144,77 @@ export function DividendInputModal() {
     }
   };
 
-  const updateField = (field: keyof DividendInput, value: string | number) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleSaveMultiple = async () => {
+    const itemsToSave = multipleItems.filter((_, idx) => selectedItems.has(idx));
+
+    if (itemsToSave.length === 0) {
+      alert('저장할 항목을 선택해주세요.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const result = await saveDividends(itemsToSave);
+      if (result.success) {
+        alert(`${itemsToSave.length}건의 배당내역이 저장되었습니다.`);
+        handleOpenChange(false);
+      } else {
+        alert(result.error || '저장에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      alert('저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const toggleItemSelection = (idx: number) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(idx)) {
+      newSelected.delete(idx);
+    } else {
+      newSelected.add(idx);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedItems.size === multipleItems.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(multipleItems.map((_, idx) => idx)));
+    }
+  };
+
+  const updateMultipleItem = (idx: number, field: keyof DividendInput, value: string | number) => {
+    setMultipleItems((prev) =>
+      prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const removeItem = (idx: number) => {
+    setMultipleItems((prev) => prev.filter((_, i) => i !== idx));
+    const newSelected = new Set(selectedItems);
+    newSelected.delete(idx);
+    // Adjust indices
+    const adjusted = new Set<number>();
+    newSelected.forEach((i) => {
+      if (i > idx) {
+        adjusted.add(i - 1);
+      } else {
+        adjusted.add(i);
+      }
+    });
+    setSelectedItems(adjusted);
+  };
+
+  const updateSingleField = (field: keyof DividendInput, value: string | number) => {
+    setSingleForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('ko-KR').format(amount);
   };
 
   return (
@@ -221,7 +291,7 @@ export function DividendInputModal() {
                   onClick={handlePhotoMode}
                 >
                   <Camera size={24} className="text-emerald-400" />
-                  <span>사진으로 입력</span>
+                  <span>사진으로 입력 (여러 건)</span>
                 </Button>
               </div>
             )}
@@ -236,8 +306,8 @@ export function DividendInputModal() {
                   <Input
                     id="date"
                     type="date"
-                    value={formData.date}
-                    onChange={(e) => updateField('date', e.target.value)}
+                    value={singleForm.date}
+                    onChange={(e) => updateSingleField('date', e.target.value)}
                     className="bg-white/5 border-white/10 text-white [color-scheme:dark]"
                   />
                 </div>
@@ -247,8 +317,8 @@ export function DividendInputModal() {
                   </Label>
                   <Input
                     id="ticker"
-                    value={formData.ticker}
-                    onChange={(e) => updateField('ticker', e.target.value)}
+                    value={singleForm.ticker}
+                    onChange={(e) => updateSingleField('ticker', e.target.value)}
                     placeholder="예: 446720, AAPL"
                     className="bg-white/5 border-white/10 text-white placeholder:text-slate-500"
                   />
@@ -259,8 +329,8 @@ export function DividendInputModal() {
                   </Label>
                   <Input
                     id="name"
-                    value={formData.name}
-                    onChange={(e) => updateField('name', e.target.value)}
+                    value={singleForm.name}
+                    onChange={(e) => updateSingleField('name', e.target.value)}
                     placeholder="예: SOL 미국배당 다우존스"
                     className="bg-white/5 border-white/10 text-white placeholder:text-slate-500"
                   />
@@ -273,9 +343,9 @@ export function DividendInputModal() {
                     <Input
                       id="amountKRW"
                       type="number"
-                      value={formData.amountKRW || ''}
+                      value={singleForm.amountKRW || ''}
                       onChange={(e) =>
-                        updateField('amountKRW', Number(e.target.value))
+                        updateSingleField('amountKRW', Number(e.target.value))
                       }
                       placeholder="0"
                       className="bg-white/5 border-white/10 text-white placeholder:text-slate-500"
@@ -289,9 +359,9 @@ export function DividendInputModal() {
                       id="amountUSD"
                       type="number"
                       step="0.01"
-                      value={formData.amountUSD || ''}
+                      value={singleForm.amountUSD || ''}
                       onChange={(e) =>
-                        updateField('amountUSD', Number(e.target.value))
+                        updateSingleField('amountUSD', Number(e.target.value))
                       }
                       placeholder="0.00"
                       className="bg-white/5 border-white/10 text-white placeholder:text-slate-500"
@@ -302,7 +372,7 @@ export function DividendInputModal() {
                 <div className="pt-4 space-y-2">
                   <Button
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                    onClick={handleSave}
+                    onClick={handleSaveSingle}
                     disabled={isSaving}
                   >
                     {isSaving ? (
@@ -355,7 +425,7 @@ export function DividendInputModal() {
                         분석 중...
                       </>
                     ) : (
-                      '분석하기'
+                      '배당내역 분석하기'
                     )}
                   </Button>
                   <Button
@@ -373,83 +443,122 @@ export function DividendInputModal() {
               </div>
             )}
 
-            {/* Photo Verify (after OCR) */}
+            {/* Photo Verify - Multiple Items */}
             {mode === 'photo-verify' && (
               <div className="space-y-4">
-                <p className="text-sm text-slate-400 text-center">
-                  분석 결과를 확인하고 수정해주세요
-                </p>
-                <div className="space-y-2">
-                  <Label htmlFor="date" className="text-slate-300">
-                    배당 입금일
-                  </Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => updateField('date', e.target.value)}
-                    className="bg-white/5 border-white/10 text-white [color-scheme:dark]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ticker" className="text-slate-300">
-                    종목코드
-                  </Label>
-                  <Input
-                    id="ticker"
-                    value={formData.ticker}
-                    onChange={(e) => updateField('ticker', e.target.value)}
-                    className="bg-white/5 border-white/10 text-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-slate-300">
-                    종목명
-                  </Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => updateField('name', e.target.value)}
-                    className="bg-white/5 border-white/10 text-white"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="amountKRW" className="text-slate-300">
-                      원화 배당금
-                    </Label>
-                    <Input
-                      id="amountKRW"
-                      type="number"
-                      value={formData.amountKRW || ''}
-                      onChange={(e) =>
-                        updateField('amountKRW', Number(e.target.value))
-                      }
-                      className="bg-white/5 border-white/10 text-white"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="amountUSD" className="text-slate-300">
-                      외화 배당금 ($)
-                    </Label>
-                    <Input
-                      id="amountUSD"
-                      type="number"
-                      step="0.01"
-                      value={formData.amountUSD || ''}
-                      onChange={(e) =>
-                        updateField('amountUSD', Number(e.target.value))
-                      }
-                      className="bg-white/5 border-white/10 text-white"
-                    />
-                  </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-slate-400">
+                    {multipleItems.length}건의 배당내역을 찾았습니다
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                    onClick={toggleSelectAll}
+                  >
+                    {selectedItems.size === multipleItems.length ? '전체 해제' : '전체 선택'}
+                  </Button>
                 </div>
 
-                <div className="pt-4 space-y-2">
+                <div className="space-y-3 max-h-[40vh] overflow-y-auto">
+                  {multipleItems.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-3 rounded-xl border transition-colors ${
+                        selectedItems.has(idx)
+                          ? 'bg-blue-600/10 border-blue-500/30'
+                          : 'bg-white/5 border-white/10'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <button
+                          type="button"
+                          onClick={() => toggleItemSelection(idx)}
+                          className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                            selectedItems.has(idx)
+                              ? 'bg-blue-600 border-blue-600'
+                              : 'border-white/30'
+                          }`}
+                        >
+                          {selectedItems.has(idx) && <Check size={12} className="text-white" />}
+                        </button>
+
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-white text-sm">{item.name || item.ticker}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeItem(idx)}
+                              className="text-slate-500 hover:text-red-400 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              value={item.date}
+                              onChange={(e) => updateMultipleItem(idx, 'date', e.target.value)}
+                              type="date"
+                              className="h-8 text-xs bg-white/5 border-white/10 text-white [color-scheme:dark]"
+                            />
+                            <Input
+                              value={item.ticker}
+                              onChange={(e) => updateMultipleItem(idx, 'ticker', e.target.value)}
+                              placeholder="종목코드"
+                              className="h-8 text-xs bg-white/5 border-white/10 text-white"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                value={item.amountKRW || ''}
+                                onChange={(e) => updateMultipleItem(idx, 'amountKRW', Number(e.target.value))}
+                                placeholder="원화"
+                                className="h-8 text-xs bg-white/5 border-white/10 text-white pr-8"
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">₩</span>
+                            </div>
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={item.amountUSD || ''}
+                                onChange={(e) => updateMultipleItem(idx, 'amountUSD', Number(e.target.value))}
+                                placeholder="외화"
+                                className="h-8 text-xs bg-white/5 border-white/10 text-white pr-8"
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">$</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {selectedItems.size > 0 && (
+                  <div className="p-3 bg-blue-600/10 rounded-xl border border-blue-500/20">
+                    <p className="text-sm text-blue-300 text-center">
+                      선택된 {selectedItems.size}건의 총 배당금:{' '}
+                      <span className="font-bold">
+                        ₩{formatCurrency(
+                          multipleItems
+                            .filter((_, idx) => selectedItems.has(idx))
+                            .reduce((sum, item) => sum + item.amountKRW + (item.amountUSD * 1400), 0)
+                        )}
+                      </span>
+                    </p>
+                  </div>
+                )}
+
+                <div className="pt-2 space-y-2">
                   <Button
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                    onClick={handleSave}
-                    disabled={isSaving}
+                    onClick={handleSaveMultiple}
+                    disabled={isSaving || selectedItems.size === 0}
                   >
                     {isSaving ? (
                       <>
@@ -459,7 +568,7 @@ export function DividendInputModal() {
                     ) : (
                       <>
                         <Check className="mr-2 h-4 w-4" />
-                        저장하기
+                        {selectedItems.size}건 저장하기
                       </>
                     )}
                   </Button>
@@ -468,6 +577,8 @@ export function DividendInputModal() {
                     className="w-full border-white/20 text-slate-300 hover:bg-white/10 hover:text-white"
                     onClick={() => {
                       setImageSrc(null);
+                      setMultipleItems([]);
+                      setSelectedItems(new Set());
                       setMode('select');
                     }}
                     disabled={isSaving}

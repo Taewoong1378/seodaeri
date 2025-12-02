@@ -25,6 +25,14 @@ export interface OCRResult {
   type: 'BUY' | 'SELL' | 'DIVIDEND';
 }
 
+export interface DividendOCRItem {
+  date: string;
+  ticker: string;
+  name: string;
+  amountKRW: number;
+  amountUSD: number;
+}
+
 export interface SaveTransactionResult {
   success: boolean;
   transactionId?: string;
@@ -117,6 +125,96 @@ For Korean stocks, ticker should be the 6-digit code.`;
   } catch (error) {
     console.error('[analyzeTradeImage] OCR Analysis failed:', error);
     return null;
+  }
+}
+
+/**
+ * 배당 이미지에서 여러 배당내역을 추출
+ * 한 이미지에 여러 종목의 배당 내역이 있을 수 있음
+ */
+export async function analyzeDividendImage(imageBase64: string): Promise<DividendOCRItem[]> {
+  console.log('[analyzeDividendImage] Called, imageBase64 length:', imageBase64?.length);
+
+  if (!process.env.OPENAI_API_KEY) {
+    console.error('[analyzeDividendImage] OPENAI_API_KEY is not set');
+    return [];
+  }
+
+  const prompt = `You are a financial data extraction assistant.
+Analyze the provided image which shows dividend payment records from a Korean brokerage app.
+The image may contain MULTIPLE dividend entries - extract ALL of them.
+
+For each dividend entry, extract:
+- date: Payment date in YYYY-MM-DD format (배당 지급일, 입금일)
+- ticker: Stock code (6-digit Korean code like 446720, or US ticker like AAPL)
+- name: Stock name in Korean (e.g., "SOL 미국배당 다우존스", "Tiger 미국S&P500")
+- amountKRW: Dividend amount in Korean Won (원화 배당금). Extract the number only.
+- amountUSD: Dividend amount in USD (외화 배당금). Set to 0 if not shown or if it's a Korean stock.
+
+IMPORTANT:
+- Look for patterns like "₩5,560" or "₩32,780" for KRW amounts
+- The stock code is usually a 6-digit number for Korean ETFs
+- Extract ALL dividend entries visible in the image, not just one
+- If a stock name contains the ticker, still try to find the actual 6-digit code
+
+Return a JSON object with a "dividends" array containing all extracted entries:
+{
+  "dividends": [
+    { "date": "2024-05-03", "ticker": "367380", "name": "ACE 미국나스닥100", "amountKRW": 5560, "amountUSD": 0 },
+    { "date": "2024-05-03", "ticker": "360750", "name": "Tiger 미국S&P500", "amountKRW": 32780, "amountUSD": 0 }
+  ]
+}`;
+
+  try {
+    console.log('[analyzeDividendImage] Sending request to OpenAI...');
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: prompt
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Extract ALL dividend entries from this image. Return them as a JSON array." },
+            {
+              type: "image_url",
+              image_url: {
+                url: imageBase64,
+              },
+            },
+          ],
+        },
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    console.log('[analyzeDividendImage] OpenAI response received');
+    const content = response.choices[0]?.message?.content;
+    console.log('[analyzeDividendImage] Content:', content);
+
+    if (!content) {
+      console.log('[analyzeDividendImage] No content in response');
+      return [];
+    }
+
+    const result = JSON.parse(content);
+    console.log('[analyzeDividendImage] Parsed result:', result);
+
+    const dividends: DividendOCRItem[] = (result.dividends || []).map((item: any) => ({
+      date: item.date || new Date().toISOString().split('T')[0],
+      ticker: item.ticker || '',
+      name: item.name || '',
+      amountKRW: Number(item.amountKRW) || 0,
+      amountUSD: Number(item.amountUSD) || 0,
+    }));
+
+    console.log('[analyzeDividendImage] Final dividends:', dividends);
+    return dividends;
+  } catch (error) {
+    console.error('[analyzeDividendImage] OCR Analysis failed:', error);
+    return [];
   }
 }
 
