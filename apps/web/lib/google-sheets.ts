@@ -1251,16 +1251,16 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
   console.log('[parseYieldComparisonDollarData] Columns 28-36 (AI~AQ):', currentRow.slice(28, 37));
 
   // G17:AQ78 범위 기준 컬럼 인덱스 (G=0 기준):
-  // 달러환율 적용 지수 컬럼들 AI~AM = 28~32
-  const COL_ACCOUNT_DOLLAR = 28;  // AI열 - 계좌 달러환율 적용 지수
-  const COL_KOSPI_DOLLAR = 29;    // AJ열 - KOSPI 달러환율 적용 지수
-  const COL_SP500_DOLLAR = 30;    // AK열 - S&P500 달러환율 적용 지수
-  const COL_NASDAQ_DOLLAR = 31;   // AL열 - NASDAQ 달러환율 적용 지수
-  const COL_DOLLAR = 32;          // AM열 - DOLLAR 지수
+  // 시트 공식: T열(실제 지수값)을 사용하여 수익률 계산
+  const COL_ACCOUNT = 8;          // O열 - 계좌종합 지수 (100 기준)
+  const COL_KOSPI = 13;           // T열 - 코스피 실제 지수값
+  const COL_SP500_DOLLAR = 28;    // AI열 - S&P500 달러환율 적용 지수
+  const COL_NASDAQ_DOLLAR = 29;   // AJ열 - NASDAQ 달러환율 적용 지수
+  const COL_DOLLAR = 27;          // AH열 - DOLLAR 지수
 
   // 달러환율 적용 지수 데이터 (100 기준)
-  const currentAccountIdx = parsePercent(currentRow[COL_ACCOUNT_DOLLAR]);
-  const currentKospiIdx = parsePercent(currentRow[COL_KOSPI_DOLLAR]);
+  const currentAccountIdx = parsePercent(currentRow[COL_ACCOUNT]);
+  const currentKospiIdx = parsePercent(currentRow[COL_KOSPI]);
   const currentSp500Idx = parsePercent(currentRow[COL_SP500_DOLLAR]);
   const currentNasdaqIdx = parsePercent(currentRow[COL_NASDAQ_DOLLAR]);
   const currentDollarIdx = parsePercent(currentRow[COL_DOLLAR]);
@@ -1272,8 +1272,8 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
   let prevDollarIdx = 100;
 
   if (prevYearRow) {
-    prevAccountIdx = parsePercent(prevYearRow[COL_ACCOUNT_DOLLAR]) || 100;
-    prevKospiIdx = parsePercent(prevYearRow[COL_KOSPI_DOLLAR]) || 100;
+    prevAccountIdx = parsePercent(prevYearRow[COL_ACCOUNT]) || 100;
+    prevKospiIdx = parsePercent(prevYearRow[COL_KOSPI]) || 100;
     prevSp500Idx = parsePercent(prevYearRow[COL_SP500_DOLLAR]) || 100;
     prevNasdaqIdx = parsePercent(prevYearRow[COL_NASDAQ_DOLLAR]) || 100;
     prevDollarIdx = parsePercent(prevYearRow[COL_DOLLAR]) || 100;

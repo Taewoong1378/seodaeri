@@ -5,6 +5,8 @@ import { History, Home, PieChart, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import type { ReactElement } from 'react';
+
 const navItems = [
   { href: '/dashboard', label: '홈', icon: Home },
   { href: '/transactions', label: '내역', icon: History },
@@ -12,7 +14,7 @@ const navItems = [
   { href: '/settings', label: '설정', icon: Settings },
 ];
 
-export function BottomNav() {
+export function BottomNav(): ReactElement {
   const pathname = usePathname();
 
   return (

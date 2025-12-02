@@ -1,6 +1,6 @@
 'use client';
 
-import { type JSX, useEffect, useRef } from 'react';
+import { type ReactElement, useEffect, useRef } from 'react';
 import {
   Area,
   AreaChart,
@@ -38,7 +38,7 @@ function formatCurrency(amount: number): string {
   return amount.toLocaleString();
 }
 
-export function AccountTrendChart({ data, currentTotalAsset, currentTotalInvested }: AccountTrendChartProps): JSX.Element {
+export function AccountTrendChart({ data, currentTotalAsset, currentTotalInvested }: AccountTrendChartProps): ReactElement {
   const scrollRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
   const hiddenChartRef = useRef<HTMLDivElement>(null);
