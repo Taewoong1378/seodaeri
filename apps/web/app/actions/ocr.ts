@@ -67,7 +67,7 @@ For Korean stocks, ticker should be the 6-digit code.`;
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -176,90 +176,121 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
     if (session.accessToken) {
       let sheetSynced = false;
 
-      try {
-        // 3-1. 매매일지 탭에 거래 기록 추가 (Append)
-        // "8. 매매일지(App)" 탭: A=날짜, B=종목코드, C=종목명, D=거래유형, E=단가, F=수량, G=총금액
-        await appendSheetData(
-          session.accessToken,
-          user.spreadsheet_id,
-          "'8. 매매일지(App)'!A:G",
-          [[
-            transaction.date,
-            transaction.ticker,
-            transaction.name || '',
-            transaction.type === 'BUY' ? '매수' : '매도',
-            transaction.price,
-            transaction.quantity,
-            totalAmount,
-          ]]
-        );
-
-        sheetSynced = true;
-      } catch (appendError) {
-        // 매매일지 탭이 없을 수 있음 - 에러 무시하고 계속 진행
-        console.warn('Failed to append to 매매일지 tab (might not exist):', appendError);
-      }
-
-      try {
-        // 3-2. 종목현황 탭에서 해당 종목 찾아서 수량/평단가 업데이트
-        const portfolioRows = await fetchSheetData(
-          session.accessToken,
-          user.spreadsheet_id,
-          "'3. 종목현황'!A:J"
-        );
-
-        if (portfolioRows) {
-          const portfolio = parsePortfolioData(portfolioRows);
-          const existingItem = portfolio.find(
-            (item) => item.ticker.toUpperCase() === transaction.ticker.toUpperCase()
+      // 배당 vs 매매 분기 처리
+      if (transaction.type === 'DIVIDEND') {
+        try {
+          // 배당내역 탭에 추가
+          // "7. 배당내역" 탭: A=입금날짜, B=계좌구분, C=종목명, D=종목코드, E=통화, F=세전배당, G=세금, H=세후배당(원), I=세후배당($), J=비고
+          const isKorean = /^\d{6}$/.test(transaction.ticker);
+          await appendSheetData(
+            session.accessToken,
+            user.spreadsheet_id,
+            "'7. 배당내역'!A:J",
+            [[
+              transaction.date,
+              '일반 계좌',  // 기본값
+              transaction.name || transaction.ticker,
+              transaction.ticker,
+              isKorean ? 'KRW' : 'USD',
+              '',  // 세전배당 (알 수 없음)
+              '',  // 세금 (알 수 없음)
+              isKorean ? transaction.price : '',  // 세후배당(원)
+              isKorean ? '' : (transaction.price / 1400).toFixed(2),  // 세후배당($) - KRW로 입력받았으므로 역산
+              'App에서 추가',
+            ]]
           );
 
-          if (existingItem) {
-            // 기존 종목 - 평단가/수량 계산 후 업데이트
-            const { newQty, newAvgPrice } = calculateNewAvgPrice(
-              existingItem.quantity,
-              existingItem.avgPrice,
-              transaction.quantity,
+          sheetSynced = true;
+        } catch (appendError) {
+          console.warn('Failed to append to 배당내역 tab:', appendError);
+        }
+      } else {
+        // 매수/매도인 경우
+        try {
+          // 3-1. 매매일지 탭에 거래 기록 추가 (Append)
+          // "8. 매매일지(App)" 탭: A=날짜, B=종목코드, C=종목명, D=거래유형, E=단가, F=수량, G=총금액
+          await appendSheetData(
+            session.accessToken,
+            user.spreadsheet_id,
+            "'8. 매매일지(App)'!A:G",
+            [[
+              transaction.date,
+              transaction.ticker,
+              transaction.name || '',
+              transaction.type === 'BUY' ? '매수' : '매도',
               transaction.price,
-              transaction.type
+              transaction.quantity,
+              totalAmount,
+            ]]
+          );
+
+          sheetSynced = true;
+        } catch (appendError) {
+          // 매매일지 탭이 없을 수 있음 - 에러 무시하고 계속 진행
+          console.warn('Failed to append to 매매일지 tab (might not exist):', appendError);
+        }
+
+        try {
+          // 3-2. 종목현황 탭에서 해당 종목 찾아서 수량/평단가 업데이트
+          const portfolioRows = await fetchSheetData(
+            session.accessToken,
+            user.spreadsheet_id,
+            "'3. 종목현황'!A:J"
+          );
+
+          if (portfolioRows) {
+            const portfolio = parsePortfolioData(portfolioRows);
+            const existingItem = portfolio.find(
+              (item) => item.ticker.toUpperCase() === transaction.ticker.toUpperCase()
             );
 
-            // 수량(E열)과 평단가(F열) 업데이트
-            const rowIndex = existingItem.rowIndex;
-            await batchUpdateSheet(
-              session.accessToken,
-              user.spreadsheet_id,
-              [
-                { range: `'3. 종목현황'!E${rowIndex}`, values: [[newQty]] },
-                { range: `'3. 종목현황'!F${rowIndex}`, values: [[newAvgPrice]] },
-              ]
-            );
-
-            sheetSynced = true;
-          } else if (transaction.type === 'BUY') {
-            // 신규 종목 매수 - 새 행 추가
-            // A=종목명, B=국가, C=종목코드, D=통화, E=수량, F=평단가
-            const isKorean = /^\d{6}$/.test(transaction.ticker);
-            await appendSheetData(
-              session.accessToken,
-              user.spreadsheet_id,
-              "'3. 종목현황'!A:F",
-              [[
-                transaction.name || transaction.ticker,
-                isKorean ? '한국' : '미국',
-                transaction.ticker,
-                isKorean ? 'KRW' : 'USD',
+            if (existingItem) {
+              // 기존 종목 - 평단가/수량 계산 후 업데이트
+              const { newQty, newAvgPrice } = calculateNewAvgPrice(
+                existingItem.quantity,
+                existingItem.avgPrice,
                 transaction.quantity,
                 transaction.price,
-              ]]
-            );
+                transaction.type
+              );
 
-            sheetSynced = true;
+              // 수량(E열)과 평단가(F열) 업데이트
+              const rowIndex = existingItem.rowIndex;
+              await batchUpdateSheet(
+                session.accessToken,
+                user.spreadsheet_id,
+                [
+                  { range: `'3. 종목현황'!E${rowIndex}`, values: [[newQty]] },
+                  { range: `'3. 종목현황'!F${rowIndex}`, values: [[newAvgPrice]] },
+                ]
+              );
+
+              sheetSynced = true;
+            } else if (transaction.type === 'BUY') {
+              // 신규 종목 매수 - 새 행 추가
+              // A=종목명, B=국가, C=종목코드, D=통화, E=수량, F=평단가
+              const isKorean = /^\d{6}$/.test(transaction.ticker);
+              await appendSheetData(
+                session.accessToken,
+                user.spreadsheet_id,
+                "'3. 종목현황'!A:F",
+                [[
+                  transaction.name || transaction.ticker,
+                  isKorean ? '한국' : '미국',
+                  transaction.ticker,
+                  isKorean ? 'KRW' : 'USD',
+                  transaction.quantity,
+                  transaction.price,
+                ]]
+              );
+
+              sheetSynced = true;
+            }
           }
+        } catch (updateError) {
+          console.error('Failed to update 종목현황:', updateError);
+          // 종목현황 업데이트 실패해도 계속 진행
         }
-      } catch (updateError) {
-        console.error('Failed to update 종목현황:', updateError);
-        // 종목현황 업데이트 실패해도 계속 진행
       }
 
       // 시트 동기화 상태 업데이트
