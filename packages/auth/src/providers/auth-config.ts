@@ -68,6 +68,7 @@ export const authConfig: NextAuthConfig = {
         const { createServiceClient } = await import('@repo/database/server')
         const supabase = createServiceClient()
 
+        // 이메일 기준으로 upsert (같은 이메일이면 ID 업데이트)
         const { error } = await supabase
           .from('users')
           .upsert({
@@ -76,7 +77,7 @@ export const authConfig: NextAuthConfig = {
             name: user.name,
             image: user.image,
             updated_at: new Date().toISOString(),
-          }, { onConflict: 'id' })
+          }, { onConflict: 'email' })
 
         if (error) {
           console.error('Failed to save user to Supabase:', error)
