@@ -57,5 +57,6 @@ export const defaultDashboardData: DashboardData = {
   accountTrend: [],
   monthlyProfitLoss: [],
   yieldComparison: null,
+  yieldComparisonDollar: null,
   lastSyncAt: null,
 };

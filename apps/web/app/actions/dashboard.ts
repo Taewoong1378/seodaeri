@@ -12,6 +12,7 @@ import {
   type PerformanceComparisonData,
   type PortfolioItem,
   type YieldComparisonData,
+  type YieldComparisonDollarData,
   aggregateMonthlyDividends,
   fetchSheetData,
   parseAccountSummary,
@@ -21,6 +22,7 @@ import {
   parsePerformanceComparisonData,
   parsePortfolioData,
   parseYieldComparisonData,
+  parseYieldComparisonDollarData,
 } from '../../lib/google-sheets';
 
 // 사용자별 캐시 태그 생성
@@ -76,6 +78,8 @@ export interface DashboardData {
   monthlyProfitLoss: MonthlyProfitLoss[];
   // 수익률 비교 바 차트 (5. 계좌내역(누적) 탭에서)
   yieldComparison: YieldComparisonData | null;
+  // 수익률 비교 달러환율 적용 (4. 수익률 비교(달러환율 적용) 탭에서)
+  yieldComparisonDollar: YieldComparisonDollarData | null;
   // 마지막 동기화 시간
   lastSyncAt: string | null;
 }
@@ -125,13 +129,14 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       accountTrend: [],
       monthlyProfitLoss: [],
       yieldComparison: null,
+      yieldComparisonDollar: null,
       lastSyncAt: null,
     };
   }
 
   try {
     // 시트에서 데이터 읽기 (병렬 처리, 60초 캐시)
-    const [accountRows, dividendRows, portfolioRows, performanceRows, profitLossRows] = await Promise.all([
+    const [accountRows, dividendRows, portfolioRows, performanceRows, profitLossRows, dollarYieldRows] = await Promise.all([
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'1. 계좌현황(누적)'!A:K", user.id),
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!A:J", user.id),
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'3. 종목현황'!A:P", user.id),
@@ -139,6 +144,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AB78", user.id),
       // 월별 손익 데이터는 "2. 계좌현황(올해)" 시트의 B48:M50
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'2. 계좌현황(올해)'!B48:M50", user.id),
+      // 수익률 비교(달러환율 적용) 데이터 - "5. 계좌내역(누적)" 시트의 Y~AC 컬럼 (달러환율 적용 지수)
+      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AC78", user.id),
     ]);
 
     // 계좌 요약 파싱
@@ -230,6 +237,11 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       ? parseYieldComparisonData(performanceRows)
       : null;
 
+    // 수익률 비교 달러환율 적용 파싱 (확장된 범위에서 달러 컬럼 포함)
+    const yieldComparisonDollar: YieldComparisonDollarData | null = dollarYieldRows
+      ? parseYieldComparisonDollarData(dollarYieldRows)
+      : null;
+
     return {
       totalAsset: Math.round(totalAsset),
       totalYield: Number.parseFloat(totalYield.toFixed(2)),
@@ -243,6 +255,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       accountTrend,
       monthlyProfitLoss,
       yieldComparison,
+      yieldComparisonDollar,
       lastSyncAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -282,6 +295,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       accountTrend: [],
       monthlyProfitLoss: [],
       yieldComparison: null,
+      yieldComparisonDollar: null,
       lastSyncAt: null,
     };
   }

@@ -2,13 +2,13 @@
 
 import { useEffect, useRef } from 'react';
 import {
-    Area,
-    AreaChart,
-    CartesianGrid,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts';
 import { LandscapeChartModal } from './LandscapeChartModal';
 import { ShareChartButton } from './ShareChartButton';
@@ -331,12 +331,6 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
         </div>
       </div>
 
-      {/* Scroll hint */}
-      {displayData.length > 12 && (
-        <p className="text-[10px] text-slate-600 text-center">
-          ← 좌우로 스크롤하여 전체 기간 보기 →
-        </p>
-      )}
       {displayData.length > 12 && (
         <p className="text-[10px] text-slate-600 text-center">
           ← 좌우로 스크롤하여 전체 기간 보기 →

@@ -1,7 +1,7 @@
 import { auth, signOut } from '@repo/auth/server';
 import { Button } from '@repo/design-system/components/button';
 import { Card, CardContent } from '@repo/design-system/components/card';
-import { ChevronRight, ExternalLink, LogOut, User } from 'lucide-react';
+import { ChevronRight, ExternalLink, LogOut, Shield, User } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -61,6 +61,21 @@ export default async function SettingsPage() {
                 <div>
                   <p className="text-sm font-medium text-white">시트 연동 관리</p>
                   <p className="text-xs text-slate-500">Google 스프레드시트 연결 설정</p>
+                </div>
+              </div>
+              <ChevronRight size={20} className="text-slate-500" />
+            </Link>
+            <Link
+              href="/privacy"
+              className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-slate-500/10 flex items-center justify-center">
+                  <Shield size={20} className="text-slate-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">개인정보처리방침</p>
+                  <p className="text-xs text-slate-500">개인정보 수집 및 이용 안내</p>
                 </div>
               </div>
               <ChevronRight size={20} className="text-slate-500" />

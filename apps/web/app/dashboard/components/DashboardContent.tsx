@@ -12,6 +12,7 @@ import { PerformanceComparisonChart } from './PerformanceComparisonChart';
 import { PortfolioDonutChart } from './PortfolioDonutChart';
 import { PortfolioHoldingsChart } from './PortfolioHoldingsChart';
 import { YieldComparisonChart } from './YieldComparisonChart';
+import { YieldComparisonDollarChart } from './YieldComparisonDollarChart';
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(Math.round(amount));
@@ -100,6 +101,15 @@ export function DashboardContent() {
                 <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
                     <YieldComparisonChart data={displayData.yieldComparison} />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Yield Comparison Dollar Bar Chart (달러환율 적용) */}
+              {displayData.yieldComparisonDollar && (
+                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                  <CardContent className="p-6">
+                    <YieldComparisonDollarChart data={displayData.yieldComparisonDollar} />
                   </CardContent>
                 </Card>
               )}

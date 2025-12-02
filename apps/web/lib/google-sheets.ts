@@ -1006,6 +1006,26 @@ export interface YieldComparisonData {
 }
 
 /**
+ * 수익률 비교(달러환율 적용) 바 차트 데이터 타입
+ */
+export interface YieldComparisonDollarData {
+  thisYearYield: {
+    account: number;
+    kospi: number;
+    sp500: number;
+    nasdaq: number;
+    dollar: number; // 달러 환율 수익률
+  };
+  annualizedYield: {
+    account: number;
+    kospi: number;
+    sp500: number;
+    nasdaq: number;
+    dollar: number; // 달러 환율 연평균 수익률
+  };
+}
+
+/**
  * "5. 계좌내역(누적)" 시트에서 수익률 비교 데이터 파싱
  * 현재 연월의 데이터에서 올해 수익률과 연평균 수익률 계산
  */
@@ -1125,7 +1145,7 @@ export function parseYieldComparisonData(rows: any[]): YieldComparisonData | nul
   const calcAnnualized = (cumulative: number): number => {
     const total = 1 + cumulative / 100;
     if (total <= 0 || years <= 0) return 0;
-    return (Math.pow(total, 1 / years) - 1) * 100;
+    return (total ** (1 / years) - 1) * 100;
   };
 
   const annualizedYield = {
@@ -1152,4 +1172,132 @@ export function parseYieldComparisonData(rows: any[]): YieldComparisonData | nul
       nasdaq: round(annualizedYield.nasdaq),
     },
   };
+}
+
+/**
+ * "5. 계좌내역(누적)" 시트에서 수익률 비교(달러환율 적용) 데이터 파싱
+ *
+ * 범위: G17:AC78
+ * - G열(0) = 날짜 (YY.MM)
+ * - S열(12) = 올해 수익률 (계좌, 달러환율 적용)
+ * - T열(13) = 올해 수익률 (KOSPI, 달러환율 적용)
+ * - U열(14) = 올해 수익률 (S&P500, 달러환율 적용)
+ * - V열(15) = 올해 수익률 (NASDAQ, 달러환율 적용)
+ * - W열(16) = 올해 수익률 (DOLLAR)
+ * - X열(17) = 연평균 수익률 (계좌, 달러환율 적용)
+ * - Y열(18) = 연평균 수익률 (KOSPI, 달러환율 적용)
+ * - Z열(19) = 연평균 수익률 (S&P500, 달러환율 적용)
+ * - AA열(20) = 연평균 수익률 (NASDAQ, 달러환율 적용)
+ * - AB열(21) = 연평균 수익률 (DOLLAR)
+ */
+export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDollarData | null {
+  if (!rows || rows.length === 0) return null;
+
+  const parsePercent = (val: any): number => {
+    if (!val || val === '#NUM!' || val === '#VALUE!' || val === '#DIV/0!' || val === '#REF!') return 0;
+    const str = String(val).replace(/[%,\s]/g, '');
+    const num = Number.parseFloat(str);
+    if (Number.isNaN(num)) return 0;
+    // 값이 소수점 형태(0.15 = 15%)로 저장된 경우 변환
+    // 단, 이미 백분율 형태(-0.6, 66.5 등)인 경우는 그대로 사용
+    if (Math.abs(num) < 2 && num !== 0) {
+      return num * 100;
+    }
+    return num;
+  };
+
+  // 현재 연월 계산
+  const now = new Date();
+  const currentYY = String(now.getFullYear()).slice(2);
+  const currentMM = String(now.getMonth() + 1).padStart(2, '0');
+  const currentDateStr = `${currentYY}.${currentMM}`;
+
+  // G17:AC78 범위 기준 컬럼 인덱스 (G=0 기준):
+  // 올해 수익률 컬럼들 (S~W = 12~16)
+  const COL_THIS_YEAR_ACCOUNT = 12;  // S열
+  const COL_THIS_YEAR_KOSPI = 13;    // T열
+  const COL_THIS_YEAR_SP500 = 14;    // U열
+  const COL_THIS_YEAR_NASDAQ = 15;   // V열
+  const COL_THIS_YEAR_DOLLAR = 16;   // W열
+  // 연평균 수익률 컬럼들 (X~AB = 17~21)
+  const COL_ANNUAL_ACCOUNT = 17;     // X열
+  const COL_ANNUAL_KOSPI = 18;       // Y열
+  const COL_ANNUAL_SP500 = 19;       // Z열
+  const COL_ANNUAL_NASDAQ = 20;      // AA열
+  const COL_ANNUAL_DOLLAR = 21;      // AB열
+
+  let currentRow: any[] | null = null;
+
+  for (const row of rows) {
+    if (!row || !Array.isArray(row) || row.length === 0) continue;
+    const dateCell = String(row[0] || '').trim();
+
+    if (dateCell === currentDateStr) {
+      currentRow = row;
+      break;
+    }
+  }
+
+  // 현재 월 데이터가 없으면 가장 최근 데이터 사용
+  if (!currentRow) {
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const row = rows[i];
+      if (!row || !Array.isArray(row) || row.length === 0) continue;
+      const dateCell = String(row[0] || '').trim();
+      if (/^\d{2}\.\d{2}$/.test(dateCell)) {
+        currentRow = row;
+        break;
+      }
+    }
+  }
+
+  if (!currentRow) {
+    return null;
+  }
+
+  // Debug: 현재 행의 모든 컬럼 값 출력
+  console.log('[parseYieldComparisonDollarData] Current date:', currentRow[0]);
+  console.log('[parseYieldComparisonDollarData] Row length:', currentRow.length);
+  console.log('[parseYieldComparisonDollarData] Columns 12-21:', currentRow.slice(12, 22));
+
+  // 올해 수익률 (이미 백분율로 저장된 값)
+  const thisYearYield = {
+    account: parsePercent(currentRow[COL_THIS_YEAR_ACCOUNT]),
+    kospi: parsePercent(currentRow[COL_THIS_YEAR_KOSPI]),
+    sp500: parsePercent(currentRow[COL_THIS_YEAR_SP500]),
+    nasdaq: parsePercent(currentRow[COL_THIS_YEAR_NASDAQ]),
+    dollar: parsePercent(currentRow[COL_THIS_YEAR_DOLLAR]),
+  };
+
+  // 연평균 수익률 (이미 백분율로 저장된 값)
+  const annualizedYield = {
+    account: parsePercent(currentRow[COL_ANNUAL_ACCOUNT]),
+    kospi: parsePercent(currentRow[COL_ANNUAL_KOSPI]),
+    sp500: parsePercent(currentRow[COL_ANNUAL_SP500]),
+    nasdaq: parsePercent(currentRow[COL_ANNUAL_NASDAQ]),
+    dollar: parsePercent(currentRow[COL_ANNUAL_DOLLAR]),
+  };
+
+  const round = (n: number) => Math.round(n * 10) / 10;
+
+  const result: YieldComparisonDollarData = {
+    thisYearYield: {
+      account: round(thisYearYield.account),
+      kospi: round(thisYearYield.kospi),
+      sp500: round(thisYearYield.sp500),
+      nasdaq: round(thisYearYield.nasdaq),
+      dollar: round(thisYearYield.dollar),
+    },
+    annualizedYield: {
+      account: round(annualizedYield.account),
+      kospi: round(annualizedYield.kospi),
+      sp500: round(annualizedYield.sp500),
+      nasdaq: round(annualizedYield.nasdaq),
+      dollar: round(annualizedYield.dollar),
+    },
+  };
+
+  console.log('[parseYieldComparisonDollarData] Result:', JSON.stringify(result));
+
+  return result;
 }
