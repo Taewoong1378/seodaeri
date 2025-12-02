@@ -4,7 +4,6 @@ import { Card, CardContent } from '@repo/design-system/components/card';
 import { cn } from '@repo/design-system/lib/utils';
 import { ArrowDownLeft, ArrowUpRight, Banknote, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import { useState } from 'react';
-import { OCRModal } from '../../dashboard/components/OCRModal';
 
 interface Transaction {
   id: string;
@@ -249,7 +248,6 @@ export function TransactionsClient({ transactions }: TransactionsClientProps) {
         )}
       </div>
 
-      <OCRModal mode={activeTab === 'dividend' ? 'dividend' : 'trade'} />
     </div>
   );
 }

@@ -5,7 +5,7 @@ export default function TransactionsLayout({
 }) {
   return (
     <div className="min-h-screen bg-black flex justify-center">
-      <div className="w-full max-w-[500px] bg-[#020617] min-h-screen relative shadow-2xl overflow-hidden">
+      <div className="w-full max-w-[500px] bg-[#020617] min-h-screen relative shadow-2xl">
         {children}
       </div>
     </div>

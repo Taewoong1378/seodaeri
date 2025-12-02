@@ -32,8 +32,10 @@ export interface SaveTransactionResult {
 }
 
 export async function analyzeTradeImage(imageBase64: string, mode: 'trade' | 'dividend' = 'trade'): Promise<OCRResult | null> {
+  console.log('[analyzeTradeImage] Called with mode:', mode, 'imageBase64 length:', imageBase64?.length);
+
   if (!process.env.OPENAI_API_KEY) {
-    console.error('OPENAI_API_KEY is not set');
+    console.error('[analyzeTradeImage] OPENAI_API_KEY is not set');
     return null;
   }
 
@@ -66,8 +68,9 @@ Ensure price is a number (remove commas and currency symbols).
 For Korean stocks, ticker should be the 6-digit code.`;
 
   try {
+    console.log('[analyzeTradeImage] Sending request to OpenAI...');
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -89,12 +92,19 @@ For Korean stocks, ticker should be the 6-digit code.`;
       response_format: { type: "json_object" },
     });
 
+    console.log('[analyzeTradeImage] OpenAI response received');
     const content = response.choices[0]?.message?.content;
-    if (!content) return null;
+    console.log('[analyzeTradeImage] Content:', content);
+
+    if (!content) {
+      console.log('[analyzeTradeImage] No content in response');
+      return null;
+    }
 
     const result = JSON.parse(content);
+    console.log('[analyzeTradeImage] Parsed result:', result);
 
-    return {
+    const finalResult = {
       date: result.date || new Date().toISOString().split('T')[0],
       ticker: result.ticker || '',
       name: result.name || '',
@@ -102,8 +112,10 @@ For Korean stocks, ticker should be the 6-digit code.`;
       quantity: mode === 'dividend' ? 1 : (Number.parseFloat(result.quantity) || 0),
       type: mode === 'dividend' ? 'DIVIDEND' : (result.type || 'BUY'),
     };
+    console.log('[analyzeTradeImage] Final result:', finalResult);
+    return finalResult;
   } catch (error) {
-    console.error('OCR Analysis failed:', error);
+    console.error('[analyzeTradeImage] OCR Analysis failed:', error);
     return null;
   }
 }
