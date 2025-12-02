@@ -11,6 +11,7 @@ import {
   YAxis
 } from 'recharts';
 import { LandscapeChartModal } from './LandscapeChartModal';
+import { ShareChartButton } from './ShareChartButton';
 
 interface PerformanceComparisonData {
   date: string;
@@ -33,17 +34,30 @@ const LINES = [
 
 export function PerformanceComparisonChart({ data }: PerformanceComparisonChartProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  // 현재 연월 계산
+  const now = new Date();
+  const currentYY = String(now.getFullYear()).slice(2);
+  const currentMM = String(now.getMonth() + 1).padStart(2, '0');
+  const currentDate = `${currentYY}.${currentMM}`;
+
+  // 현재 월까지만 데이터 필터링
+  const filteredData = data.filter((item) => {
+    // date 형식: "YY.MM" (예: "25.12")
+    return item.date <= currentDate;
+  });
 
   // 데이터가 0인 경우 이전 값으로 채우기 (forward fill)
-  const displayData = data.map((item, index) => {
+  const displayData = filteredData.map((item, index) => {
     const result = { ...item };
 
     // portfolio가 0이면 이전 값 사용
     if (result.portfolio === 0 && index > 0) {
       // 이전에 유효한 값을 찾기
       for (let i = index - 1; i >= 0; i--) {
-        if (data[i]?.portfolio !== 0) {
-          result.portfolio = data[i]?.portfolio || 0;
+        if (filteredData[i]?.portfolio !== 0) {
+          result.portfolio = filteredData[i]?.portfolio || 0;
           break;
         }
       }
@@ -52,26 +66,11 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
     return result;
   });
 
-  // 현재 날짜에 해당하는 위치로 스크롤
+  // 현재 날짜 위치로 스크롤 (마지막 데이터가 보이도록)
   useEffect(() => {
     if (scrollRef.current && displayData.length > 0) {
-      const now = new Date();
-      const currentYY = String(now.getFullYear()).slice(2);
-      const currentMM = String(now.getMonth() + 1).padStart(2, '0');
-      const currentDate = `${currentYY}.${currentMM}`;
-
-      // 현재 날짜에 가장 가까운 인덱스 찾기
-      let targetIndex = displayData.length - 1;
-      for (let i = 0; i < displayData.length; i++) {
-        const item = displayData[i];
-        if (item && item.date >= currentDate) {
-          targetIndex = i;
-          break;
-        }
-      }
-
-      // 데이터 포인트당 40px, 현재 위치가 화면 중앙에 오도록 스크롤
-      const scrollPosition = Math.max(0, targetIndex * 40 - scrollRef.current.clientWidth / 2);
+      // 마지막 데이터가 보이도록 스크롤
+      const scrollPosition = Math.max(0, displayData.length * 40 - scrollRef.current.clientWidth + 40);
       scrollRef.current.scrollLeft = scrollPosition;
     }
   }, [displayData]);
@@ -87,7 +86,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
   const chartWidth = Math.max(displayData.length * 40, 400);
 
   return (
-    <div className="space-y-4">
+    <div ref={chartRef} className="space-y-4">
       <div className="flex items-center justify-between">
         {/* Legend */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -105,7 +104,9 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
           ))}
         </div>
 
-        <LandscapeChartModal title="수익률 비교">
+        <div className="flex items-center gap-2">
+          <ShareChartButton chartRef={chartRef} title="수익률 비교" />
+          <LandscapeChartModal title="수익률 비교">
             <div className="w-full h-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
@@ -165,7 +166,8 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </LandscapeChartModal>
+          </LandscapeChartModal>
+        </div>
       </div>
 
       {/* Scrollable Chart Container */}

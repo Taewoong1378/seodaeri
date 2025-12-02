@@ -1,7 +1,9 @@
 'use client';
 
+import { useRef } from 'react';
 import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { LandscapeChartModal } from './LandscapeChartModal';
+import { ShareChartButton } from './ShareChartButton';
 
 interface MonthlyProfitLoss {
   month: string;
@@ -55,6 +57,8 @@ function formatYAxisValue(value: number): string {
 }
 
 export function MonthlyProfitLossChart({ data }: MonthlyProfitLossChartProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
+
   if (!data || data.length === 0) return null;
 
   // 데이터를 차트용으로 변환 (손실을 음수로)
@@ -152,19 +156,22 @@ export function MonthlyProfitLossChart({ data }: MonthlyProfitLossChartProps) {
   );
 
   return (
-    <div className="space-y-4">
+    <div ref={chartRef} className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-white">월별 손익</h4>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-sm bg-orange-500" />
-            <span className="text-[10px] text-slate-500">수익</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 mr-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-sm bg-orange-500" />
+              <span className="text-[10px] text-slate-500">수익</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-sm bg-slate-600" />
+              <span className="text-[10px] text-slate-500">손실</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-sm bg-slate-600" />
-            <span className="text-[10px] text-slate-500">손실</span>
-          </div>
+          <ShareChartButton chartRef={chartRef} title="월별 손익" />
           <LandscapeChartModal title="월별 손익">
             <div className="w-full h-full">
               {renderChart("100%")}

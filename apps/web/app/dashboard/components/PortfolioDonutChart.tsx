@@ -1,7 +1,9 @@
 'use client';
 
+import { useRef } from 'react';
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { LandscapeChartModal } from './LandscapeChartModal';
+import { ShareChartButton } from './ShareChartButton';
 
 interface PortfolioItem {
   ticker: string;
@@ -41,6 +43,8 @@ function formatCurrency(amount: number): string {
 }
 
 export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
+
   // 상위 5개 + 기타로 그룹화
   const sortedData = [...data].sort((a, b) => b.weight - a.weight);
   const top5 = sortedData.slice(0, 5);
@@ -63,11 +67,13 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
   ];
 
   return (
-    <div className="space-y-4">
+    <div ref={chartRef} className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-white">자산 비중</h4>
-        <LandscapeChartModal title="포트폴리오 비중">
+        <div className="flex items-center gap-2">
+          <ShareChartButton chartRef={chartRef} title="포트폴리오 비중" />
+          <LandscapeChartModal title="포트폴리오 비중">
           <div className="w-full h-full flex items-center justify-center">
             <div className="w-full h-full max-w-[600px] max-h-[400px] flex items-center gap-8">
               <div className="relative flex-1 aspect-square max-h-[300px]">
@@ -121,7 +127,8 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
               </div>
             </div>
           </div>
-        </LandscapeChartModal>
+          </LandscapeChartModal>
+        </div>
       </div>
 
       <div className="flex items-center gap-4 bg-white/[0.02] rounded-xl p-4">

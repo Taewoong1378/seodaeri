@@ -11,6 +11,7 @@ import {
   YAxis,
 } from 'recharts';
 import { LandscapeChartModal } from './LandscapeChartModal';
+import { ShareChartButton } from './ShareChartButton';
 
 interface AccountTrendData {
   date: string;
@@ -39,6 +40,7 @@ function formatCurrency(amount: number): string {
 
 export function AccountTrendChart({ data, currentTotalAsset, currentTotalInvested }: AccountTrendChartProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
 
   // 현재 월 계산
   const now = new Date();
@@ -133,19 +135,22 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
   const chartWidth = Math.max(displayData.length * 40, 400);
 
   return (
-    <div className="space-y-4">
+    <div ref={chartRef} className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-white">월별 계좌추세</h4>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-blue-500/70" />
-            <span className="text-[11px] text-slate-400">누적입금액</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 mr-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-blue-500/70" />
+              <span className="text-[11px] text-slate-400">누적입금액</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm bg-rose-400/70" />
+              <span className="text-[11px] text-slate-400">계좌총액</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-rose-400/70" />
-            <span className="text-[11px] text-slate-400">계좌총액</span>
-          </div>
+          <ShareChartButton chartRef={chartRef} title="월별 계좌추세" />
           <LandscapeChartModal title="월별 계좌추세">
           <div className="w-full h-full">
             <ResponsiveContainer width="100%" height="100%">

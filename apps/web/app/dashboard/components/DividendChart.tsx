@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { LandscapeChartModal } from './LandscapeChartModal';
+import { ShareChartButton } from './ShareChartButton';
 
 interface MonthlyDividend {
   month: string;
@@ -42,6 +43,8 @@ function formatYAxisValue(value: number): string {
 }
 
 export function DividendChart({ data }: DividendChartProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
+
   // 사용 가능한 연도 목록 추출 (중복 제거, 내림차순)
   const availableYears = [...new Set(data.map(d => d.year))].sort((a, b) => b - a);
 
@@ -121,15 +124,18 @@ export function DividendChart({ data }: DividendChartProps) {
   );
 
   return (
-    <div className="space-y-4 relative">
+    <div ref={chartRef} className="space-y-4 relative">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-white">월별 배당금</h4>
-        <LandscapeChartModal title={`${selectedYear}년 월별 배당금`}>
-          <div className="w-full h-full">
-            {renderChart("100%", true)}
-          </div>
-        </LandscapeChartModal>
+        <div className="flex items-center gap-2">
+          <ShareChartButton chartRef={chartRef} title={`${selectedYear}년 월별 배당금`} />
+          <LandscapeChartModal title={`${selectedYear}년 월별 배당금`}>
+            <div className="w-full h-full">
+              {renderChart("100%", true)}
+            </div>
+          </LandscapeChartModal>
+        </div>
       </div>
 
       {/* Year Selector & Total */}
