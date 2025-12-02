@@ -50,11 +50,24 @@ export async function getDashboardData(): Promise<DashboardData | null> {
   const supabase = createServiceClient();
 
   // 사용자 정보 및 spreadsheet_id 조회
-  const { data: user } = await supabase
+  // ID로 먼저 조회, 실패하면 이메일로 fallback
+  let { data: user } = await supabase
     .from('users')
     .select('spreadsheet_id')
     .eq('id', session.user.id)
     .single();
+
+  if (!user && session.user.email) {
+    const { data: userByEmail } = await supabase
+      .from('users')
+      .select('spreadsheet_id')
+      .eq('email', session.user.email)
+      .single();
+
+    if (userByEmail) {
+      user = userByEmail;
+    }
+  }
 
   if (!user?.spreadsheet_id || !session.accessToken) {
     // 시트 연동 안됨 - 기본값 반환
@@ -307,11 +320,24 @@ export async function syncPortfolio() {
 
   const supabase = createServiceClient();
 
-  const { data: user } = await supabase
+  // ID로 먼저 조회, 실패하면 이메일로 fallback
+  let { data: user } = await supabase
     .from('users')
     .select('spreadsheet_id')
     .eq('id', session.user.id)
     .single();
+
+  if (!user && session.user.email) {
+    const { data: userByEmail } = await supabase
+      .from('users')
+      .select('spreadsheet_id')
+      .eq('email', session.user.email)
+      .single();
+
+    if (userByEmail) {
+      user = userByEmail;
+    }
+  }
 
   if (!user?.spreadsheet_id) {
     throw new Error('Spreadsheet ID not found');

@@ -67,11 +67,24 @@ export async function getTransactions(): Promise<TransactionsResult> {
     }));
 
     // 2. Google Sheets에서 입금내역, 배당내역 조회
-    const { data: user } = await supabase
+    // ID로 먼저 조회, 실패하면 이메일로 fallback
+    let { data: user } = await supabase
       .from('users')
       .select('spreadsheet_id')
       .eq('id', session.user.id)
       .single();
+
+    if (!user && session.user.email) {
+      const { data: userByEmail } = await supabase
+        .from('users')
+        .select('spreadsheet_id')
+        .eq('email', session.user.email)
+        .single();
+
+      if (userByEmail) {
+        user = userByEmail;
+      }
+    }
 
     const sheetTransactions: Transaction[] = [];
 

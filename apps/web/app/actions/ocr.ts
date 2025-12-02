@@ -110,11 +110,24 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
 
   try {
     // 1. 사용자의 spreadsheet_id 조회
-    const { data: user } = await supabase
+    // ID로 먼저 조회, 실패하면 이메일로 fallback
+    let { data: user } = await supabase
       .from('users')
       .select('spreadsheet_id')
       .eq('id', session.user.id)
       .single();
+
+    if (!user && session.user.email) {
+      const { data: userByEmail } = await supabase
+        .from('users')
+        .select('spreadsheet_id')
+        .eq('email', session.user.email)
+        .single();
+
+      if (userByEmail) {
+        user = userByEmail;
+      }
+    }
 
     if (!user?.spreadsheet_id) {
       return { success: false, error: '연동된 스프레드시트가 없습니다. 온보딩을 먼저 완료해주세요.' };
