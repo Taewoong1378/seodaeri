@@ -15,8 +15,8 @@ export function BenefitBanner() {
   return (
     <div className="relative overflow-hidden rounded-[24px] bg-white/[0.03] border border-white/10 p-1 shadow-sm">
       <div className="relative bg-[#020617]/40 backdrop-blur-sm rounded-[20px] p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:block relative w-16 h-16 rounded-2xl overflow-hidden border border-white/10 shadow-inner shrink-0">
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden border border-white/10 shadow-inner shrink-0">
              <Image
               src="/images/banners/banner-benefit-kiwoom.png"
               alt="키움증권 혜택"
@@ -24,7 +24,7 @@ export function BenefitBanner() {
               className="object-cover"
             />
           </div>
-          <div className="text-center sm:text-left space-y-1">
+          <div className="text-left space-y-1">
             <h3 className="text-lg font-bold text-white tracking-tight">
               키움증권 계좌 개설하고
             </h3>
