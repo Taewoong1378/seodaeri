@@ -1,5 +1,6 @@
 'use client';
 
+import { SmallBanner } from '@/app/dashboard/components/SmallBanner';
 import { Card, CardContent } from '@repo/design-system/components/card';
 import {
   Tooltip,
@@ -214,6 +215,17 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
             </div>
           </div>
         </div>
+      )}
+
+      {/* SCHD Banner for Dividend Tab */}
+      {activeTab === 'dividend' && (
+        <SmallBanner
+          title="SOL 미국배당다우존스"
+          description="한국판 SCHD로 시작하는 월배당 투자"
+          image="/images/banners/banner-sol-etf.png"
+          link="https://www.shinhansec.com"
+          gradient="from-blue-600 to-indigo-900"
+        />
       )}
 
       {activeTab === 'deposit' && depositTransactions.length > 0 && (
