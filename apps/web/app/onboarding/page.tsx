@@ -61,7 +61,10 @@ export default async function OnboardingPage() {
             </p>
           </div>
 
-          <OnboardingClient userName={session.user.name || undefined} />
+          <OnboardingClient
+            userName={session.user.name || undefined}
+            accessToken={session.accessToken || undefined}
+          />
         </div>
       </main>
 
