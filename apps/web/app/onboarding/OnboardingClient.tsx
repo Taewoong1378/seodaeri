@@ -3,13 +3,13 @@
 import { Button } from '@repo/design-system/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/design-system/components/card';
 import { Input } from '@repo/design-system/components/input';
-import { Copy, ExternalLink, FileSpreadsheet, FolderOpen, Loader2, Plus } from 'lucide-react';
-import Link from 'next/link';
+import { FileSpreadsheet, FolderOpen, Loader2, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import {
   type OnboardingResult,
   connectSheetById,
+  createNewSheet,
 } from '../actions/onboarding';
 
 interface OnboardingClientProps {
@@ -36,17 +36,12 @@ function extractSheetId(input: string): string {
 
 // 환경변수
 const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || '';
-const MASTER_TEMPLATE_ID = process.env.NEXT_PUBLIC_SEODAERI_TEMPLATE_SHEET_ID || '';
-const MASTER_TEMPLATE_URL = MASTER_TEMPLATE_ID
-  ? `https://docs.google.com/spreadsheets/d/${MASTER_TEMPLATE_ID}/copy`
-  : '';
 
 export function OnboardingClient({ userName, accessToken }: OnboardingClientProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState<'manual' | 'picker' | null>(null);
+  const [loading, setLoading] = useState<'manual' | 'picker' | 'create' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sheetInput, setSheetInput] = useState('');
-  const [showCopyGuide, setShowCopyGuide] = useState(false);
   const [pickerReady, setPickerReady] = useState(false);
 
   // Google Picker API 로드
@@ -171,6 +166,20 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
     }
   };
 
+  // 템플릿 복사해서 새 시트 만들기
+  const handleCreateSheet = async () => {
+    setLoading('create');
+    setError(null);
+    try {
+      const result = await createNewSheet();
+      handleResult(result);
+    } catch (err: any) {
+      console.error('handleCreateSheet error:', err);
+      setError(err?.message || '시트 생성 중 오류가 발생했습니다.');
+      setLoading(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Option 1: 기존 시트 연동 (메인) */}
@@ -249,7 +258,7 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
         <div className="flex-1 h-px bg-white/10" />
       </div>
 
-      {/* Option 2: 새 시트 만들기 - 템플릿 복사 가이드 */}
+      {/* Option 2: 새 시트 만들기 */}
       <Card className="bg-white/5 border-white/10">
         <CardHeader className="pb-3">
           <CardTitle className="text-white flex items-center gap-3 text-lg">
@@ -259,85 +268,27 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
             새 시트 만들기
           </CardTitle>
           <CardDescription className="text-slate-400">
-            서대리 투자기록 템플릿을 복사하여 시작하세요.
+            서대리 투자기록 템플릿으로 새 스프레드시트를 생성합니다.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {!showCopyGuide ? (
-            <Button
-              onClick={() => setShowCopyGuide(true)}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              <Copy className="w-4 h-4" />
-              템플릿으로 시작하기
-            </Button>
-          ) : (
-            <div className="space-y-4">
-              {/* Step 1 */}
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                  <span className="text-xs font-bold text-emerald-400">1</span>
-                </div>
-                <div className="flex-1 space-y-2">
-                  <p className="text-sm text-slate-300">템플릿을 내 드라이브에 복사하세요</p>
-                  {MASTER_TEMPLATE_URL ? (
-                    <Link
-                      href={MASTER_TEMPLATE_URL}
-                      target="_blank"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors text-sm font-medium"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      템플릿 복사하기
-                    </Link>
-                  ) : (
-                    <p className="text-xs text-slate-500">
-                      템플릿 URL이 설정되지 않았습니다. 관리자에게 문의하세요.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Step 2 */}
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                  <span className="text-xs font-bold text-emerald-400">2</span>
-                </div>
-                <div className="flex-1 space-y-2">
-                  <p className="text-sm text-slate-300">복사가 완료되면 아래 버튼을 눌러 연동하세요</p>
-                  <Button
-                    onClick={openGooglePicker}
-                    disabled={loading !== null || !pickerReady}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
-                  >
-                    {loading === 'picker' ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        선택 중...
-                      </>
-                    ) : !pickerReady ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        로딩 중...
-                      </>
-                    ) : (
-                      <>
-                        <FolderOpen className="w-4 h-4" />
-                        복사한 시트 선택하기
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setShowCopyGuide(false)}
-                className="text-xs text-slate-500 hover:text-slate-400"
-                type='button'
-              >
-                접기
-              </button>
-            </div>
-          )}
+        <CardContent>
+          <Button
+            onClick={handleCreateSheet}
+            disabled={loading !== null}
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
+          >
+            {loading === 'create' ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                생성 중...
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4" />
+                새 시트 생성하기
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
 

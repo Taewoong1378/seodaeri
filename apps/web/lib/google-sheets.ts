@@ -1,7 +1,12 @@
 import { google } from 'googleapis';
 
-// 서대리 마스터 템플릿 ID (실제 템플릿 시트 ID로 교체 필요)
-const MASTER_TEMPLATE_ID = process.env.SEODAERI_TEMPLATE_SHEET_ID || '';
+// 서대리 마스터 템플릿 ID (서버/클라이언트 환경변수 모두 지원)
+const MASTER_TEMPLATE_ID = process.env.SEODAERI_TEMPLATE_SHEET_ID
+  || process.env.NEXT_PUBLIC_SEODAERI_TEMPLATE_SHEET_ID
+  || '';
+
+// 디버깅용 로그
+console.log('[google-sheets] MASTER_TEMPLATE_ID:', MASTER_TEMPLATE_ID ? `${MASTER_TEMPLATE_ID.substring(0, 10)}...` : 'NOT SET');
 
 /**
  * Google Drive에서 "서대리" 관련 스프레드시트 검색

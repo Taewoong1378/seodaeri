@@ -196,11 +196,27 @@ export async function createNewSheet(): Promise<OnboardingResult> {
   } catch (error: any) {
     console.error('createNewSheet error:', error);
 
+    // 마스터 템플릿 ID 미설정
     if (error.message?.includes('마스터 템플릿 ID')) {
       return { success: false, error: error.message };
     }
 
-    return { success: false, error: '새 시트 생성 중 오류가 발생했습니다.' };
+    // Google API 에러
+    if (error.code === 404) {
+      return { success: false, error: '마스터 템플릿을 찾을 수 없습니다. 템플릿 ID를 확인하세요.' };
+    }
+
+    if (error.code === 403) {
+      return { success: false, error: '템플릿에 접근 권한이 없습니다. 템플릿이 공유되어 있는지 확인하세요.' };
+    }
+
+    if (error.code === 401) {
+      return { success: false, error: '인증이 만료되었습니다. 다시 로그인해주세요.' };
+    }
+
+    // 기타 에러 - 실제 메시지 포함
+    const errorMessage = error.message || error.toString();
+    return { success: false, error: `시트 생성 실패: ${errorMessage}` };
   }
 }
 
