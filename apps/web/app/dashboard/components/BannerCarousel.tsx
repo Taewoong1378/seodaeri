@@ -100,8 +100,8 @@ export function BannerCarousel() {
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl z-0" />
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full translate-y-1/3 -translate-x-1/4 blur-2xl z-0" />
 
-                <div className="relative z-10 flex items-start justify-between gap-4">
-                  <div className="space-y-2 max-w-[70%]">
+                <div className="relative z-10 flex flex-col sm:flex-row items-start justify-between gap-4 h-full sm:h-auto">
+                  <div className="space-y-2 max-w-full sm:max-w-[70%]">
                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 w-fit">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                       <span className="text-[10px] sm:text-xs font-medium text-white/90">
@@ -123,16 +123,16 @@ export function BannerCarousel() {
                   </div>
                 </div>
 
-                <div className="absolute bottom-6 right-6 sm:bottom-8 sm:right-8">
-                  <button
-                    type="button"
-                    className="group flex items-center gap-2 px-4 py-2 rounded-full bg-white text-slate-900 text-sm font-bold shadow-lg hover:bg-slate-50 transition-all active:scale-95"
-                  >
-                    {banner.action}
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                  </button>
-                </div>
-              </div>
+                    <div className="mt-6 sm:mt-0 sm:absolute sm:bottom-8 sm:right-8">
+                      <button
+                        type="button"
+                        className="group flex items-center gap-2 px-4 py-2 rounded-full bg-white text-slate-900 text-sm font-bold shadow-lg hover:bg-slate-50 transition-all active:scale-95"
+                      >
+                        {banner.action}
+                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                      </button>
+                    </div>
+                  </div>
             </div>
           ))}
         </div>
