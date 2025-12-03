@@ -1,5 +1,6 @@
 'use client';
 
+import { SmallBanner } from '@/app/dashboard/components/SmallBanner';
 import { Card, CardContent } from '@repo/design-system/components/card';
 import Link from 'next/link';
 import { defaultDashboardData, useDashboard } from '../../../hooks';
@@ -105,6 +106,15 @@ export function DashboardContent() {
                 </div>
               )}
 
+              {/* Small Banner 1 */}
+              <SmallBanner
+                title="SOL 미국배당다우존스"
+                description="한국판 SCHD의 대명사"
+                image="/images/banners/banner-sol-etf.png"
+                link="#"
+                gradient="from-blue-600 to-cyan-600"
+              />
+
               {/* Yield Comparison Bar Chart */}
               {displayData.yieldComparison && (
                 <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
@@ -122,6 +132,15 @@ export function DashboardContent() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Small Banner 2 */}
+              <SmallBanner
+                title="TIGER 미국테크TOP10"
+                description="미국 빅테크 상위 10개 종목 집중 투자"
+                image="/images/banners/banner-tiger-etf.png"
+                link="#"
+                gradient="from-orange-500 to-red-600"
+              />
 
               {/* Portfolio Charts */}
               {displayData.portfolio.length > 0 && (
