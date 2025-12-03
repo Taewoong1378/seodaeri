@@ -123,7 +123,7 @@ export function BannerCarousel() {
                   </div>
                 </div>
 
-                    <div className="mt-6 sm:mt-0 sm:absolute sm:bottom-8 sm:right-8">
+                    <div className="mt-6 sm:mt-0 sm:absolute sm:bottom-8 sm:right-8 relative z-20">
                       <button
                         type="button"
                         className="group flex items-center gap-2 px-4 py-2 rounded-full bg-white text-slate-900 text-sm font-bold shadow-lg hover:bg-slate-50 transition-all active:scale-95"
