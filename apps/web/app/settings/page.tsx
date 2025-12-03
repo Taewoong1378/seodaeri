@@ -51,7 +51,7 @@ export default async function SettingsPage() {
         <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
           <CardContent className="p-0">
             <Link
-              href="/onboarding"
+              href="/settings/sheet"
               className="flex items-center justify-between p-4 border-b border-white/5 hover:bg-white/5 transition-colors"
             >
               <div className="flex items-center gap-3">
