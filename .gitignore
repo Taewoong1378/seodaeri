@@ -51,3 +51,5 @@ dist/
 # Misc
 *.pem
 *.log
+
+packages/database/*

@@ -2,11 +2,12 @@
 
 import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
-import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
+import { revalidatePath, unstable_cache } from 'next/cache';
 import {
   type AccountSummary,
   type AccountTrendData,
   type CumulativeDividendData,
+  type DepositRecord,
   type DividendByYearData,
   type DividendRecord,
   type RollingAverageDividendData,
@@ -28,6 +29,7 @@ import {
   fetchSheetData,
   parseAccountSummary,
   parseAccountTrendData,
+  parseDepositData,
   parseDividendData,
   parseMajorIndexYieldComparison,
   parseMonthlyProfitLoss,
@@ -138,7 +140,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     }
   }
 
-  if (!user?.spreadsheet_id || !session.accessToken) {
+  if (!user?.id || !user?.spreadsheet_id || !session.accessToken) {
     // 시트 연동 안됨 - 기본값 반환
     return {
       totalAsset: 0,
@@ -228,29 +230,85 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       ? ((totalAsset - totalInvested) / totalInvested) * 100
       : accountSummary.totalYield; // 시트의 수익률 fallback
 
-    // 포트폴리오 캐시 업데이트 (백그라운드)
-    if (portfolio.length > 0) {
-      const upsertData = portfolio.map((item) => ({
-        user_id: user.id,
-        ticker: item.ticker,
-        avg_price: item.avgPrice,
-        quantity: item.quantity,
-        current_price: item.currentPrice,
-        currency: item.currency,
-        updated_at: new Date().toISOString(),
-      }));
+    // 백그라운드에서 DB 동기화 (에러 무시)
+    const userId = user.id as string; // user.id는 위에서 검증됨
+    (async () => {
+      try {
+        const now = new Date().toISOString();
+        const today = now.split('T')[0] as string;
 
-      // 백그라운드에서 캐시 업데이트 (에러 무시)
-      (async () => {
-        try {
+        // 1. 포트폴리오 캐시 업데이트
+        if (portfolio.length > 0) {
+          const portfolioCacheData = portfolio.map((item) => ({
+            user_id: userId,
+            ticker: item.ticker,
+            avg_price: item.avgPrice,
+            quantity: item.quantity,
+            current_price: item.currentPrice,
+            currency: item.currency,
+            updated_at: now,
+          }));
+
           await supabase
             .from('portfolio_cache')
-            .upsert(upsertData, { onConflict: 'user_id,ticker' });
-        } catch (err) {
-          console.error('Cache update failed:', err);
+            .upsert(portfolioCacheData, { onConflict: 'user_id,ticker' });
+
+          // holdings 테이블도 업데이트
+          const holdingsData = portfolio.map((item) => ({
+            user_id: userId,
+            ticker: item.ticker,
+            name: item.name,
+            quantity: item.quantity,
+            avg_price: item.avgPrice,
+            currency: item.currency,
+            updated_at: now,
+          }));
+
+          await supabase
+            .from('holdings')
+            .upsert(holdingsData, { onConflict: 'user_id,ticker' });
+
+          // 오늘 스냅샷 저장
+          await supabase
+            .from('portfolio_snapshots')
+            .upsert({
+              user_id: userId,
+              snapshot_date: today,
+              total_asset: Math.round(totalAsset),
+              total_invested: Math.round(totalInvested),
+              total_profit: Math.round(totalProfit),
+              yield_percent: Number(totalYield.toFixed(2)),
+            }, { onConflict: 'user_id,snapshot_date' });
         }
-      })();
-    }
+
+        // 2. 배당금 내역 저장
+        if (dividends.length > 0) {
+          const dividendData = dividends
+            .filter((d) => d.date)
+            .map((d) => ({
+              user_id: userId,
+              ticker: d.ticker,
+              name: d.name,
+              amount_krw: d.amountKRW,
+              amount_usd: d.amountUSD,
+              dividend_date: d.date,
+              sheet_synced: true,
+              updated_at: now,
+            }));
+
+          if (dividendData.length > 0) {
+            await supabase
+              .from('dividends')
+              .upsert(dividendData, {
+                onConflict: 'user_id,ticker,dividend_date,amount_krw,amount_usd',
+                ignoreDuplicates: true,
+              });
+          }
+        }
+      } catch (err) {
+        console.error('[getDashboardData] Background sync failed:', err);
+      }
+    })();
 
     // 수익률 비교 파싱
     const performanceComparison: PerformanceComparisonData[] = performanceRows
@@ -366,7 +424,12 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 }
 
 /**
- * 포트폴리오 데이터 새로고침 (수동 동기화)
+ * 전체 데이터 동기화 (Sheet → Supabase DB)
+ * - 포트폴리오
+ * - 배당금 내역
+ * - 입출금 내역
+ * - 일별 스냅샷
+ * - 보유 종목
  */
 export async function syncPortfolio() {
   const session = await auth();
@@ -395,23 +458,30 @@ export async function syncPortfolio() {
     }
   }
 
-  if (!user?.spreadsheet_id) {
-    throw new Error('Spreadsheet ID not found');
+  if (!user?.id || !user?.spreadsheet_id) {
+    throw new Error('User or Spreadsheet ID not found');
   }
 
-  // 시트에서 포트폴리오 데이터 읽기
-  const rows = await fetchSheetData(
-    session.accessToken,
-    user.spreadsheet_id,
-    "'3. 종목현황'!A:J"
-  );
+  const userId = user.id as string;
+  const spreadsheetId = user.spreadsheet_id as string;
+  const accessToken = session.accessToken;
 
-  const portfolio = parsePortfolioData(rows || []);
+  // 시트에서 모든 데이터 병렬로 읽기
+  const [portfolioRows, dividendRows, depositRows] = await Promise.all([
+    fetchSheetData(accessToken, spreadsheetId, "'3. 종목현황'!A:P"),
+    fetchSheetData(accessToken, spreadsheetId, "'7. 배당내역'!A:J"),
+    fetchSheetData(accessToken, spreadsheetId, "'6. 입금내역'!A:J"), // A:F -> A:J로 확장 (금액 컬럼 포함)
+  ]);
 
-  // 포트폴리오 캐시 업데이트
+  // 1. 포트폴리오 파싱 및 저장
+  const portfolio = parsePortfolioData(portfolioRows || []);
+  let portfolioCount = 0;
+  let holdingsCount = 0;
+
   if (portfolio.length > 0) {
-    const upsertData = portfolio.map((item) => ({
-      user_id: user.id,
+    // portfolio_cache 업데이트
+    const cacheData = portfolio.map((item) => ({
+      user_id: userId,
       ticker: item.ticker,
       avg_price: item.avgPrice,
       quantity: item.quantity,
@@ -420,16 +490,148 @@ export async function syncPortfolio() {
       updated_at: new Date().toISOString(),
     }));
 
-    const { error } = await supabase
+    await supabase
       .from('portfolio_cache')
-      .upsert(upsertData, { onConflict: 'user_id,ticker' });
+      .upsert(cacheData, { onConflict: 'user_id,ticker' });
 
-    if (error) throw error;
+    // holdings 테이블 업데이트
+    const holdingsData = portfolio.map((item) => ({
+      user_id: userId,
+      ticker: item.ticker,
+      name: item.name,
+      quantity: item.quantity,
+      avg_price: item.avgPrice,
+      currency: item.currency,
+      updated_at: new Date().toISOString(),
+    }));
+
+    await supabase
+      .from('holdings')
+      .upsert(holdingsData, { onConflict: 'user_id,ticker' });
+
+    portfolioCount = portfolio.length;
+    holdingsCount = portfolio.length;
+  }
+
+  // 2. 배당금 내역 파싱 및 저장
+  const dividends = parseDividendData(dividendRows || []);
+  let dividendCount = 0;
+
+  if (dividends.length > 0) {
+    const dividendData = dividends
+      .filter((d) => d.date) // 날짜가 있는 것만
+      .map((d) => ({
+        user_id: userId,
+        ticker: d.ticker,
+        name: d.name,
+        amount_krw: d.amountKRW,
+        amount_usd: d.amountUSD,
+        dividend_date: d.date,
+        sheet_synced: true,
+        updated_at: new Date().toISOString(),
+      }));
+
+    if (dividendData.length > 0) {
+      // 중복 방지를 위해 upsert 사용
+      const { error } = await supabase
+        .from('dividends')
+        .upsert(dividendData, {
+          onConflict: 'user_id,ticker,dividend_date,amount_krw,amount_usd',
+          ignoreDuplicates: true,
+        });
+
+      if (!error) {
+        dividendCount = dividendData.length;
+      }
+    }
+  }
+
+  // 3. 입출금 내역 파싱 및 저장
+  const deposits = parseDepositData(depositRows || []);
+  let depositCount = 0;
+
+  if (deposits.length > 0) {
+    const depositData = deposits
+      .filter((d) => d.date && d.amount) // 날짜와 금액이 있는 것만
+      .map((d) => ({
+        user_id: userId,
+        type: d.type,
+        amount: d.amount,
+        currency: 'KRW' as const,
+        deposit_date: d.date,
+        memo: d.memo || null,
+        sheet_synced: true,
+        updated_at: new Date().toISOString(),
+      }));
+
+    if (depositData.length > 0) {
+      const { error } = await supabase
+        .from('deposits')
+        .upsert(depositData, {
+          onConflict: 'user_id,type,amount,deposit_date',
+          ignoreDuplicates: true,
+        });
+
+      if (!error) {
+        depositCount = depositData.length;
+      }
+    }
+  }
+
+  // 4. 오늘 포트폴리오 스냅샷 저장
+  let snapshotSaved = false;
+  if (portfolio.length > 0) {
+    let totalAsset = 0;
+    let totalInvested = 0;
+
+    for (const item of portfolio) {
+      const rate = item.currency === 'USD' ? 1400 : 1;
+      totalAsset += item.totalValue * rate;
+      totalInvested += item.avgPrice * item.quantity * rate;
+    }
+
+    const totalProfit = totalAsset - totalInvested;
+    const yieldPercent = totalInvested > 0
+      ? ((totalAsset - totalInvested) / totalInvested) * 100
+      : 0;
+
+    const today = new Date().toISOString().split('T')[0] as string;
+
+    const { error } = await supabase
+      .from('portfolio_snapshots')
+      .upsert({
+        user_id: userId,
+        snapshot_date: today,
+        total_asset: Math.round(totalAsset),
+        total_invested: Math.round(totalInvested),
+        total_profit: Math.round(totalProfit),
+        yield_percent: Number(yieldPercent.toFixed(2)),
+      }, { onConflict: 'user_id,snapshot_date' });
+
+    if (!error) {
+      snapshotSaved = true;
+    }
   }
 
   // 캐시 무효화
-  revalidateTag(getDashboardCacheTag(user.id), 'max');
   revalidatePath('/dashboard');
 
-  return { success: true, count: portfolio.length };
+  console.log(`[syncPortfolio] Synced for user ${userId}:`, {
+    portfolioCount,
+    holdingsCount,
+    dividendCount,
+    depositCount,
+    snapshotSaved,
+  });
+
+  return {
+    success: true,
+    synced: {
+      portfolio: portfolioCount,
+      holdings: holdingsCount,
+      dividends: dividendCount,
+      deposits: depositCount,
+      snapshot: snapshotSaved,
+    },
+  };
 }

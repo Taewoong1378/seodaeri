@@ -125,6 +125,178 @@ export interface Database {
           },
         ]
       }
+      dividends: {
+        Row: {
+          id: string
+          user_id: string
+          ticker: string
+          name: string | null
+          amount_krw: number
+          amount_usd: number
+          dividend_date: string
+          sheet_synced: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          ticker: string
+          name?: string | null
+          amount_krw?: number
+          amount_usd?: number
+          dividend_date: string
+          sheet_synced?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          ticker?: string
+          name?: string | null
+          amount_krw?: number
+          amount_usd?: number
+          dividend_date?: string
+          sheet_synced?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'dividends_user_id_fkey'
+            columns: ['user_id']
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      deposits: {
+        Row: {
+          id: string
+          user_id: string
+          type: 'DEPOSIT' | 'WITHDRAW'
+          amount: number
+          currency: string
+          deposit_date: string
+          memo: string | null
+          sheet_synced: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: 'DEPOSIT' | 'WITHDRAW'
+          amount: number
+          currency?: string
+          deposit_date: string
+          memo?: string | null
+          sheet_synced?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: 'DEPOSIT' | 'WITHDRAW'
+          amount?: number
+          currency?: string
+          deposit_date?: string
+          memo?: string | null
+          sheet_synced?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'deposits_user_id_fkey'
+            columns: ['user_id']
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      portfolio_snapshots: {
+        Row: {
+          id: string
+          user_id: string
+          snapshot_date: string
+          total_asset: number | null
+          total_invested: number | null
+          total_profit: number | null
+          yield_percent: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          snapshot_date: string
+          total_asset?: number | null
+          total_invested?: number | null
+          total_profit?: number | null
+          yield_percent?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          snapshot_date?: string
+          total_asset?: number | null
+          total_invested?: number | null
+          total_profit?: number | null
+          yield_percent?: number | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'portfolio_snapshots_user_id_fkey'
+            columns: ['user_id']
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      holdings: {
+        Row: {
+          user_id: string
+          ticker: string
+          name: string | null
+          quantity: number | null
+          avg_price: number | null
+          currency: string
+          broker: string | null
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          ticker: string
+          name?: string | null
+          quantity?: number | null
+          avg_price?: number | null
+          currency?: string
+          broker?: string | null
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          ticker?: string
+          name?: string | null
+          quantity?: number | null
+          avg_price?: number | null
+          currency?: string
+          broker?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'holdings_user_id_fkey'
+            columns: ['user_id']
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
