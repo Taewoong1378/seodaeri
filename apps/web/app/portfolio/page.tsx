@@ -1,3 +1,4 @@
+import { BenefitBanner } from '@/app/portfolio/components/BenefitBanner';
 import { auth } from '@repo/auth/server';
 import { Button } from '@repo/design-system/components/button';
 import { ExternalLink, PieChart } from 'lucide-react';
@@ -111,6 +112,9 @@ export default async function PortfolioPage() {
             </div>
           )}
         </section>
+
+        {/* Account Opening Banner */}
+        <BenefitBanner />
 
         {/* Portfolio Content (List or Chart) */}
         {portfolio.length === 0 ? (
