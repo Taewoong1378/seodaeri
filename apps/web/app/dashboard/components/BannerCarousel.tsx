@@ -82,7 +82,7 @@ export function BannerCarousel() {
               className="flex-[0_0_100%] min-w-0 relative"
             >
               <div
-                className={`w-full h-48 sm:h-56 bg-gradient-to-br ${banner.bgGradient} p-6 sm:p-8 flex flex-col justify-center relative overflow-hidden`}
+                className={`w-full min-h-[12rem] h-auto sm:h-56 bg-gradient-to-br ${banner.bgGradient} p-6 sm:p-8 flex flex-col justify-center relative overflow-hidden`}
               >
                 {/* Background Image (with fallback to gradient) */}
                 <div className="absolute inset-0 z-0">
