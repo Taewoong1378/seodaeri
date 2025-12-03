@@ -60,22 +60,12 @@ export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
   return (
     <div ref={chartRef} className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-white">수익률 비교</h4>
-        <div className="flex items-center gap-2">
-          {/* Legend */}
-          <div className="flex items-center gap-3 mr-1">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
-              <span className="text-[11px] text-slate-400">올해 수익률</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.annualized }} />
-              <span className="text-[11px] text-slate-400">연평균 수익률</span>
-            </div>
-          </div>
-          <ShareChartButton chartRef={hiddenChartRef} title="수익률 비교" />
-          <LandscapeChartModal title="수익률 비교">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-semibold text-white">수익률 비교</h4>
+          <div className="flex items-center gap-2">
+            <ShareChartButton chartRef={hiddenChartRef} title="수익률 비교" />
+            <LandscapeChartModal title="수익률 비교">
             <div className="flex flex-col w-full h-full">
               {/* Custom Legend for Modal */}
               <div className="flex items-center justify-center gap-6 mb-4 shrink-0">
@@ -138,6 +128,19 @@ export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
               </div>
             </div>
           </LandscapeChartModal>
+          </div>
+        </div>
+
+        {/* Legend - Moved below title */}
+        <div className="flex items-center justify-end gap-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
+            <span className="text-[11px] text-slate-400">올해 수익률</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.annualized }} />
+            <span className="text-[11px] text-slate-400">연평균 수익률</span>
+          </div>
         </div>
       </div>
 
