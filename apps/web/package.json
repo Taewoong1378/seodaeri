@@ -17,6 +17,8 @@
     "@repo/design-system": "workspace:*",
     "@tanstack/react-query": "^5.90.11",
     "@tanstack/react-query-devtools": "^5.91.1",
+    "embla-carousel-autoplay": "^8.6.0",
+    "embla-carousel-react": "^8.6.0",
     "googleapis": "^144.0.0",
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.475.0",

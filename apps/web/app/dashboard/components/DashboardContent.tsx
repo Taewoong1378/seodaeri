@@ -4,6 +4,7 @@ import { Card, CardContent } from '@repo/design-system/components/card';
 import Link from 'next/link';
 import { defaultDashboardData, useDashboard } from '../../../hooks';
 import { AccountTrendChart } from './AccountTrendChart';
+import { BannerCarousel } from './BannerCarousel';
 import { CumulativeDividendChart } from './CumulativeDividendChart';
 import { DashboardTabs } from './DashboardTabs';
 import { DividendByYearChart } from './DividendByYearChart';
@@ -14,9 +15,9 @@ import { MonthlyProfitLossChart } from './MonthlyProfitLossChart';
 import { MonthlyYieldComparisonChart } from './MonthlyYieldComparisonChart';
 import { MonthlyYieldComparisonDollarAppliedChart } from './MonthlyYieldComparisonDollarAppliedChart';
 import { PerformanceComparisonChart } from './PerformanceComparisonChart';
-import { RollingAverageDividendChart } from './RollingAverageDividendChart';
 import { PortfolioDonutChart } from './PortfolioDonutChart';
 import { PortfolioHoldingsChart } from './PortfolioHoldingsChart';
+import { RollingAverageDividendChart } from './RollingAverageDividendChart';
 import { YearlyDividendChart } from './YearlyDividendChart';
 import { YieldComparisonChart } from './YieldComparisonChart';
 import { YieldComparisonDollarChart } from './YieldComparisonDollarChart';
@@ -62,7 +63,8 @@ export function DashboardContent() {
   return (
     <div className="space-y-6">
       {/* Hero Section */}
-      <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <BannerCarousel />
         <HeroCard
           totalAsset={displayData.totalAsset}
           totalYield={displayData.totalYield}
