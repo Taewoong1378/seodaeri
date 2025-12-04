@@ -2,13 +2,14 @@
 
 import { useRef } from 'react';
 import {
-    CartesianGrid,
-    Line,
-    LineChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts';
 import type { MajorIndexYieldComparisonData } from '../../../lib/google-sheets';
 import { LandscapeChartModal } from './LandscapeChartModal';
@@ -53,21 +54,22 @@ export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparis
       data={chartData}
       margin={isModal
         ? { top: 20, right: 30, left: 10, bottom: 20 }
-        : { top: 10, right: 10, left: -10, bottom: 0 }
+        : { top: 10, right: 10, left: -10, bottom: 20 }
       }
     >
-      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+      <ReferenceLine y={0} stroke="#cbd5e1" />
       <XAxis
         dataKey="name"
-        axisLine={false}
+        axisLine={{ stroke: '#cbd5e1' }}
         tickLine={false}
-        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isModal ? 12 : 10 }}
+        tick={{ fill: '#64748b', fontSize: isModal ? 12 : 10 }}
         interval={isModal ? 0 : 'preserveStartEnd'}
       />
       <YAxis
         axisLine={false}
         tickLine={false}
-        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isModal ? 12 : 10 }}
+        tick={{ fill: '#64748b', fontSize: isModal ? 12 : 10 }}
         tickFormatter={(value) => `${value}%`}
         domain={[yMin, yMax]}
         width={isModal ? 50 : 45}
@@ -82,7 +84,7 @@ export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparis
           padding: '12px',
           color: '#1e293b',
         }}
-        labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 11, marginBottom: 8 }}
+        labelStyle={{ color: '#64748b', fontSize: 11, marginBottom: 8 }}
         formatter={(value: number, name: string) => {
           const labels: Record<string, string> = {
             sp500: 'S&P500',

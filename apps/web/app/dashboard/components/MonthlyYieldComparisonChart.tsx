@@ -2,14 +2,15 @@
 
 import { useRef } from 'react';
 import {
-    Bar,
-    BarChart,
-    CartesianGrid,
-    Cell,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from 'recharts';
 import type { MonthlyYieldComparisonData } from '../../../lib/google-sheets';
 import { LandscapeChartModal } from './LandscapeChartModal';
@@ -92,17 +93,18 @@ export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChar
                       data={chartData}
                       margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <ReferenceLine y={0} stroke="#cbd5e1" />
                       <XAxis
                         dataKey="name"
-                        axisLine={false}
+                        axisLine={{ stroke: '#cbd5e1' }}
                         tickLine={false}
-                        tick={{ fill: 'var(--muted-foreground)', fontSize: 14 }}
+                        tick={{ fill: '#64748b', fontSize: 14 }}
                       />
                       <YAxis
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
+                        tick={{ fill: '#64748b', fontSize: 12 }}
                         tickFormatter={(value) => `${value}%`}
                       />
                       <Tooltip
@@ -115,7 +117,7 @@ export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChar
                           padding: '12px',
                           color: 'hsl(var(--popover-foreground))',
                         }}
-                        labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 13, marginBottom: 8 }}
+                        labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
                         formatter={(value: number, name: string) => {
                           const label = name === 'currentMonth' ? `${data.currentMonth} 수익률` : '올해 수익률';
                           return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
@@ -157,19 +159,20 @@ export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChar
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
-            margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+            margin={{ top: 10, right: 10, left: -10, bottom: 20 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <ReferenceLine y={0} stroke="#cbd5e1" />
             <XAxis
               dataKey="name"
-              axisLine={false}
+              axisLine={{ stroke: '#cbd5e1' }}
               tickLine={false}
-              tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
+              tick={{ fill: '#64748b', fontSize: 10 }}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
+              tick={{ fill: '#64748b', fontSize: 10 }}
               tickFormatter={(value) => `${value}%`}
               width={45}
             />
@@ -183,7 +186,7 @@ export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChar
                 padding: '12px',
                 color: '#1e293b',
               }}
-              labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 11, marginBottom: 8 }}
+              labelStyle={{ color: '#64748b', fontSize: 11, marginBottom: 8 }}
               formatter={(value: number, name: string) => {
                 const label = name === 'currentMonth' ? `${data.currentMonth} 수익률` : '올해 수익률';
                 return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];

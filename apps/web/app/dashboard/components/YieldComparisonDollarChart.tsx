@@ -6,6 +6,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -91,12 +92,13 @@ export function YieldComparisonDollarChart({ data }: YieldComparisonDollarChartP
                       data={chartData}
                       margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                      <ReferenceLine y={0} stroke="#cbd5e1" />
                       <XAxis
                         dataKey="name"
-                        axisLine={false}
+                        axisLine={{ stroke: '#cbd5e1' }}
                         tickLine={false}
-                        tick={{ fill: '#94a3b8', fontSize: 14 }}
+                        tick={{ fill: '#64748b', fontSize: 14 }}
                       />
                       <YAxis
                         axisLine={false}
@@ -114,7 +116,7 @@ export function YieldComparisonDollarChart({ data }: YieldComparisonDollarChartP
                           padding: '12px',
                           color: '#1e293b',
                         }}
-                        labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 13, marginBottom: 8 }}
+                        labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
                         formatter={(value: number, name: string) => {
                           const label = name === 'thisYear' ? '올해 수익률' : '연평균 수익률';
                           return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
@@ -156,19 +158,20 @@ export function YieldComparisonDollarChart({ data }: YieldComparisonDollarChartP
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
-            margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+            margin={{ top: 10, right: 10, left: -10, bottom: 20 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <ReferenceLine y={0} stroke="#cbd5e1" />
             <XAxis
               dataKey="name"
-              axisLine={false}
+              axisLine={{ stroke: '#cbd5e1' }}
               tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tick={{ fill: '#64748b', fontSize: 10 }}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tick={{ fill: '#64748b', fontSize: 10 }}
               tickFormatter={(value) => `${value}%`}
               width={45}
             />

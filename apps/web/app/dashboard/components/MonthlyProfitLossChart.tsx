@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { LandscapeChartModal } from './LandscapeChartModal';
 import { ShareChartButton } from './ShareChartButton';
 
@@ -95,7 +95,7 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={chartData}
-          margin={{ top: 20, right: 10, left: -10, bottom: 0 }}
+          margin={{ top: 20, right: 10, left: -10, bottom: 20 }}
           stackOffset="sign"
         >
           <defs>
@@ -108,25 +108,26 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
               <stop offset="100%" stopColor="#334155" stopOpacity={0.8} />
             </linearGradient>
           </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
           <XAxis
             dataKey="month"
-            axisLine={false}
+            axisLine={{ stroke: '#cbd5e1' }}
             tickLine={false}
-            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, fontWeight: 500 }}
+            tick={{ fill: '#64748b', fontSize: 10, fontWeight: 500 }}
             dy={8}
             tickFormatter={(value) => value.replace('월', '')}
           />
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }}
+            tick={{ fill: '#64748b', fontSize: 9 }}
             tickFormatter={formatYAxisValue}
             domain={[-yAxisMax, yAxisMax]}
           />
-          <ReferenceLine y={0} stroke="hsl(var(--border))" />
+          <ReferenceLine y={0} stroke="#cbd5e1" />
           <Tooltip
             content={<CustomTooltip variant={variant} />}
-            cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+            cursor={{ fill: 'rgba(16, 185, 129, 0.1)' }}
           />
           {/* 수익 막대 (위로) */}
           <Bar

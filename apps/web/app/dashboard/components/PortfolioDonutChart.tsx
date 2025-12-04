@@ -106,14 +106,14 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
                         padding: '12px',
                         color: '#1e293b',
                       }}
-                      itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
+                      itemStyle={{ color: '#1e293b' }}
                       formatter={(value: number) => formatCurrency(value)}
                     />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-sm text-slate-500">총 자산</span>
-                  <span className="text-xl font-bold text-white">{formatCurrency(totalAsset)}</span>
+                  <span className="text-sm text-muted-foreground">총 자산</span>
+                  <span className="text-xl font-bold text-foreground">{formatCurrency(totalAsset)}</span>
                 </div>
               </div>
               <div className="flex-1 space-y-3">
@@ -123,8 +123,8 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
                       className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: COLORS[index % COLORS.length] }}
                     />
-                    <span className="text-sm text-slate-300 truncate flex-1">{item.name}</span>
-                    <span className="text-sm font-bold text-white">{item.weight.toFixed(1)}%</span>
+                    <span className="text-sm text-muted-foreground truncate flex-1">{item.name}</span>
+                    <span className="text-sm font-bold text-foreground">{item.weight.toFixed(1)}%</span>
                   </div>
                 ))}
               </div>

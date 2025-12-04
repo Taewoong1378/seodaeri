@@ -52,12 +52,12 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
         : { top: 10, right: 10, left: 0, bottom: 40 }
       }
     >
-      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
       <XAxis
         dataKey="month"
-        axisLine={false}
+        axisLine={{ stroke: '#cbd5e1' }}
         tickLine={false}
-        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isModal ? 10 : 8 }}
+        tick={{ fill: '#64748b', fontSize: isModal ? 10 : 8 }}
         angle={-45}
         textAnchor="end"
         height={isModal ? 60 : 50}
@@ -66,13 +66,13 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
       <YAxis
         axisLine={false}
         tickLine={false}
-        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isModal ? 11 : 9 }}
+        tick={{ fill: '#64748b', fontSize: isModal ? 11 : 9 }}
         tickFormatter={formatCurrencyShort}
         domain={[0, yMax]}
         width={isModal ? 60 : 45}
       />
       <Tooltip
-        cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+        cursor={{ fill: 'rgba(16, 185, 129, 0.1)' }}
         contentStyle={{
           backgroundColor: '#ffffff',
           border: '1px solid #e2e8f0',
@@ -81,7 +81,7 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
           padding: '12px',
           color: '#1e293b',
         }}
-        labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 12, marginBottom: 8 }}
+        labelStyle={{ color: '#64748b', fontSize: 12, marginBottom: 8 }}
         formatter={(value: number) => [formatCurrency(value), '누적 배당금']}
         labelFormatter={(label) => `${label}`}
       />

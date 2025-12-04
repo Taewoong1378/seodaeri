@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { LandscapeChartModal } from './LandscapeChartModal';
 import { ShareChartButton } from './ShareChartButton';
 
@@ -84,11 +84,12 @@ export function DividendChart({ data }: DividendChartProps) {
               <stop offset="100%" stopColor="#1e3a8a" stopOpacity={0.8} />
             </linearGradient>
           </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
           <XAxis
             dataKey="month"
-            axisLine={false}
+            axisLine={{ stroke: '#cbd5e1' }}
             tickLine={false}
-            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: showYAxis ? 12 : 10, fontWeight: 500 }}
+            tick={{ fill: '#64748b', fontSize: showYAxis ? 12 : 10, fontWeight: 500 }}
             dy={8}
             tickFormatter={(value) => value.replace('월', '')}
           />
@@ -96,13 +97,13 @@ export function DividendChart({ data }: DividendChartProps) {
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tick={{ fill: '#64748b', fontSize: 10 }}
               tickFormatter={formatYAxisValue}
             />
           )}
           <Tooltip
             content={<CustomTooltip />}
-            cursor={{ fill: 'hsl(var(--muted)/0.3)', radius: 8 }}
+            cursor={{ fill: 'rgba(16, 185, 129, 0.1)', radius: 8 }}
           />
           <Bar
             dataKey="amount"
@@ -114,7 +115,7 @@ export function DividendChart({ data }: DividendChartProps) {
             {fullYearData.map((entry) => (
               <Cell
                 key={`cell-${entry.month}`}
-                fill={entry.amount > 0 ? 'url(#barGradientDividend)' : 'hsl(var(--muted))'}
+                fill={entry.amount > 0 ? 'url(#barGradientDividend)' : '#e2e8f0'}
                 style={{ filter: entry.amount > 0 ? 'drop-shadow(0 4px 6px rgba(59, 130, 246, 0.15))' : 'none' }}
               />
             ))}
@@ -172,7 +173,7 @@ export function DividendChart({ data }: DividendChartProps) {
       </div>
 
       {/* Chart */}
-      {renderChart()}
+      {renderChart("220px", true)}
 
       {/* Hidden Chart for Capture */}
       <div

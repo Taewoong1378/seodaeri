@@ -134,18 +134,18 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                     <stop offset="100%" stopColor="#059669" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                 <XAxis
                   dataKey="date"
-                  axisLine={false}
+                  axisLine={{ stroke: '#cbd5e1' }}
                   tickLine={false}
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
                   tickFormatter={(value) => value}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
                   tickFormatter={(value) => `${value}%`}
                   domain={[yMin, yMax]}
                 />
@@ -158,7 +158,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                     padding: '12px',
                     color: '#1e293b',
                   }}
-                  labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 13, marginBottom: 8 }}
+                  labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
                   itemStyle={{ fontSize: 13, padding: '2px 0' }}
                   formatter={(value: number, name: string) => {
                     const lineConfig = LINES.find(l => l.dataKey === name);
@@ -200,7 +200,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
             data={displayData}
             width={chartWidth}
             height={220}
-            margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+            margin={{ top: 10, right: 20, left: 10, bottom: 20 }}
           >
             <defs>
               <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
@@ -210,21 +210,21 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
             </defs>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="hsl(var(--border))"
+              stroke="#e2e8f0"
               vertical={false}
             />
             <XAxis
               dataKey="date"
-              axisLine={false}
+              axisLine={{ stroke: '#cbd5e1' }}
               tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tick={{ fill: '#64748b', fontSize: 10 }}
               interval={2}
               tickFormatter={(value) => value}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tick={{ fill: '#64748b', fontSize: 10 }}
               tickFormatter={(value) => `${value}%`}
               domain={[yMin, yMax]}
               width={45}
@@ -238,7 +238,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                 padding: '12px',
                 color: '#1e293b',
               }}
-              labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 11, marginBottom: 8 }}
+              labelStyle={{ color: '#64748b', fontSize: 11, marginBottom: 8 }}
               itemStyle={{ fontSize: 12, padding: '2px 0' }}
               formatter={(value: number, name: string) => {
                 const lineConfig = LINES.find(l => l.dataKey === name);

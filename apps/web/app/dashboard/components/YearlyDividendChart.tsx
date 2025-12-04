@@ -46,20 +46,20 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
       data={data.data}
       margin={isModal
         ? { top: 30, right: 30, left: 20, bottom: 20 }
-        : { top: 25, right: 10, left: 0, bottom: 0 }
+        : { top: 25, right: 10, left: 0, bottom: 20 }
       }
     >
-      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
       <XAxis
         dataKey="year"
-        axisLine={false}
+        axisLine={{ stroke: '#cbd5e1' }}
         tickLine={false}
-        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isModal ? 12 : 10 }}
+        tick={{ fill: '#64748b', fontSize: isModal ? 12 : 10 }}
       />
       <YAxis
         axisLine={false}
         tickLine={false}
-        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isModal ? 11 : 9 }}
+        tick={{ fill: '#64748b', fontSize: isModal ? 11 : 9 }}
         tickFormatter={formatCurrencyShort}
         domain={[0, yMax]}
         width={isModal ? 70 : 55}
@@ -74,7 +74,7 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
           padding: '12px',
           color: '#1e293b',
         }}
-        labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 12, marginBottom: 8 }}
+        labelStyle={{ color: '#64748b', fontSize: 12, marginBottom: 8 }}
         formatter={(value: number) => [formatCurrency(value), '배당금']}
       />
       <Bar
@@ -86,7 +86,7 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
         <LabelList
           dataKey="amount"
           position="top"
-          fill="hsl(var(--muted-foreground))"
+          fill="#64748b"
           fontSize={isModal ? 12 : 10}
           formatter={(value: any) => formatCurrency(value)}
         />

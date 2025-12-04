@@ -182,17 +182,17 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                     <stop offset="100%" stopColor="#a3e635" stopOpacity={0.1} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                 <XAxis
                   dataKey="date"
-                  axisLine={false}
+                  axisLine={{ stroke: '#cbd5e1' }}
                   tickLine={false}
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                  tick={{ fill: '#64748b', fontSize: 12 }}
                   tickFormatter={(value) => formatCurrency(value)}
                   domain={[0, yMax]}
                 />
@@ -205,7 +205,7 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                     padding: '12px',
                     color: '#1e293b',
                   }}
-                  labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 13, marginBottom: 8 }}
+                  labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
                   formatter={(value: number, name: string) => {
                     const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액';
                     return [`₩${value.toLocaleString()}`, label];
@@ -251,7 +251,7 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
             data={displayData}
             width={chartWidth}
             height={220}
-            margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+            margin={{ top: 10, right: 20, left: 10, bottom: 20 }}
           >
             <defs>
               <linearGradient id="depositGradient" x1="0" y1="0" x2="0" y2="1">
@@ -265,20 +265,20 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
             </defs>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="hsl(var(--border))"
+              stroke="#e2e8f0"
               vertical={false}
             />
             <XAxis
               dataKey="date"
-              axisLine={false}
+              axisLine={{ stroke: '#cbd5e1' }}
               tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tick={{ fill: '#64748b', fontSize: 10 }}
               interval={2}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tick={{ fill: '#64748b', fontSize: 10 }}
               tickFormatter={(value) => formatCurrency(value)}
               domain={[0, yMax]}
               width={55}
@@ -292,7 +292,7 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                 padding: '12px',
                 color: '#1e293b',
               }}
-              labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 11, marginBottom: 8 }}
+              labelStyle={{ color: '#64748b', fontSize: 11, marginBottom: 8 }}
               formatter={(value: number, name: string) => {
                 const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액';
                 return [`₩${value.toLocaleString()}`, label];

@@ -100,16 +100,16 @@ export function MonthlyYieldComparisonDollarAppliedChart({ data }: MonthlyYieldC
                         tickFormatter={(value) => `${value}%`}
                       />
                       <Tooltip
-                        cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+                        cursor={{ fill: 'rgba(16, 185, 129, 0.1)' }}
                         contentStyle={{
-                          backgroundColor: 'hsl(var(--popover))',
-                          border: '1px solid hsl(var(--border))',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '12px',
                           boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                           padding: '12px',
-                          color: 'hsl(var(--popover-foreground))',
+                          color: '#1e293b',
                         }}
-                        labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 13, marginBottom: 8 }}
+                        labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
                         formatter={(value: number, name: string) => {
                           const label = name === 'currentMonth' ? `${data.currentMonth} 수익률` : '올해 수익률';
                           return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
@@ -151,19 +151,19 @@ export function MonthlyYieldComparisonDollarAppliedChart({ data }: MonthlyYieldC
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
-            margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+            margin={{ top: 10, right: 10, left: -10, bottom: 20 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
             <XAxis
               dataKey="name"
-              axisLine={false}
+              axisLine={{ stroke: '#cbd5e1' }}
               tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tick={{ fill: '#64748b', fontSize: 10 }}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
+              tick={{ fill: '#64748b', fontSize: 10 }}
               tickFormatter={(value) => `${value}%`}
               width={45}
             />
@@ -177,7 +177,7 @@ export function MonthlyYieldComparisonDollarAppliedChart({ data }: MonthlyYieldC
                 padding: '12px',
                 color: '#1e293b',
               }}
-              labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 11, marginBottom: 8 }}
+              labelStyle={{ color: '#64748b', fontSize: 11, marginBottom: 8 }}
               formatter={(value: number, name: string) => {
                 const label = name === 'currentMonth' ? `${data.currentMonth} 수익률` : '올해 수익률';
                 return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];

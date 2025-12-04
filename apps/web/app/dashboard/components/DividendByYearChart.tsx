@@ -88,20 +88,20 @@ export function DividendByYearChart({ data, variant = 'default' }: DividendByYea
       data={chartData}
       margin={isModal
         ? { top: 20, right: 30, left: 20, bottom: 20 }
-        : { top: 10, right: 10, left: 0, bottom: 0 }
+        : { top: 10, right: 10, left: 0, bottom: 20 }
       }
     >
-      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
       <XAxis
         dataKey="month"
-        axisLine={false}
+        axisLine={{ stroke: '#cbd5e1' }}
         tickLine={false}
-        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isModal ? 12 : 10 }}
+        tick={{ fill: '#64748b', fontSize: isModal ? 12 : 10 }}
       />
       <YAxis
         axisLine={false}
         tickLine={false}
-        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isModal ? 11 : 9 }}
+        tick={{ fill: '#64748b', fontSize: isModal ? 11 : 9 }}
         tickFormatter={(value) => formatCurrency(value)}
         domain={[0, yMax]}
         width={isModal ? 70 : 55}
@@ -116,7 +116,7 @@ export function DividendByYearChart({ data, variant = 'default' }: DividendByYea
           padding: '12px',
           color: '#1e293b',
         }}
-        labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 12, marginBottom: 8 }}
+        labelStyle={{ color: '#64748b', fontSize: 12, marginBottom: 8 }}
         formatter={(value: number, name: string) => [
           `₩${new Intl.NumberFormat('ko-KR').format(value)}`,
           `${name}년`

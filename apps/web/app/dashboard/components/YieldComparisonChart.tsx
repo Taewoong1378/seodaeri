@@ -6,6 +6,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -85,30 +86,31 @@ export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
                     data={chartData}
                     margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <ReferenceLine y={0} stroke="#cbd5e1" />
                     <XAxis
                       dataKey="name"
-                      axisLine={false}
+                      axisLine={{ stroke: '#cbd5e1' }}
                       tickLine={false}
-                      tick={{ fill: 'var(--muted-foreground)', fontSize: 14 }}
+                      tick={{ fill: '#64748b', fontSize: 14 }}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
+                      tick={{ fill: '#64748b', fontSize: 12 }}
                       tickFormatter={(value) => `${value}%`}
                     />
                     <Tooltip
-                      cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+                      cursor={{ fill: 'rgba(16, 185, 129, 0.1)' }}
                       contentStyle={{
-                        backgroundColor: 'hsl(var(--popover))',
-                        border: '1px solid hsl(var(--border))',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e2e8f0',
                         borderRadius: '12px',
                         boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                         padding: '12px',
-                        color: 'hsl(var(--popover-foreground))',
+                        color: '#1e293b',
                       }}
-                      labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 13, marginBottom: 8 }}
+                      labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
                       formatter={(value: number, name: string) => {
                         const label = name === 'thisYear' ? '올해 수익률' : '연평균 수익률';
                         return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
@@ -150,19 +152,20 @@ export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
-            margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+            margin={{ top: 10, right: 10, left: -10, bottom: 20 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <ReferenceLine y={0} stroke="#cbd5e1" />
             <XAxis
               dataKey="name"
-              axisLine={false}
+              axisLine={{ stroke: '#cbd5e1' }}
               tickLine={false}
-              tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
+              tick={{ fill: '#64748b', fontSize: 11 }}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
+              tick={{ fill: '#64748b', fontSize: 10 }}
               tickFormatter={(value) => `${value}%`}
               width={40}
             />
@@ -176,7 +179,7 @@ export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
                 padding: '12px',
                 color: '#1e293b',
               }}
-              labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 11, marginBottom: 8 }}
+              labelStyle={{ color: '#64748b', fontSize: 11, marginBottom: 8 }}
               formatter={(value: number, name: string) => {
                 const label = name === 'thisYear' ? '올해 수익률' : '연평균 수익률';
                 return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
