@@ -77,7 +77,7 @@ export function DividendChart({ data }: DividendChartProps) {
   const renderChart = (height = "220px", showYAxis = false) => (
     <div className="relative w-full" style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={fullYearData} margin={{ top: 10, right: showYAxis ? 10 : 0, left: showYAxis ? -10 : 0, bottom: 0 }}>
+        <BarChart data={fullYearData} margin={{ top: 10, right: showYAxis ? 10 : 0, left: showYAxis ? 0 : 0, bottom: 20 }}>
           <defs>
             <linearGradient id="barGradientDividend" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
@@ -132,11 +132,13 @@ export function DividendChart({ data }: DividendChartProps) {
         <div className="flex items-center gap-2">
           <ShareChartButton chartRef={hiddenChartRef} title={`${selectedYear}년 월별 배당금`} />
           <LandscapeChartModal title={`${selectedYear}년 월별 배당금`}>
-            <div className="flex items-center justify-center mb-4">
-              <p className="text-lg text-slate-400">총 <span className="text-white font-bold">{yearTotal.toLocaleString()}원</span></p>
-            </div>
-            <div className="w-full h-full">
-              {renderChart("100%", true)}
+            <div className="flex flex-col h-full">
+              <div className="flex items-center justify-center mb-4 shrink-0">
+                <p className="text-lg text-slate-400">총 <span className="text-white font-bold">{yearTotal.toLocaleString()}원</span></p>
+              </div>
+              <div className="flex-1 min-h-0">
+                {renderChart("100%", true)}
+              </div>
             </div>
           </LandscapeChartModal>
         </div>

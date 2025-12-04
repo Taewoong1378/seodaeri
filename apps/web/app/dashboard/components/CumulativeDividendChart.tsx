@@ -42,7 +42,7 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
   const currentCumulative = data.data[data.data.length - 1]?.cumulative || 0;
 
   // 차트 너비 계산 (데이터 포인트 수에 따라)
-  const chartWidth = Math.max(data.data.length * 28, 600);
+  const chartWidth = Math.max(data.data.length * 27, 600);
 
   const renderChart = (isModal = false) => (
     <BarChart
@@ -106,7 +106,7 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
           <LandscapeChartModal title="배당금 누적 그래프">
             <div className="flex flex-col w-full h-full">
               <div className="flex-1 min-h-0 overflow-x-auto">
-                <div style={{ width: chartWidth, height: '100%', minHeight: 300 }}>
+                <div style={{ width: chartWidth, height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     {renderChart(true)}
                   </ResponsiveContainer>

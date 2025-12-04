@@ -43,7 +43,7 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
   const currentAverage = data.data[data.data.length - 1]?.average || 0;
 
   // 차트 너비 계산 (데이터 포인트 수에 따라)
-  const chartWidth = Math.max(data.data.length * 28, 600);
+  const chartWidth = Math.max(data.data.length * 27, 600);
 
   const renderChart = (isModal = false) => (
     <BarChart
@@ -107,7 +107,7 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
           <LandscapeChartModal title="12개월 월평균 배당금">
             <div className="flex flex-col w-full h-full">
               <div className="flex-1 min-h-0 overflow-x-auto">
-                <div style={{ width: chartWidth, height: '100%', minHeight: 300 }}>
+                <div style={{ width: chartWidth, height: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     {renderChart(true)}
                   </ResponsiveContainer>
