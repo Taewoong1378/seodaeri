@@ -129,11 +129,16 @@ Return a JSON object with a "trades" array containing all extracted entries:
  * 거래 내역을 Supabase DB에만 저장 (시트 연동 없음)
  */
 export async function saveTradeTransactions(trades: TradeInput[]): Promise<SaveTradeResult> {
+  console.log('[saveTradeTransactions] Called with trades:', JSON.stringify(trades));
+
   const session = await auth();
 
   if (!session?.user?.id) {
+    console.log('[saveTradeTransactions] No session user id');
     return { success: false, error: '로그인이 필요합니다.' };
   }
+
+  console.log('[saveTradeTransactions] Session user id:', session.user.id);
 
   if (trades.length === 0) {
     return { success: false, error: '저장할 거래내역이 없습니다.' };
@@ -142,9 +147,36 @@ export async function saveTradeTransactions(trades: TradeInput[]): Promise<SaveT
   const supabase = createServiceClient();
 
   try {
+    // 사용자 조회 (ID로 먼저, 실패시 이메일로)
+    let { data: user } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', session.user.id)
+      .single();
+
+    if (!user && session.user.email) {
+      const { data: userByEmail } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', session.user.email)
+        .single();
+
+      if (userByEmail) {
+        user = userByEmail;
+      }
+    }
+
+    if (!user) {
+      console.log('[saveTradeTransactions] User not found in DB');
+      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' };
+    }
+
+    const userId = user.id as string;
+    console.log('[saveTradeTransactions] Found user id:', userId);
+
     // 모든 거래내역을 DB에 저장
     const insertData = trades.map((trade) => ({
-      user_id: session.user.id,
+      user_id: userId,
       ticker: trade.ticker,
       name: trade.name || null,
       type: trade.type,
@@ -155,13 +187,18 @@ export async function saveTradeTransactions(trades: TradeInput[]): Promise<SaveT
       sheet_synced: true, // 시트 연동 불필요
     }));
 
-    const { error: insertError } = await supabase
+    console.log('[saveTradeTransactions] Insert data:', JSON.stringify(insertData));
+
+    const { error: insertError, data: insertedData } = await supabase
       .from('transactions')
-      .insert(insertData);
+      .insert(insertData)
+      .select();
+
+    console.log('[saveTradeTransactions] Insert result - error:', insertError, 'data:', insertedData);
 
     if (insertError) {
-      console.error('Failed to insert trades:', insertError);
-      return { success: false, error: '거래내역 저장에 실패했습니다.' };
+      console.error('[saveTradeTransactions] Failed to insert trades:', insertError);
+      return { success: false, error: `거래내역 저장 실패: ${insertError.message}` };
     }
 
     revalidatePath('/dashboard');
