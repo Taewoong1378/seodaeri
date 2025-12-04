@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     image TEXT,
     spreadsheet_id TEXT, -- 연동된 구글 시트 ID
     auto_deposit_settings JSONB, -- 자동 입금 설정 { amount, dayOfMonth, memo, enabled }
+    deleted_at TIMESTAMP WITH TIME ZONE, -- 회원탈퇴 시간 (soft delete)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );

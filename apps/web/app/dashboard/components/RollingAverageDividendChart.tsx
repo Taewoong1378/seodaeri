@@ -43,7 +43,7 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
   const currentAverage = data.data[data.data.length - 1]?.average || 0;
 
   // 차트 너비 계산 (데이터 포인트 수에 따라)
-  const chartWidth = Math.max(data.data.length * 27, 600);
+  const chartWidth = Math.max(data.data.length * 26, 600);
 
   const renderChart = (isModal = false) => (
     <BarChart

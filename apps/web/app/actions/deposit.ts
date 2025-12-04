@@ -3,7 +3,7 @@
 import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
 import { revalidatePath } from 'next/cache';
-import { appendSheetData, extractAccountsFromDeposits, fetchSheetData } from '../../lib/google-sheets';
+import { appendSheetData, deleteSheetRow, extractAccountsFromDeposits, fetchSheetData } from '../../lib/google-sheets';
 
 export interface DepositInput {
   date: string; // YYYY-MM-DD
@@ -248,4 +248,116 @@ function getDefaultAccounts(): string[] {
     'ISA',
     '퇴직연금DC',
   ];
+}
+
+export interface DeleteDepositInput {
+  date: string;      // YYYY-MM-DD
+  type: 'DEPOSIT' | 'WITHDRAW';
+  amount: number;
+}
+
+/**
+ * 입출금내역 삭제 (Supabase + Google Sheet)
+ */
+export async function deleteDeposit(input: DeleteDepositInput): Promise<SaveDepositResult> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: '로그인이 필요합니다.' };
+  }
+
+  if (!session.accessToken) {
+    return { success: false, error: 'Google 인증이 필요합니다.' };
+  }
+
+  const supabase = createServiceClient();
+
+  try {
+    // 사용자의 spreadsheet_id 조회
+    let { data: user } = await supabase
+      .from('users')
+      .select('id, spreadsheet_id')
+      .eq('id', session.user.id)
+      .single();
+
+    if (!user && session.user.email) {
+      const { data: userByEmail } = await supabase
+        .from('users')
+        .select('id, spreadsheet_id')
+        .eq('email', session.user.email)
+        .single();
+
+      if (userByEmail) {
+        user = userByEmail;
+      }
+    }
+
+    if (!user?.spreadsheet_id) {
+      return { success: false, error: '연동된 스프레드시트가 없습니다.' };
+    }
+
+    const userId = user.id as string;
+
+    // 1. Supabase에서 삭제
+    await supabase
+      .from('deposits')
+      .delete()
+      .eq('user_id', userId)
+      .eq('type', input.type)
+      .eq('amount', input.amount)
+      .eq('deposit_date', input.date);
+
+    // 2. Google Sheet에서 해당 행 찾아서 삭제
+    const sheetName = '6. 입금내역';
+    const rows = await fetchSheetData(
+      session.accessToken,
+      user.spreadsheet_id,
+      `'${sheetName}'!A:H`
+    );
+
+    if (rows) {
+      // 매칭되는 행 찾기 (날짜 + 금액 + 타입)
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row) continue;
+
+        const rowDate = String(row[0] || '').trim(); // A열: 일자
+        const rowType = String(row[4] || '').trim(); // E열: 구분
+        const rowAmountStr = String(row[6] || '0'); // G열: 금액
+        const rowAmount = Math.abs(parseFloat(rowAmountStr.replace(/[₩,\s-]/g, '')) || 0);
+
+        // 날짜 형식 맞추기
+        const normalizedRowDate = rowDate.replace(/\//g, '-');
+
+        // 타입 매칭
+        const isDeposit = rowType.includes('입금') || !rowAmountStr.includes('-');
+        const matchType = (input.type === 'DEPOSIT' && isDeposit) ||
+                         (input.type === 'WITHDRAW' && !isDeposit);
+
+        if (
+          normalizedRowDate === input.date &&
+          matchType &&
+          Math.abs(rowAmount - input.amount) < 1
+        ) {
+          // 행 삭제
+          await deleteSheetRow(
+            session.accessToken,
+            user.spreadsheet_id,
+            sheetName,
+            i
+          );
+          break;
+        }
+      }
+    }
+
+    revalidatePath('/dashboard');
+    revalidatePath('/transactions');
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('deleteDeposit error:', error);
+    const errorMessage = error?.message || '알 수 없는 오류';
+    return { success: false, error: `삭제 실패: ${errorMessage}` };
+  }
 }

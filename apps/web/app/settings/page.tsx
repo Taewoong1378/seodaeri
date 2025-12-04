@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { BottomNav } from '../dashboard/components/BottomNav';
+import { DeleteAccountButton } from './DeleteAccountButton';
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -99,6 +100,11 @@ export default async function SettingsPage() {
             로그아웃
           </Button>
         </form>
+
+        {/* Delete Account */}
+        <div className="pt-2">
+          <DeleteAccountButton />
+        </div>
 
         {/* App Info */}
         <div className="text-center pt-4">

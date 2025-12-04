@@ -104,6 +104,8 @@ export async function appendSheetData(
   range: string,
   values: any[][]
 ) {
+  console.log('[appendSheetData] Appending to:', { spreadsheetId, range, rowCount: values.length });
+
   const auth = new google.auth.OAuth2();
   auth.setCredentials({ access_token: accessToken });
 
@@ -118,9 +120,15 @@ export async function appendSheetData(
         values,
       },
     });
+    console.log('[appendSheetData] Success:', response.data.updates);
     return response.data;
-  } catch (error) {
-    console.error('Error appending sheet data:', error);
+  } catch (error: any) {
+    console.error('[appendSheetData] Error:', {
+      code: error?.code,
+      message: error?.message,
+      status: error?.response?.status,
+      errors: error?.response?.data?.error,
+    });
     throw error;
   }
 }
@@ -181,6 +189,93 @@ export async function batchUpdateSheet(
     console.error('Error batch updating sheet:', error);
     throw error;
   }
+}
+
+/**
+ * 시트에서 특정 행 삭제
+ * @param sheetName 시트 탭 이름 (예: "7. 배당내역")
+ * @param rowIndex 삭제할 행 인덱스 (0-based, 헤더 포함)
+ */
+export async function deleteSheetRow(
+  accessToken: string,
+  spreadsheetId: string,
+  sheetName: string,
+  rowIndex: number
+) {
+  console.log('[deleteSheetRow] Deleting row:', { spreadsheetId, sheetName, rowIndex });
+
+  const auth = new google.auth.OAuth2();
+  auth.setCredentials({ access_token: accessToken });
+
+  const sheets = google.sheets({ version: 'v4', auth });
+
+  try {
+    // 먼저 시트 ID를 가져와야 함 (시트 이름 → 시트 ID)
+    const spreadsheet = await sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: 'sheets(properties(sheetId,title))',
+    });
+
+    const sheet = spreadsheet.data.sheets?.find(
+      (s) => s.properties?.title === sheetName
+    );
+
+    if (!sheet?.properties?.sheetId) {
+      throw new Error(`시트 "${sheetName}"를 찾을 수 없습니다.`);
+    }
+
+    const sheetId = sheet.properties.sheetId;
+
+    // 행 삭제 요청
+    const response = await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId,
+                dimension: 'ROWS',
+                startIndex: rowIndex,
+                endIndex: rowIndex + 1,
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    console.log('[deleteSheetRow] Success');
+    return response.data;
+  } catch (error: any) {
+    console.error('[deleteSheetRow] Error:', {
+      code: error?.code,
+      message: error?.message,
+    });
+    throw error;
+  }
+}
+
+/**
+ * 시트에서 특정 조건에 맞는 행 찾기
+ * @returns 행 인덱스 (0-based) 또는 -1 (못 찾음)
+ */
+export async function findSheetRowIndex(
+  accessToken: string,
+  spreadsheetId: string,
+  range: string,
+  matchFn: (row: any[]) => boolean
+): Promise<number> {
+  const rows = await fetchSheetData(accessToken, spreadsheetId, range);
+  if (!rows) return -1;
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (row && matchFn(row)) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 // ============================================

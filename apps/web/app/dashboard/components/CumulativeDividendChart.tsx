@@ -42,7 +42,7 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
   const currentCumulative = data.data[data.data.length - 1]?.cumulative || 0;
 
   // 차트 너비 계산 (데이터 포인트 수에 따라)
-  const chartWidth = Math.max(data.data.length * 27, 600);
+  const chartWidth = Math.max(data.data.length * 26, 600);
 
   const renderChart = (isModal = false) => (
     <BarChart
