@@ -4,6 +4,7 @@ import Autoplay from 'embla-carousel-autoplay';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ArrowRight, Building2, TrendingUp, Wallet } from 'lucide-react';
 import Image from 'next/image';
+import type { ReactElement } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 
 const BANNERS = [
@@ -49,7 +50,7 @@ const BANNERS = [
   },
 ];
 
-export function BannerCarousel() {
+export function BannerCarousel(): ReactElement {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [
     Autoplay({ delay: 5000, stopOnInteraction: false }),
   ]);
