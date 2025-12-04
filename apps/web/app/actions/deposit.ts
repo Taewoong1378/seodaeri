@@ -260,13 +260,17 @@ export interface DeleteDepositInput {
  * 입출금내역 삭제 (Supabase + Google Sheet)
  */
 export async function deleteDeposit(input: DeleteDepositInput): Promise<SaveDepositResult> {
+  console.log('[deleteDeposit] Called with input:', JSON.stringify(input));
+
   const session = await auth();
 
   if (!session?.user?.id) {
+    console.log('[deleteDeposit] No session user id');
     return { success: false, error: '로그인이 필요합니다.' };
   }
 
   if (!session.accessToken) {
+    console.log('[deleteDeposit] No access token');
     return { success: false, error: 'Google 인증이 필요합니다.' };
   }
 
@@ -293,13 +297,16 @@ export async function deleteDeposit(input: DeleteDepositInput): Promise<SaveDepo
     }
 
     if (!user?.spreadsheet_id) {
+      console.log('[deleteDeposit] No spreadsheet_id');
       return { success: false, error: '연동된 스프레드시트가 없습니다.' };
     }
+
+    console.log('[deleteDeposit] User found, spreadsheet_id:', user.spreadsheet_id);
 
     const userId = user.id as string;
 
     // 1. Supabase에서 삭제
-    await supabase
+    const { error: dbError, count } = await supabase
       .from('deposits')
       .delete()
       .eq('user_id', userId)
@@ -307,23 +314,47 @@ export async function deleteDeposit(input: DeleteDepositInput): Promise<SaveDepo
       .eq('amount', input.amount)
       .eq('deposit_date', input.date);
 
+    console.log('[deleteDeposit] Supabase delete result - error:', dbError, 'count:', count);
+
     // 2. Google Sheet에서 해당 행 찾아서 삭제
     const sheetName = '6. 입금내역';
+    console.log('[deleteDeposit] Fetching sheet data...');
     const rows = await fetchSheetData(
       session.accessToken,
       user.spreadsheet_id,
       `'${sheetName}'!A:H`
     );
 
+    console.log('[deleteDeposit] Sheet rows count:', rows?.length || 0);
+
     if (rows) {
+      let found = false;
+
+      // 첫 몇 행의 raw 데이터 로깅
+      console.log('[deleteDeposit] First 3 rows raw data:');
+      for (let i = 0; i < Math.min(3, rows.length); i++) {
+        console.log(`[deleteDeposit] Row ${i}:`, JSON.stringify(rows[i]));
+      }
+
       // 매칭되는 행 찾기 (날짜 + 금액 + 타입)
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
-        if (!row) continue;
+        if (!row || row.length < 5) continue;
 
-        const rowDate = String(row[0] || '').trim(); // A열: 일자
-        const rowType = String(row[4] || '').trim(); // E열: 구분
-        const rowAmountStr = String(row[6] || '0'); // G열: 금액
+        // 시트 구조 확인: 앞에 빈 컬럼이 있을 수 있음
+        // 실제 데이터 위치 찾기: 날짜 형식(YYYY-MM-DD 또는 YYYY/MM/DD)을 찾아서 offset 결정
+        let offset = 0;
+        for (let j = 0; j < Math.min(3, row.length); j++) {
+          const val = String(row[j] || '');
+          if (/^\d{4}[-/]\d{2}[-/]\d{2}$/.test(val)) {
+            offset = j;
+            break;
+          }
+        }
+
+        const rowDate = String(row[offset] || '').trim(); // 일자
+        const rowType = String(row[offset + 4] || '').trim(); // 구분
+        const rowAmountStr = String(row[offset + 6] || '0'); // 금액
         const rowAmount = Math.abs(parseFloat(rowAmountStr.replace(/[₩,\s-]/g, '')) || 0);
 
         // 날짜 형식 맞추기
@@ -334,11 +365,18 @@ export async function deleteDeposit(input: DeleteDepositInput): Promise<SaveDepo
         const matchType = (input.type === 'DEPOSIT' && isDeposit) ||
                          (input.type === 'WITHDRAW' && !isDeposit);
 
+        // 처음 몇 개 행만 상세 로깅
+        if (i <= 5) {
+          console.log(`[deleteDeposit] Row ${i} (offset=${offset}): date=${normalizedRowDate}, type=${rowType}, amount=${rowAmount}, isDeposit=${isDeposit}`);
+          console.log(`[deleteDeposit] Input: date=${input.date}, type=${input.type}, amount=${input.amount}`);
+        }
+
         if (
           normalizedRowDate === input.date &&
           matchType &&
           Math.abs(rowAmount - input.amount) < 1
         ) {
+          console.log(`[deleteDeposit] Match found at row ${i}, deleting...`);
           // 행 삭제
           await deleteSheetRow(
             session.accessToken,
@@ -346,17 +384,22 @@ export async function deleteDeposit(input: DeleteDepositInput): Promise<SaveDepo
             sheetName,
             i
           );
+          found = true;
           break;
         }
+      }
+      if (!found) {
+        console.log('[deleteDeposit] No matching row found in sheet');
       }
     }
 
     revalidatePath('/dashboard');
     revalidatePath('/transactions');
 
+    console.log('[deleteDeposit] Success');
     return { success: true };
   } catch (error: any) {
-    console.error('deleteDeposit error:', error);
+    console.error('[deleteDeposit] Error:', error);
     const errorMessage = error?.message || '알 수 없는 오류';
     return { success: false, error: `삭제 실패: ${errorMessage}` };
   }

@@ -10,11 +10,13 @@ import {
 } from '@repo/design-system/components/tooltip';
 import { cn } from '@repo/design-system/lib/utils';
 import { ArrowDownLeft, ArrowUpRight, Banknote, Trash2, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { queryKeys } from '../../../lib/query-client';
 import { deleteDeposit } from '../../actions/deposit';
 import { deleteDividend } from '../../actions/dividend';
 import { deleteTransaction } from '../../actions/trade';
+import { AlertDialog, ConfirmDialog } from './ConfirmDialog';
 
 export type TabType = 'trade' | 'dividend' | 'deposit';
 
@@ -26,7 +28,7 @@ function ClickableTooltip({ text }: { text: string }) {
     <Tooltip open={open} onOpenChange={setOpen}>
       <TooltipTrigger asChild>
         <span
-          className="text-base font-bold text-white leading-none truncate cursor-pointer block max-w-[160px]"
+          className="text-sm font-bold text-white leading-tight truncate cursor-pointer block"
           onClick={() => setOpen(!open)}
           onTouchStart={() => setOpen(true)}
         >
@@ -79,55 +81,111 @@ function formatDate(dateStr: string): string {
 }
 
 export function TransactionsClient({ transactions, activeTab, onTabChange }: TransactionsClientProps) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [alertState, setAlertState] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    variant: 'error' | 'success' | 'default';
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    variant: 'default',
+  });
 
-  const handleDelete = async (tx: Transaction) => {
-    const typeText = tx.type === 'BUY' ? '매수' :
-                     tx.type === 'SELL' ? '매도' :
-                     tx.type === 'DIVIDEND' ? '배당' :
-                     tx.type === 'DEPOSIT' ? '입금' : '출금';
-
-    if (!confirm(`이 ${typeText} 내역을 삭제하시겠습니까?`)) {
-      return;
+  const getTypeText = (type: Transaction['type']) => {
+    switch (type) {
+      case 'BUY': return '매수';
+      case 'SELL': return '매도';
+      case 'DIVIDEND': return '배당';
+      case 'DEPOSIT': return '입금';
+      case 'WITHDRAW': return '출금';
+      default: return '거래';
     }
+  };
 
+  const handleDeleteClick = (tx: Transaction) => {
+    setDeleteTarget(tx);
+    setIsConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+
+    const tx = deleteTarget;
     setDeletingId(tx.id);
 
+    console.log('[handleDeleteConfirm] Transaction to delete:', JSON.stringify(tx, null, 2));
+
     try {
-      let result;
+      let result: any;
 
       if (tx.type === 'DIVIDEND') {
-        result = await deleteDividend({
+        const input = {
           date: tx.trade_date.split('T')[0] || tx.trade_date,
           ticker: tx.ticker,
           amountKRW: tx.total_amount,
           amountUSD: 0,
-        });
+        };
+        console.log('[handleDeleteConfirm] Calling deleteDividend with:', input);
+        try {
+          result = await deleteDividend(input);
+          console.log('[handleDeleteConfirm] deleteDividend returned:', result);
+        } catch (e) {
+          console.error('[handleDeleteConfirm] deleteDividend threw error:', e);
+          throw e;
+        }
       } else if (tx.type === 'DEPOSIT' || tx.type === 'WITHDRAW') {
-        result = await deleteDeposit({
+        const input = {
           date: tx.trade_date.split('T')[0] || tx.trade_date,
           type: tx.type,
           amount: tx.total_amount,
-        });
+        };
+        console.log('[handleDeleteConfirm] Calling deleteDeposit with:', input);
+        result = await deleteDeposit(input);
       } else {
-        result = await deleteTransaction({
+        const input = {
           id: tx.source === 'app' ? tx.id : undefined,
           date: tx.trade_date.split('T')[0] || tx.trade_date,
           ticker: tx.ticker,
           type: tx.type,
           price: tx.price,
           quantity: tx.quantity,
-        });
+        };
+        console.log('[handleDeleteConfirm] Calling deleteTransaction with:', input);
+        result = await deleteTransaction(input);
       }
 
+      console.log('[handleDeleteConfirm] Result:', result);
+
+      setIsConfirmOpen(false);
+      setDeleteTarget(null);
+
       if (result.success) {
-        router.refresh();
+        // React Query 캐시 무효화로 데이터 재조회
+        queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       } else {
-        alert(result.error || '삭제에 실패했습니다.');
+        setAlertState({
+          isOpen: true,
+          title: '삭제 실패',
+          description: result.error || '삭제에 실패했습니다.',
+          variant: 'error',
+        });
       }
     } catch (error) {
-      alert('삭제 중 오류가 발생했습니다.');
+      setIsConfirmOpen(false);
+      setDeleteTarget(null);
+      setAlertState({
+        isOpen: true,
+        title: '오류',
+        description: '삭제 중 오류가 발생했습니다.',
+        variant: 'error',
+      });
     } finally {
       setDeletingId(null);
     }
@@ -333,11 +391,11 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
                 key={tx.id}
                 className="bg-white/5 border-white/5 shadow-none rounded-2xl overflow-hidden"
               >
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
                       <div
-                        className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 mt-0.5 ${
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
                           tx.type === 'BUY'
                             ? 'bg-emerald-500/10 text-emerald-400'
                             : tx.type === 'SELL'
@@ -352,20 +410,20 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
                         }`}
                       >
                         {tx.type === 'BUY' ? (
-                          <ArrowDownLeft className="w-6 h-6" />
+                          <ArrowDownLeft className="w-5 h-5" />
                         ) : tx.type === 'SELL' ? (
-                          <ArrowUpRight className="w-6 h-6" />
+                          <ArrowUpRight className="w-5 h-5" />
                         ) : tx.type === 'DIVIDEND' ? (
-                          <Banknote className="w-6 h-6" />
+                          <Banknote className="w-5 h-5" />
                         ) : tx.type === 'DEPOSIT' ? (
-                          <Wallet className="w-6 h-6" />
+                          <Wallet className="w-5 h-5" />
                         ) : tx.type === 'WITHDRAW' ? (
-                          <TrendingDown className="w-6 h-6" />
+                          <TrendingDown className="w-5 h-5" />
                         ) : (
-                          <TrendingUp className="w-6 h-6" />
+                          <TrendingUp className="w-5 h-5" />
                         )}
                       </div>
-                      <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                      <div className="flex flex-col gap-1 flex-1 min-w-0 overflow-hidden">
                         <ClickableTooltip
                           text={
                             (tx.type === 'DEPOSIT' || tx.type === 'WITHDRAW')
@@ -373,28 +431,28 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
                               : (tx.name || tx.ticker)
                           }
                         />
-                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 truncate">
                           {tx.ticker && (
                             <>
-                              <span className="font-medium text-slate-400">{tx.ticker}</span>
-                              <span className="text-slate-600">·</span>
+                              <span className="font-medium text-slate-400 truncate">{tx.ticker}</span>
+                              <span className="text-slate-600 shrink-0">·</span>
                             </>
                           )}
                           {/* 입출금의 경우 메모 표시 */}
                           {(tx.type === 'DEPOSIT' || tx.type === 'WITHDRAW') && tx.name && (
                             <>
-                              <span className="font-medium text-slate-400">{tx.name}</span>
-                              <span className="text-slate-600">·</span>
+                              <span className="font-medium text-slate-400 truncate max-w-[80px]">{tx.name}</span>
+                              <span className="text-slate-600 shrink-0">·</span>
                             </>
                           )}
-                          <span className="whitespace-nowrap">{formatDate(tx.trade_date)}</span>
+                          <span className="whitespace-nowrap shrink-0">{formatDate(tx.trade_date)}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <div className="text-right flex flex-col items-end gap-1 whitespace-nowrap">
+                    <div className="flex items-start gap-1.5 shrink-0">
+                      <div className="text-right flex flex-col items-end gap-1">
                         <div
-                          className={`text-lg font-bold tracking-tight ${
+                          className={`text-base font-bold tracking-tight ${
                             tx.type === 'BUY'
                               ? 'text-emerald-400'
                               : tx.type === 'SELL'
@@ -412,16 +470,16 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
                           {formatCurrency(tx.total_amount)}원
                         </div>
                         {tx.type === 'BUY' || tx.type === 'SELL' ? (
-                          <div className="text-xs font-medium text-slate-500">
+                          <div className="text-[11px] font-medium text-slate-500">
                             {formatCurrency(tx.price)}원 × {tx.quantity}주
                           </div>
                         ) : null}
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleDelete(tx)}
+                        onClick={() => handleDeleteClick(tx)}
                         disabled={deletingId === tx.id}
-                        className="p-2 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors disabled:opacity-50"
+                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors disabled:opacity-50 shrink-0"
                         aria-label="삭제"
                       >
                         <Trash2 size={16} className={deletingId === tx.id ? 'animate-pulse' : ''} />
@@ -443,6 +501,35 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
       </div>
 
     </div>
+
+      {/* 삭제 확인 다이얼로그 */}
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        onOpenChange={(open) => {
+          setIsConfirmOpen(open);
+          if (!open) setDeleteTarget(null);
+        }}
+        title="내역 삭제"
+        description={
+          deleteTarget
+            ? `이 ${getTypeText(deleteTarget.type)} 내역을 삭제하시겠습니까?\n삭제된 내역은 복구할 수 없습니다.`
+            : ''
+        }
+        confirmText="삭제"
+        cancelText="취소"
+        onConfirm={handleDeleteConfirm}
+        isLoading={deletingId !== null}
+        variant="danger"
+      />
+
+      {/* 알림 다이얼로그 */}
+      <AlertDialog
+        isOpen={alertState.isOpen}
+        onOpenChange={(open) => setAlertState((prev) => ({ ...prev, isOpen: open }))}
+        title={alertState.title}
+        description={alertState.description}
+        variant={alertState.variant}
+      />
     </TooltipProvider>
   );
 }

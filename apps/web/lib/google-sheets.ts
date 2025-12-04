@@ -216,17 +216,42 @@ export async function deleteSheetRow(
       fields: 'sheets(properties(sheetId,title))',
     });
 
+    // 시트 이름에서 모든 종류의 공백 제거하여 비교 (일반 공백, non-breaking space, 전각 공백 등)
+    const normalizeSheetName = (name: string | null | undefined) =>
+      name?.replace(/[\s\u00A0\u3000\u200B\uFEFF]/g, '') || '';
+    const normalizedSearchName = normalizeSheetName(sheetName);
+
+    // 디버깅: 각 문자의 유니코드 코드 포인트 출력
+    const toCharCodes = (s: string) => [...s].map(c => c.charCodeAt(0).toString(16)).join(',');
+    console.log('[deleteSheetRow] Looking for:', normalizedSearchName, 'codes:', toCharCodes(normalizedSearchName));
+
+    spreadsheet.data.sheets?.forEach((s, i) => {
+      const normalized = normalizeSheetName(s.properties?.title);
+      const match = normalized === normalizedSearchName;
+      if (normalized.includes('입금') || normalized.includes('6')) {
+        console.log(`[deleteSheetRow] Sheet ${i}: "${normalized}" codes: ${toCharCodes(normalized)} match: ${match}`);
+      }
+    });
+
     const sheet = spreadsheet.data.sheets?.find(
-      (s) => s.properties?.title === sheetName
+      (s) => normalizeSheetName(s.properties?.title) === normalizedSearchName
     );
 
-    if (!sheet?.properties?.sheetId) {
+    if (!sheet) {
+      console.error('[deleteSheetRow] Sheet not found:', sheetName);
+      console.log('[deleteSheetRow] Available sheets (raw):', spreadsheet.data.sheets?.map(s => s.properties?.title));
       throw new Error(`시트 "${sheetName}"를 찾을 수 없습니다.`);
     }
 
-    const sheetId = sheet.properties.sheetId;
+    const sheetId = sheet.properties?.sheetId;
+    if (sheetId === undefined || sheetId === null) {
+      throw new Error(`시트 "${sheetName}"의 ID를 찾을 수 없습니다.`);
+    }
+    console.log('[deleteSheetRow] Found sheet! sheetId:', sheetId);
+    console.log('[deleteSheetRow] Found sheetId:', sheetId, 'for sheet:', sheetName);
 
     // 행 삭제 요청
+    console.log('[deleteSheetRow] Sending batchUpdate request to delete row', rowIndex);
     const response = await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {

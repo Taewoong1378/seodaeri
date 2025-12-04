@@ -227,13 +227,20 @@ export interface DeleteDividendInput {
  * 배당내역 삭제 (Supabase + Google Sheet)
  */
 export async function deleteDividend(input: DeleteDividendInput): Promise<SaveDividendResult> {
+  console.log('===========================================');
+  console.log('[deleteDividend] FUNCTION CALLED');
+  console.log('[deleteDividend] Input:', JSON.stringify(input));
+  console.log('===========================================');
+
   const session = await auth();
 
   if (!session?.user?.id) {
+    console.log('[deleteDividend] No session user id');
     return { success: false, error: '로그인이 필요합니다.' };
   }
 
   if (!session.accessToken) {
+    console.log('[deleteDividend] No access token');
     return { success: false, error: 'Google 인증이 필요합니다.' };
   }
 
@@ -260,13 +267,16 @@ export async function deleteDividend(input: DeleteDividendInput): Promise<SaveDi
     }
 
     if (!user?.spreadsheet_id) {
+      console.log('[deleteDividend] No spreadsheet_id');
       return { success: false, error: '연동된 스프레드시트가 없습니다.' };
     }
+
+    console.log('[deleteDividend] User found, spreadsheet_id:', user.spreadsheet_id);
 
     const userId = user.id as string;
 
     // 1. Supabase에서 삭제
-    await supabase
+    const { error: dbError, count } = await supabase
       .from('dividends')
       .delete()
       .eq('user_id', userId)
@@ -275,27 +285,59 @@ export async function deleteDividend(input: DeleteDividendInput): Promise<SaveDi
       .eq('amount_krw', input.amountKRW)
       .eq('amount_usd', input.amountUSD);
 
+    console.log('[deleteDividend] Supabase delete result - error:', dbError, 'count:', count);
+
     // 2. Google Sheet에서 해당 행 찾아서 삭제
     const sheetName = '7. 배당내역';
+    console.log('[deleteDividend] Fetching sheet data...');
     const rows = await fetchSheetData(
       session.accessToken,
       user.spreadsheet_id,
       `'${sheetName}'!A:J`
     );
 
+    console.log('[deleteDividend] Sheet rows count:', rows?.length || 0);
+
     if (rows) {
+      let found = false;
+
+      // 첫 몇 행의 raw 데이터 로깅
+      console.log('[deleteDividend] First 3 rows raw data:');
+      for (let i = 0; i < Math.min(3, rows.length); i++) {
+        console.log(`[deleteDividend] Row ${i}:`, JSON.stringify(rows[i]));
+      }
+
       // 매칭되는 행 찾기 (날짜 + 종목코드 + 금액)
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
-        if (!row) continue;
+        if (!row || row.length < 5) continue;
 
-        const rowDate = String(row[0] || '').trim(); // A열: 일자
-        const rowTicker = String(row[4] || '').trim(); // E열: 종목코드
-        const rowAmountKRW = parseFloat(String(row[6] || '0').replace(/[₩,\s]/g, '')) || 0;
-        const rowAmountUSD = parseFloat(String(row[7] || '0').replace(/[$,\s]/g, '')) || 0;
+        // 시트 구조 확인: 앞에 빈 컬럼이 있을 수 있음
+        // 실제 데이터 위치 찾기: 날짜 형식(YYYY-MM-DD 또는 YYYY/MM/DD)을 찾아서 offset 결정
+        let offset = 0;
+        for (let j = 0; j < Math.min(3, row.length); j++) {
+          const val = String(row[j] || '');
+          if (/^\d{4}[-/]\d{2}[-/]\d{2}$/.test(val)) {
+            offset = j;
+            break;
+          }
+        }
+
+        const rowDate = String(row[offset] || '').trim(); // 일자
+        const rowTicker = String(row[offset + 4] || '').trim(); // 종목코드
+        const rowAmountKRWStr = String(row[offset + 6] || '0');
+        const rowAmountUSDStr = String(row[offset + 7] || '0');
+        const rowAmountKRW = parseFloat(rowAmountKRWStr.replace(/[₩,\s]/g, '')) || 0;
+        const rowAmountUSD = parseFloat(rowAmountUSDStr.replace(/[$,\s]/g, '')) || 0;
 
         // 날짜 형식 맞추기 (YYYY-MM-DD 또는 YYYY/MM/DD)
         const normalizedRowDate = rowDate.replace(/\//g, '-');
+
+        // 처음 몇 개 행만 상세 로깅
+        if (i <= 5) {
+          console.log(`[deleteDividend] Row ${i} (offset=${offset}): date=${normalizedRowDate}, ticker=${rowTicker}, krw=${rowAmountKRW}, usd=${rowAmountUSD}`);
+          console.log(`[deleteDividend] Input: date=${input.date}, ticker=${input.ticker}, krw=${input.amountKRW}, usd=${input.amountUSD}`);
+        }
 
         if (
           normalizedRowDate === input.date &&
@@ -303,6 +345,7 @@ export async function deleteDividend(input: DeleteDividendInput): Promise<SaveDi
           Math.abs(rowAmountKRW - input.amountKRW) < 1 &&
           Math.abs(rowAmountUSD - input.amountUSD) < 0.01
         ) {
+          console.log(`[deleteDividend] Match found at row ${i}, deleting...`);
           // 행 삭제 (i는 0-based index)
           await deleteSheetRow(
             session.accessToken,
@@ -310,17 +353,22 @@ export async function deleteDividend(input: DeleteDividendInput): Promise<SaveDi
             sheetName,
             i
           );
+          found = true;
           break;
         }
+      }
+      if (!found) {
+        console.log('[deleteDividend] No matching row found in sheet');
       }
     }
 
     revalidatePath('/dashboard');
     revalidatePath('/transactions');
 
+    console.log('[deleteDividend] Success');
     return { success: true };
   } catch (error: any) {
-    console.error('deleteDividend error:', error);
+    console.error('[deleteDividend] Error:', error);
     const errorMessage = error?.message || '알 수 없는 오류';
     return { success: false, error: `삭제 실패: ${errorMessage}` };
   }
