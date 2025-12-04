@@ -9,8 +9,12 @@ import {
   TooltipTrigger,
 } from '@repo/design-system/components/tooltip';
 import { cn } from '@repo/design-system/lib/utils';
-import { ArrowDownLeft, ArrowUpRight, Banknote, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Banknote, Trash2, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { deleteDeposit } from '../../actions/deposit';
+import { deleteDividend } from '../../actions/dividend';
+import { deleteTransaction } from '../../actions/trade';
 
 export type TabType = 'trade' | 'dividend' | 'deposit';
 
@@ -75,6 +79,60 @@ function formatDate(dateStr: string): string {
 }
 
 export function TransactionsClient({ transactions, activeTab, onTabChange }: TransactionsClientProps) {
+  const router = useRouter();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (tx: Transaction) => {
+    const typeText = tx.type === 'BUY' ? '매수' :
+                     tx.type === 'SELL' ? '매도' :
+                     tx.type === 'DIVIDEND' ? '배당' :
+                     tx.type === 'DEPOSIT' ? '입금' : '출금';
+
+    if (!confirm(`이 ${typeText} 내역을 삭제하시겠습니까?`)) {
+      return;
+    }
+
+    setDeletingId(tx.id);
+
+    try {
+      let result;
+
+      if (tx.type === 'DIVIDEND') {
+        result = await deleteDividend({
+          date: tx.trade_date.split('T')[0] || tx.trade_date,
+          ticker: tx.ticker,
+          amountKRW: tx.total_amount,
+          amountUSD: 0,
+        });
+      } else if (tx.type === 'DEPOSIT' || tx.type === 'WITHDRAW') {
+        result = await deleteDeposit({
+          date: tx.trade_date.split('T')[0] || tx.trade_date,
+          type: tx.type,
+          amount: tx.total_amount,
+        });
+      } else {
+        result = await deleteTransaction({
+          id: tx.source === 'app' ? tx.id : undefined,
+          date: tx.trade_date.split('T')[0] || tx.trade_date,
+          ticker: tx.ticker,
+          type: tx.type,
+          price: tx.price,
+          quantity: tx.quantity,
+        });
+      }
+
+      if (result.success) {
+        router.refresh();
+      } else {
+        alert(result.error || '삭제에 실패했습니다.');
+      }
+    } catch (error) {
+      alert('삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   // 거래내역: BUY, SELL (매수/매도만)
   const tradeTransactions = transactions.filter(
     (tx) => tx.type === 'BUY' || tx.type === 'SELL'
@@ -333,30 +391,41 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
                         </div>
                       </div>
                     </div>
-                    <div className="text-right flex flex-col items-end gap-1 whitespace-nowrap">
-                      <div
-                        className={`text-lg font-bold tracking-tight ${
-                          tx.type === 'BUY'
-                            ? 'text-emerald-400'
-                            : tx.type === 'SELL'
-                            ? 'text-red-400'
-                            : tx.type === 'DIVIDEND'
-                            ? 'text-blue-400'
-                            : tx.type === 'DEPOSIT'
-                            ? 'text-purple-400'
-                            : tx.type === 'WITHDRAW'
-                            ? 'text-orange-400'
-                            : 'text-white'
-                        }`}
-                      >
-                        {tx.type === 'BUY' || tx.type === 'WITHDRAW' ? '-' : '+'}
-                        {formatCurrency(tx.total_amount)}원
-                      </div>
-                      {tx.type === 'BUY' || tx.type === 'SELL' ? (
-                        <div className="text-xs font-medium text-slate-500">
-                          {formatCurrency(tx.price)}원 × {tx.quantity}주
+                    <div className="flex items-start gap-2">
+                      <div className="text-right flex flex-col items-end gap-1 whitespace-nowrap">
+                        <div
+                          className={`text-lg font-bold tracking-tight ${
+                            tx.type === 'BUY'
+                              ? 'text-emerald-400'
+                              : tx.type === 'SELL'
+                              ? 'text-red-400'
+                              : tx.type === 'DIVIDEND'
+                              ? 'text-blue-400'
+                              : tx.type === 'DEPOSIT'
+                              ? 'text-purple-400'
+                              : tx.type === 'WITHDRAW'
+                              ? 'text-orange-400'
+                              : 'text-white'
+                          }`}
+                        >
+                          {tx.type === 'BUY' || tx.type === 'WITHDRAW' ? '-' : '+'}
+                          {formatCurrency(tx.total_amount)}원
                         </div>
-                      ) : null}
+                        {tx.type === 'BUY' || tx.type === 'SELL' ? (
+                          <div className="text-xs font-medium text-slate-500">
+                            {formatCurrency(tx.price)}원 × {tx.quantity}주
+                          </div>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(tx)}
+                        disabled={deletingId === tx.id}
+                        className="p-2 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors disabled:opacity-50"
+                        aria-label="삭제"
+                      >
+                        <Trash2 size={16} className={deletingId === tx.id ? 'animate-pulse' : ''} />
+                      </button>
                     </div>
                   </div>
                   {!tx.sheet_synced && (
