@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: '개인정보처리방침 - 서대리',
-  description: '서대리 애플리케이션의 개인정보처리방침입니다.',
+  title: '개인정보처리방침 - 굴림(Gulim)',
+  description: '굴림(Gulim) 애플리케이션의 개인정보처리방침입니다.',
 };
 
 export default function PrivacyPolicyPage() {
@@ -15,7 +15,7 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-lg font-semibold text-white mb-3">1. 개인정보의 수집 및 이용 목적</h2>
             <p>
-              서대리(이하 &quot;서비스&quot;)는 다음의 목적을 위하여 개인정보를 처리합니다.
+              굴림(Gulim)(이하 &quot;서비스&quot;)는 다음의 목적을 위하여 개인정보를 처리합니다.
               처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며,
               이용 목적이 변경되는 경우에는 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.
             </p>

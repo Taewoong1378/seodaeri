@@ -2,14 +2,14 @@
 
 import { useRef } from 'react';
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis
 } from 'recharts';
 import type { MonthlyYieldComparisonDollarAppliedData } from '../../../lib/google-sheets';
 import { LandscapeChartModal } from './LandscapeChartModal';
@@ -63,7 +63,7 @@ export function MonthlyYieldComparisonDollarAppliedChart({ data }: MonthlyYieldC
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-white">{currentYear}년 수익률 현황 (환율 반영)</h4>
+          <h4 className="text-sm font-semibold text-foreground">{currentYear}년 수익률 현황 (환율 반영)</h4>
           <div className="flex items-center gap-2">
             <ShareChartButton chartRef={chartRef} title={`${currentYear}년 수익률 현황 (환율 반영)`} />
             <LandscapeChartModal title={`${currentYear}년 수익률 현황 (환율 반영)`}>
@@ -72,11 +72,11 @@ export function MonthlyYieldComparisonDollarAppliedChart({ data }: MonthlyYieldC
                 <div className="flex items-center justify-center gap-6 mb-4 shrink-0">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: COLORS.currentMonth }} />
-                    <span className="text-sm text-slate-400">{data.currentMonth} 수익률</span>
+                    <span className="text-sm text-muted-foreground">{data.currentMonth} 수익률</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
-                    <span className="text-sm text-slate-400">올해 수익률</span>
+                    <span className="text-sm text-muted-foreground">올해 수익률</span>
                   </div>
                 </div>
 
@@ -100,15 +100,16 @@ export function MonthlyYieldComparisonDollarAppliedChart({ data }: MonthlyYieldC
                         tickFormatter={(value) => `${value}%`}
                       />
                       <Tooltip
-                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                        cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                         contentStyle={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          backgroundColor: 'hsl(var(--popover))',
+                          border: '1px solid hsl(var(--border))',
                           borderRadius: '12px',
-                          boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                           padding: '12px',
+                          color: 'hsl(var(--popover-foreground))',
                         }}
-                        labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                        labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 13, marginBottom: 8 }}
                         formatter={(value: number, name: string) => {
                           const label = name === 'currentMonth' ? `${data.currentMonth} 수익률` : '올해 수익률';
                           return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
@@ -136,11 +137,11 @@ export function MonthlyYieldComparisonDollarAppliedChart({ data }: MonthlyYieldC
         <div className="flex items-center justify-end gap-3">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.currentMonth }} />
-            <span className="text-[11px] text-slate-400">{data.currentMonth} 수익률</span>
+            <span className="text-[11px] text-muted-foreground">{data.currentMonth} 수익률</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
-            <span className="text-[11px] text-slate-400">올해 수익률</span>
+            <span className="text-[11px] text-muted-foreground">올해 수익률</span>
           </div>
         </div>
       </div>
@@ -152,30 +153,31 @@ export function MonthlyYieldComparisonDollarAppliedChart({ data }: MonthlyYieldC
             data={chartData}
             margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis
               dataKey="name"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#94a3b8', fontSize: 10 }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10 }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
               tickFormatter={(value) => `${value}%`}
               width={45}
             />
             <Tooltip
-              cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+              cursor={{ fill: 'rgba(16, 185, 129, 0.1)' }}
               contentStyle={{
-                backgroundColor: '#1e293b',
-                border: '1px solid rgba(255,255,255,0.1)',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '12px',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                 padding: '12px',
+                color: '#1e293b',
               }}
-              labelStyle={{ color: '#94a3b8', fontSize: 11, marginBottom: 8 }}
+              labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 11, marginBottom: 8 }}
               formatter={(value: number, name: string) => {
                 const label = name === 'currentMonth' ? `${data.currentMonth} 수익률` : '올해 수익률';
                 return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
@@ -200,14 +202,14 @@ export function MonthlyYieldComparisonDollarAppliedChart({ data }: MonthlyYieldC
         {chartData.map((item) => (
           <div
             key={item.name}
-            className="flex-1 min-w-[70px] bg-white/[0.03] border border-white/5 rounded-lg px-2 py-2 text-center"
+            className="flex-1 min-w-[70px] bg-muted/30 border border-border rounded-lg px-2 py-2 text-center"
           >
-            <span className="text-[9px] text-slate-500 block mb-0.5 truncate">{item.name}</span>
+            <span className="text-[9px] text-muted-foreground block mb-0.5 truncate">{item.name}</span>
             <div className="space-y-0">
-              <div className={`text-[11px] font-semibold leading-tight ${item.thisYear >= 0 ? 'text-orange-400' : 'text-slate-400'}`}>
+              <div className={`text-[11px] font-semibold leading-tight ${item.thisYear >= 0 ? 'text-orange-500' : 'text-muted-foreground'}`}>
                 {item.thisYear >= 0 ? '+' : ''}{item.thisYear.toFixed(1)}%
               </div>
-              <div className={`text-[9px] leading-tight ${item.currentMonth >= 0 ? 'text-gray-400' : 'text-slate-500'}`}>
+              <div className={`text-[9px] leading-tight ${item.currentMonth >= 0 ? 'text-gray-500' : 'text-muted-foreground'}`}>
                 {data.currentMonth} {item.currentMonth >= 0 ? '+' : ''}{item.currentMonth.toFixed(1)}%
               </div>
             </div>

@@ -13,10 +13,10 @@ export function BenefitBanner() {
   }, []);
 
   return (
-    <div className="relative overflow-hidden rounded-[24px] bg-white/[0.03] border border-white/10 p-1 shadow-sm">
-      <div className="relative bg-[#020617]/40 backdrop-blur-sm rounded-[20px] p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div className="relative overflow-hidden rounded-[24px] bg-card border border-border p-1 shadow-sm">
+      <div className="relative bg-muted/30 backdrop-blur-sm rounded-[20px] p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4 w-full sm:w-auto">
-          <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden border border-white/10 shadow-inner shrink-0">
+          <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden border border-border shadow-inner shrink-0">
              <Image
               src="/images/banners/banner-benefit-kiwoom.png"
               alt="키움증권 혜택"
@@ -25,11 +25,11 @@ export function BenefitBanner() {
             />
           </div>
           <div className="text-left space-y-1">
-            <h3 className="text-lg font-bold text-white tracking-tight">
+            <h3 className="text-lg font-bold text-foreground tracking-tight">
               키움증권 계좌 개설하고
             </h3>
-            <p className="text-sm text-slate-400 font-medium">
-              최대 <span className="text-white font-bold">40달러</span> 투자지원금 받기
+            <p className="text-sm text-muted-foreground font-medium">
+              최대 <span className="text-foreground font-bold">40달러</span> 투자지원금 받기
             </p>
           </div>
         </div>
@@ -42,7 +42,7 @@ export function BenefitBanner() {
         >
           <button
             type="button"
-            className="w-full sm:w-auto group flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm font-bold transition-all active:scale-95 whitespace-nowrap border border-white/5"
+            className="w-full sm:w-auto group flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold transition-all active:scale-95 whitespace-nowrap shadow-sm"
           >
             혜택받기
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

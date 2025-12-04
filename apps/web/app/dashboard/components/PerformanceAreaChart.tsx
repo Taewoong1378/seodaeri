@@ -81,10 +81,12 @@ export function PerformanceAreaChart({ data, totalProfit, totalYield }: Performa
               <YAxis hide />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1e293b',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '12px',
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                  padding: '12px',
+                  color: '#1e293b',
                 }}
                 labelStyle={{ color: '#94a3b8', fontSize: 11 }}
                 itemStyle={{ color: '#fff', fontSize: 12 }}

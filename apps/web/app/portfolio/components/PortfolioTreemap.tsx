@@ -36,7 +36,7 @@ const CustomContent = (props: any) => {
         height={height}
         style={{
           fill: COLORS[index % COLORS.length],
-          stroke: '#020617',
+          stroke: '#ffffff',
           strokeWidth: 2,
           strokeOpacity: 1,
         }}
@@ -63,14 +63,14 @@ const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-slate-800 border border-white/10 px-3 py-2 rounded-lg shadow-xl z-50">
-        <p className="text-white text-sm font-bold mb-0.5">{data.name}</p>
+      <div className="bg-popover border border-border px-3 py-2 rounded-lg shadow-xl z-50">
+        <p className="text-popover-foreground text-sm font-bold mb-0.5">{data.name}</p>
         <div className="flex items-center gap-2 text-xs">
-          <span className="text-slate-400">{data.ticker}</span>
-          <span className="text-slate-500">|</span>
-          <span className="text-emerald-400 font-medium">{data.weight.toFixed(1)}%</span>
+          <span className="text-muted-foreground">{data.ticker}</span>
+          <span className="text-muted-foreground">|</span>
+          <span className="text-emerald-600 font-medium">{data.weight.toFixed(1)}%</span>
         </div>
-        <p className="text-white text-xs mt-1 font-medium">
+        <p className="text-popover-foreground text-xs mt-1 font-medium">
           {Math.round(data.totalValue).toLocaleString()}원
         </p>
       </div>
@@ -92,7 +92,7 @@ export function PortfolioTreemap({ data }: PortfolioTreemapProps) {
   if (chartData.length === 0) return null;
 
   return (
-    <div className="w-full h-[400px] rounded-2xl overflow-hidden bg-white/5 border border-white/5">
+    <div className="w-full h-[400px] rounded-2xl overflow-hidden bg-card border border-border">
       <ResponsiveContainer width="100%" height="100%">
         <Treemap
           data={chartData}

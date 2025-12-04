@@ -52,12 +52,12 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
         : { top: 10, right: 10, left: 0, bottom: 40 }
       }
     >
-      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
       <XAxis
         dataKey="month"
         axisLine={false}
         tickLine={false}
-        tick={{ fill: '#94a3b8', fontSize: isModal ? 10 : 8 }}
+        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isModal ? 10 : 8 }}
         angle={-45}
         textAnchor="end"
         height={isModal ? 60 : 50}
@@ -66,21 +66,22 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
       <YAxis
         axisLine={false}
         tickLine={false}
-        tick={{ fill: '#64748b', fontSize: isModal ? 11 : 9 }}
+        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isModal ? 11 : 9 }}
         tickFormatter={formatCurrencyShort}
         domain={[0, yMax]}
         width={isModal ? 60 : 45}
       />
       <Tooltip
-        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+        cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
         contentStyle={{
-          backgroundColor: '#1e293b',
-          border: '1px solid rgba(255,255,255,0.1)',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
           borderRadius: '12px',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
           padding: '12px',
+          color: '#1e293b',
         }}
-        labelStyle={{ color: '#94a3b8', fontSize: 12, marginBottom: 8 }}
+        labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 12, marginBottom: 8 }}
         formatter={(value: number) => [formatCurrency(value), '누적 배당금']}
         labelFormatter={(label) => `${label}`}
       />
@@ -98,8 +99,8 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-sm font-semibold text-white">배당금 누적 그래프</h4>
-          <p className="text-xs text-slate-500 mt-0.5">총 누적: {formatCurrency(currentCumulative)}</p>
+          <h4 className="text-sm font-semibold text-foreground">배당금 누적 그래프</h4>
+          <p className="text-xs text-muted-foreground mt-0.5">총 누적: {formatCurrency(currentCumulative)}</p>
         </div>
         <div className="flex items-center gap-2">
           <ShareChartButton chartRef={chartRef} title="배당금 누적 그래프" />

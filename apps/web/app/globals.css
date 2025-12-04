@@ -1,44 +1,45 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-background: oklch(0.985 0.002 247.839); /* Very light cool gray */
-  --color-foreground: oklch(0.141 0.005 285.823); /* Deep charcoal */
+  --color-background: oklch(0.96 0 0); /* Soft White #F5F5F5 */
+  --color-foreground: oklch(0.20 0.02 145); /* Dark Moss Charcoal #1B261D */
   
   --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.141 0.005 285.823);
+  --color-card-foreground: oklch(0.20 0.02 145);
   
   --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.141 0.005 285.823);
+  --color-popover-foreground: oklch(0.20 0.02 145);
   
-  --color-primary: oklch(0.488 0.243 264.376); /* Vibrant Royal Blue */
-  --color-primary-foreground: oklch(0.985 0 0);
+  --color-primary: oklch(0.48 0.16 145); /* Deep Forest Green #2E7D32 */
+  --color-primary-foreground: oklch(0.98 0 0);
   
-  --color-secondary: oklch(0.967 0.003 264.542); /* Pale cool gray */
-  --color-secondary-foreground: oklch(0.21 0.006 285.885);
+  --color-secondary: oklch(0.88 0.16 110); /* Soft Lime #DCE775 */
+  --color-secondary-foreground: oklch(0.20 0.02 145);
   
-  --color-muted: oklch(0.967 0.003 264.542);
-  --color-muted-foreground: oklch(0.552 0.016 285.938);
+  --color-muted: oklch(0.96 0.01 145);
+  --color-muted-foreground: oklch(0.55 0.05 145);
   
-  --color-accent: oklch(0.967 0.003 264.542);
-  --color-accent-foreground: oklch(0.21 0.006 285.885);
+  --color-accent: oklch(0.88 0.16 110);
+  --color-accent-foreground: oklch(0.20 0.02 145);
   
   --color-destructive: oklch(0.637 0.237 25.331);
   --color-destructive-foreground: oklch(0.985 0 0);
   
-  --color-border: oklch(0.92 0.004 286.32);
-  --color-input: oklch(0.92 0.004 286.32);
-  --color-ring: oklch(0.488 0.243 264.376);
+  --color-border: oklch(0.90 0.02 145);
+  --color-input: oklch(0.90 0.02 145);
+  --color-ring: oklch(0.48 0.16 145);
   
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
+  --radius-sm: 0.75rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.25rem; /* 20px */
   --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
 
-  /* Brand Colors - Premium Fintech */
-  --color-brand-primary: oklch(0.488 0.243 264.376);      /* Royal Blue */
-  --color-brand-secondary: oklch(0.623 0.214 164.935);    /* Teal/Emerald */
-  --color-brand-gradient-start: oklch(0.40 0.20 260);     /* Deep Blue */
-  --color-brand-gradient-end: oklch(0.55 0.20 200);       /* Cyan/Teal */
+  /* Brand Colors - Gulim */
+  --color-brand-primary: oklch(0.48 0.16 145);      /* Deep Forest Green */
+  --color-brand-secondary: oklch(0.88 0.16 110);    /* Soft Lime */
+  --color-brand-gradient-start: oklch(0.48 0.16 145);     
+  --color-brand-gradient-end: oklch(0.60 0.14 145);       
   
   --color-success: oklch(0.65 0.18 150);             /* Fresh Green */
   --color-danger: oklch(0.60 0.20 25);               /* Soft Red */

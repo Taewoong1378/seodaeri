@@ -2,15 +2,15 @@
 
 import { useRef } from 'react';
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  LabelList,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    LabelList,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis
 } from 'recharts';
 import type { YearlyDividendSummaryData } from '../../../lib/google-sheets';
 import { LandscapeChartModal } from './LandscapeChartModal';
@@ -49,31 +49,32 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
         : { top: 25, right: 10, left: 0, bottom: 0 }
       }
     >
-      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
       <XAxis
         dataKey="year"
         axisLine={false}
         tickLine={false}
-        tick={{ fill: '#94a3b8', fontSize: isModal ? 12 : 10 }}
+        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isModal ? 12 : 10 }}
       />
       <YAxis
         axisLine={false}
         tickLine={false}
-        tick={{ fill: '#64748b', fontSize: isModal ? 11 : 9 }}
+        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isModal ? 11 : 9 }}
         tickFormatter={formatCurrencyShort}
         domain={[0, yMax]}
         width={isModal ? 70 : 55}
       />
       <Tooltip
-        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+        cursor={{ fill: 'rgba(16, 185, 129, 0.1)' }}
         contentStyle={{
-          backgroundColor: '#1e293b',
-          border: '1px solid rgba(255,255,255,0.1)',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
           borderRadius: '12px',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
           padding: '12px',
+          color: '#1e293b',
         }}
-        labelStyle={{ color: '#94a3b8', fontSize: 12, marginBottom: 8 }}
+        labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 12, marginBottom: 8 }}
         formatter={(value: number) => [formatCurrency(value), '배당금']}
       />
       <Bar
@@ -85,7 +86,7 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
         <LabelList
           dataKey="amount"
           position="top"
-          fill="#94a3b8"
+          fill="hsl(var(--muted-foreground))"
           fontSize={isModal ? 12 : 10}
           formatter={(value: any) => formatCurrency(value)}
         />
@@ -100,7 +101,7 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
     <div ref={chartRef} className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-white">연도별 배당금 현황</h4>
+        <h4 className="text-sm font-semibold text-foreground">연도별 배당금 현황</h4>
         <div className="flex items-center gap-2">
           <ShareChartButton chartRef={hiddenChartRef} title="연도별 배당금 현황" />
           <LandscapeChartModal title="연도별 배당금 현황">
@@ -124,15 +125,15 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
 
       {/* Summary - Total and Average */}
       <div className="flex gap-3">
-        <div className="flex-1 bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2 text-center">
-          <span className="text-[9px] text-slate-500 block mb-0.5">총 배당금</span>
-          <div className="text-[12px] font-semibold text-orange-400">
+        <div className="flex-1 bg-muted/30 border border-border rounded-lg px-3 py-2 text-center">
+          <span className="text-[9px] text-muted-foreground block mb-0.5">총 배당금</span>
+          <div className="text-[12px] font-semibold text-orange-500">
             {formatCurrency(data.data.reduce((sum, d) => sum + d.amount, 0))}
           </div>
         </div>
-        <div className="flex-1 bg-white/[0.03] border border-white/5 rounded-lg px-3 py-2 text-center">
-          <span className="text-[9px] text-slate-500 block mb-0.5">연평균</span>
-          <div className="text-[12px] font-semibold text-slate-300">
+        <div className="flex-1 bg-muted/30 border border-border rounded-lg px-3 py-2 text-center">
+          <span className="text-[9px] text-muted-foreground block mb-0.5">연평균</span>
+          <div className="text-[12px] font-semibold text-muted-foreground">
             {formatCurrency(Math.round(data.data.reduce((sum, d) => sum + d.amount, 0) / data.data.length))}
           </div>
         </div>

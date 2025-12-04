@@ -9,8 +9,8 @@ import {
   TooltipTrigger,
 } from '@repo/design-system/components/tooltip';
 import { cn } from '@repo/design-system/lib/utils';
-import { ArrowDownLeft, ArrowUpRight, Banknote, Trash2, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { ArrowDownLeft, ArrowUpRight, Banknote, Trash2, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { queryKeys } from '../../../lib/query-client';
 import { deleteDeposit } from '../../actions/deposit';
@@ -28,7 +28,7 @@ function ClickableTooltip({ text }: { text: string }) {
     <Tooltip open={open} onOpenChange={setOpen}>
       <TooltipTrigger asChild>
         <span
-          className="text-sm font-bold text-white leading-tight truncate cursor-pointer block"
+          className="text-sm font-bold text-foreground leading-tight truncate cursor-pointer block"
           onClick={() => setOpen(!open)}
           onTouchStart={() => setOpen(true)}
         >
@@ -37,7 +37,7 @@ function ClickableTooltip({ text }: { text: string }) {
       </TooltipTrigger>
       <TooltipContent
         side="top"
-        className="bg-slate-800 text-white border-slate-700 max-w-[280px] z-[100]"
+        className="bg-popover text-popover-foreground border-border max-w-[280px] z-[100]"
         onPointerDownOutside={() => setOpen(false)}
       >
         <p className="text-sm break-words">{text}</p>
@@ -242,22 +242,22 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
     <TooltipProvider>
     <div className="space-y-4">
       {/* Tabs - 3 tabs */}
-      <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/5">
+      <div className="flex items-center bg-muted p-1 rounded-full border border-border">
         <button
           type="button"
           onClick={() => onTabChange('trade')}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+            "flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-full text-sm font-medium transition-all duration-200",
             activeTab === 'trade'
-              ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/20"
-              : "text-slate-400 hover:text-white hover:bg-white/5"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-background/50"
           )}
         >
           <ArrowUpRight size={14} />
           거래
           <span className={cn(
             "text-xs px-1.5 py-0.5 rounded-full",
-            activeTab === 'trade' ? "bg-white/20" : "bg-white/10"
+            activeTab === 'trade' ? "bg-primary-foreground/20" : "bg-muted-foreground/20"
           )}>
             {tradeTransactions.length}
           </span>
@@ -266,17 +266,17 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
           type="button"
           onClick={() => onTabChange('dividend')}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+            "flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-full text-sm font-medium transition-all duration-200",
             activeTab === 'dividend'
-              ? "bg-blue-600 text-white shadow-lg shadow-blue-900/20"
-              : "text-slate-400 hover:text-white hover:bg-white/5"
+              ? "bg-blue-600 text-white shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-background/50"
           )}
         >
           <Banknote size={14} />
           배당
           <span className={cn(
             "text-xs px-1.5 py-0.5 rounded-full",
-            activeTab === 'dividend' ? "bg-white/20" : "bg-white/10"
+            activeTab === 'dividend' ? "bg-white/20" : "bg-muted-foreground/20"
           )}>
             {dividendTransactions.length}
           </span>
@@ -285,17 +285,17 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
           type="button"
           onClick={() => onTabChange('deposit')}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+            "flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-full text-sm font-medium transition-all duration-200",
             activeTab === 'deposit'
-              ? "bg-purple-600 text-white shadow-lg shadow-purple-900/20"
-              : "text-slate-400 hover:text-white hover:bg-white/5"
+              ? "bg-purple-600 text-white shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-background/50"
           )}
         >
           <Wallet size={14} />
           입출금
           <span className={cn(
             "text-xs px-1.5 py-0.5 rounded-full",
-            activeTab === 'deposit' ? "bg-white/20" : "bg-white/10"
+            activeTab === 'deposit' ? "bg-white/20" : "bg-muted-foreground/20"
           )}>
             {depositTransactions.length}
           </span>
@@ -307,11 +307,11 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
         <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-800/10 rounded-2xl p-5 border border-emerald-500/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-emerald-300/70 mb-1">총 매수금액</p>
-              <p className="text-2xl font-bold text-white">{formatCurrency(totalBuy)}원</p>
+              <p className="text-xs text-emerald-600/70 mb-1">총 매수금액</p>
+              <p className="text-2xl font-bold text-emerald-950">{formatCurrency(totalBuy)}원</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-emerald-300/70 mb-1">총 매도금액</p>
+              <p className="text-xs text-emerald-600/70 mb-1">총 매도금액</p>
               <p className="text-lg font-semibold text-red-400">{formatCurrency(totalSell)}원</p>
             </div>
           </div>
@@ -322,11 +322,11 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
         <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/10 rounded-2xl p-5 border border-blue-500/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-blue-300/70 mb-1">누적 배당금</p>
-              <p className="text-2xl font-bold text-white">{formatCurrency(totalDividend)}원</p>
+              <p className="text-xs text-blue-600/70 mb-1 font-bold">누적 배당금</p>
+              <p className="text-2xl font-bold text-blue-950">{formatCurrency(totalDividend)}원</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-blue-300/70 mb-1">올해 배당금</p>
+              <p className="text-xs text-blue-600/70 mb-1 font-bold">올해 배당금</p>
               <p className="text-lg font-semibold text-blue-400">{formatCurrency(thisYearDividend)}원</p>
             </div>
           </div>
@@ -348,12 +348,12 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
         <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/10 rounded-2xl p-5 border border-purple-500/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-purple-300/70 mb-1">총 입금액</p>
-              <p className="text-2xl font-bold text-white">{formatCurrency(totalDeposit)}원</p>
+              <p className="text-xs text-purple-600/70 mb-1 font-bold">총 입금액</p>
+              <p className="text-2xl font-bold text-purple-950">{formatCurrency(totalDeposit)}원</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-purple-300/70 mb-1">총 출금액</p>
-              <p className="text-lg font-semibold text-orange-400">{formatCurrency(totalWithdraw)}원</p>
+              <p className="text-xs text-purple-600/70 mb-1 font-bold">총 출금액</p>
+              <p className="text-lg font-semibold text-purple-950">{formatCurrency(totalWithdraw)}원</p>
             </div>
           </div>
         </div>
@@ -363,20 +363,20 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
         {currentTransactions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
               {activeTab === 'dividend' ? (
-                <Banknote className="w-8 h-8 text-slate-500" />
+                <Banknote className="w-8 h-8 text-muted-foreground" />
               ) : activeTab === 'deposit' ? (
-                <Wallet className="w-8 h-8 text-slate-500" />
+                <Wallet className="w-8 h-8 text-muted-foreground" />
               ) : (
-                <TrendingUp className="w-8 h-8 text-slate-500" />
+                <TrendingUp className="w-8 h-8 text-muted-foreground" />
               )}
             </div>
-            <h3 className="text-lg font-medium text-white mb-2">
+            <h3 className="text-lg font-medium text-foreground mb-2">
               {activeTab === 'dividend' ? '배당내역이 없습니다' :
                activeTab === 'deposit' ? '입출금내역이 없습니다' : '거래내역이 없습니다'}
             </h3>
-            <p className="text-sm text-slate-400 max-w-[280px]">
+            <p className="text-sm text-muted-foreground max-w-[280px]">
               {activeTab === 'dividend'
                 ? "펜 버튼을 눌러 배당내역을 입력해보세요."
                 : activeTab === 'deposit'
@@ -389,24 +389,24 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
             {currentTransactions.map((tx) => (
               <Card
                 key={tx.id}
-                className="bg-white/5 border-white/5 shadow-none rounded-2xl overflow-hidden"
+                className="bg-card border-border shadow-sm rounded-[24px] overflow-hidden"
               >
-                <CardContent className="p-4">
+                <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0 flex-1">
                       <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                        className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
                           tx.type === 'BUY'
-                            ? 'bg-emerald-500/10 text-emerald-400'
+                            ? 'bg-primary/10 text-primary'
                             : tx.type === 'SELL'
-                            ? 'bg-red-500/10 text-red-400'
+                            ? 'bg-destructive/10 text-destructive'
                             : tx.type === 'DIVIDEND'
-                            ? 'bg-blue-500/10 text-blue-400'
+                            ? 'bg-blue-500/10 text-blue-600'
                             : tx.type === 'DEPOSIT'
-                            ? 'bg-purple-500/10 text-purple-400'
+                            ? 'bg-purple-500/10 text-purple-500'
                             : tx.type === 'WITHDRAW'
-                            ? 'bg-orange-500/10 text-orange-400'
-                            : 'bg-slate-500/10 text-slate-400'
+                            ? 'bg-orange-500/10 text-orange-500'
+                            : 'bg-muted text-muted-foreground'
                         }`}
                       >
                         {tx.type === 'BUY' ? (
@@ -424,25 +424,27 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
                         )}
                       </div>
                       <div className="flex flex-col gap-1 flex-1 min-w-0 overflow-hidden">
-                        <ClickableTooltip
-                          text={
-                            (tx.type === 'DEPOSIT' || tx.type === 'WITHDRAW')
-                              ? (tx.account || (tx.type === 'DEPOSIT' ? '입금' : '출금'))
-                              : (tx.name || tx.ticker)
-                          }
-                        />
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 truncate">
+                        <div className="text-foreground">
+                          <ClickableTooltip
+                            text={
+                              (tx.type === 'DEPOSIT' || tx.type === 'WITHDRAW')
+                                ? (tx.account || (tx.type === 'DEPOSIT' ? '입금' : '출금'))
+                                : (tx.name || tx.ticker)
+                            }
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate">
                           {tx.ticker && (
                             <>
-                              <span className="font-medium text-slate-400 truncate">{tx.ticker}</span>
-                              <span className="text-slate-600 shrink-0">·</span>
+                              <span className="font-medium text-muted-foreground truncate">{tx.ticker}</span>
+                              <span className="text-muted-foreground/50 shrink-0">·</span>
                             </>
                           )}
                           {/* 입출금의 경우 메모 표시 */}
                           {(tx.type === 'DEPOSIT' || tx.type === 'WITHDRAW') && tx.name && (
                             <>
-                              <span className="font-medium text-slate-400 truncate max-w-[80px]">{tx.name}</span>
-                              <span className="text-slate-600 shrink-0">·</span>
+                              <span className="font-medium text-muted-foreground truncate max-w-[80px]">{tx.name}</span>
+                              <span className="text-muted-foreground/50 shrink-0">·</span>
                             </>
                           )}
                           <span className="whitespace-nowrap shrink-0">{formatDate(tx.trade_date)}</span>
@@ -454,23 +456,23 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
                         <div
                           className={`text-base font-bold tracking-tight ${
                             tx.type === 'BUY'
-                              ? 'text-emerald-400'
+                              ? 'text-primary'
                               : tx.type === 'SELL'
-                              ? 'text-red-400'
+                              ? 'text-destructive'
                               : tx.type === 'DIVIDEND'
-                              ? 'text-blue-400'
+                              ? 'text-blue-600'
                               : tx.type === 'DEPOSIT'
-                              ? 'text-purple-400'
+                              ? 'text-purple-500'
                               : tx.type === 'WITHDRAW'
-                              ? 'text-orange-400'
-                              : 'text-white'
+                              ? 'text-orange-500'
+                              : 'text-foreground'
                           }`}
                         >
                           {tx.type === 'BUY' || tx.type === 'WITHDRAW' ? '-' : '+'}
                           {formatCurrency(tx.total_amount)}원
                         </div>
                         {tx.type === 'BUY' || tx.type === 'SELL' ? (
-                          <div className="text-[11px] font-medium text-slate-500">
+                          <div className="text-[11px] font-medium text-muted-foreground">
                             {formatCurrency(tx.price)}원 × {tx.quantity}주
                           </div>
                         ) : null}
@@ -479,7 +481,7 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
                         type="button"
                         onClick={() => handleDeleteClick(tx)}
                         disabled={deletingId === tx.id}
-                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-500 hover:text-red-400 transition-colors disabled:opacity-50 shrink-0"
+                        className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50 shrink-0"
                         aria-label="삭제"
                       >
                         <Trash2 size={16} className={deletingId === tx.id ? 'animate-pulse' : ''} />
@@ -487,8 +489,8 @@ export function TransactionsClient({ transactions, activeTab, onTabChange }: Tra
                     </div>
                   </div>
                   {!tx.sheet_synced && (
-                    <div className="mt-3 pt-3 border-t border-white/5 flex justify-end">
-                      <span className="text-[10px] font-medium text-amber-400 bg-amber-400/10 px-2 py-1 rounded-full">
+                    <div className="mt-3 pt-3 border-t border-border flex justify-end">
+                      <span className="text-[10px] font-medium text-amber-500 bg-amber-500/10 px-2 py-1 rounded-full">
                         시트 동기화 대기 중
                       </span>
                     </div>

@@ -2,13 +2,13 @@
 
 import { useRef } from 'react';
 import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
+    CartesianGrid,
+    Line,
+    LineChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis
 } from 'recharts';
 import type { MajorIndexYieldComparisonData } from '../../../lib/google-sheets';
 import { LandscapeChartModal } from './LandscapeChartModal';
@@ -56,32 +56,33 @@ export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparis
         : { top: 10, right: 10, left: -10, bottom: 0 }
       }
     >
-      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
       <XAxis
         dataKey="name"
         axisLine={false}
         tickLine={false}
-        tick={{ fill: '#94a3b8', fontSize: isModal ? 12 : 10 }}
+        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isModal ? 12 : 10 }}
         interval={isModal ? 0 : 'preserveStartEnd'}
       />
       <YAxis
         axisLine={false}
         tickLine={false}
-        tick={{ fill: '#64748b', fontSize: isModal ? 12 : 10 }}
+        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: isModal ? 12 : 10 }}
         tickFormatter={(value) => `${value}%`}
         domain={[yMin, yMax]}
         width={isModal ? 50 : 45}
       />
       <Tooltip
-        cursor={{ stroke: 'rgba(255,255,255,0.1)' }}
+        cursor={{ fill: 'rgba(16, 185, 129, 0.1)' }}
         contentStyle={{
-          backgroundColor: '#1e293b',
-          border: '1px solid rgba(255,255,255,0.1)',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
           borderRadius: '12px',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
           padding: '12px',
+          color: '#1e293b',
         }}
-        labelStyle={{ color: '#94a3b8', fontSize: 11, marginBottom: 8 }}
+        labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 11, marginBottom: 8 }}
         formatter={(value: number, name: string) => {
           const labels: Record<string, string> = {
             sp500: 'S&P500',
@@ -138,19 +139,19 @@ export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparis
     <div className={`flex items-center ${isModal ? 'justify-center gap-6' : 'justify-end gap-3'}`}>
       <div className="flex items-center gap-1.5">
         <div className={`${isModal ? 'w-4 h-0.5' : 'w-3 h-0.5'} rounded`} style={{ backgroundColor: COLORS.sp500 }} />
-        <span className={`${isModal ? 'text-sm' : 'text-[11px]'} text-slate-400`}>S&P500</span>
+        <span className={`${isModal ? 'text-sm' : 'text-[11px]'} text-muted-foreground`}>S&P500</span>
       </div>
       <div className="flex items-center gap-1.5">
         <div className={`${isModal ? 'w-4 h-0.5' : 'w-3 h-0.5'} rounded`} style={{ backgroundColor: COLORS.nasdaq }} />
-        <span className={`${isModal ? 'text-sm' : 'text-[11px]'} text-slate-400`}>나스닥</span>
+        <span className={`${isModal ? 'text-sm' : 'text-[11px]'} text-muted-foreground`}>나스닥</span>
       </div>
       <div className="flex items-center gap-1.5">
         <div className={`${isModal ? 'w-4 h-0.5' : 'w-3 h-0.5'} rounded`} style={{ backgroundColor: COLORS.kospi }} />
-        <span className={`${isModal ? 'text-sm' : 'text-[11px]'} text-slate-400`}>코스피</span>
+        <span className={`${isModal ? 'text-sm' : 'text-[11px]'} text-muted-foreground`}>코스피</span>
       </div>
       <div className="flex items-center gap-1.5">
         <div className={`${isModal ? 'w-4 h-0.5' : 'w-3 h-0.5'} rounded`} style={{ backgroundColor: COLORS.account }} />
-        <span className={`${isModal ? 'text-sm' : 'text-[11px]'} text-slate-400`}>투자</span>
+        <span className={`${isModal ? 'text-sm' : 'text-[11px]'} text-muted-foreground`}>투자</span>
       </div>
     </div>
   );
@@ -171,7 +172,7 @@ export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparis
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-white">{currentYear}년 주요지수 수익률 비교</h4>
+          <h4 className="text-sm font-semibold text-foreground">{currentYear}년 주요지수 수익률 비교</h4>
           <div className="flex items-center gap-2">
             <ShareChartButton chartRef={hiddenChartRef} title={`${currentYear}년 주요지수 수익률 비교`} />
             <LandscapeChartModal title={`${currentYear}년 주요지수 수익률 비교`}>
@@ -204,44 +205,44 @@ export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparis
 
       {/* Summary Cards */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-        <div className="flex-1 min-w-[70px] bg-white/[0.03] border border-white/5 rounded-lg px-2 py-2 text-center">
-          <span className="text-[9px] text-slate-500 block mb-0.5">S&P500</span>
+        <div className="flex-1 min-w-[70px] bg-muted/30 border border-border rounded-lg px-2 py-2 text-center">
+          <span className="text-[9px] text-muted-foreground block mb-0.5">S&P500</span>
           {latestSp500 !== undefined ? (
-            <div className={`text-[11px] font-semibold ${latestSp500 >= 0 ? 'text-red-400' : 'text-slate-400'}`}>
+            <div className={`text-[11px] font-semibold ${latestSp500 >= 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
               {latestSp500 >= 0 ? '+' : ''}{latestSp500.toFixed(1)}%
             </div>
           ) : (
-            <div className="text-[11px] font-semibold text-slate-500">-</div>
+            <div className="text-[11px] font-semibold text-muted-foreground">-</div>
           )}
         </div>
-        <div className="flex-1 min-w-[70px] bg-white/[0.03] border border-white/5 rounded-lg px-2 py-2 text-center">
-          <span className="text-[9px] text-slate-500 block mb-0.5">나스닥</span>
+        <div className="flex-1 min-w-[70px] bg-muted/30 border border-border rounded-lg px-2 py-2 text-center">
+          <span className="text-[9px] text-muted-foreground block mb-0.5">나스닥</span>
           {latestNasdaq !== undefined ? (
-            <div className={`text-[11px] font-semibold ${latestNasdaq >= 0 ? 'text-gray-300' : 'text-slate-400'}`}>
+            <div className={`text-[11px] font-semibold ${latestNasdaq >= 0 ? 'text-gray-500' : 'text-muted-foreground'}`}>
               {latestNasdaq >= 0 ? '+' : ''}{latestNasdaq.toFixed(1)}%
             </div>
           ) : (
-            <div className="text-[11px] font-semibold text-slate-500">-</div>
+            <div className="text-[11px] font-semibold text-muted-foreground">-</div>
           )}
         </div>
-        <div className="flex-1 min-w-[70px] bg-white/[0.03] border border-white/5 rounded-lg px-2 py-2 text-center">
-          <span className="text-[9px] text-slate-500 block mb-0.5">코스피</span>
+        <div className="flex-1 min-w-[70px] bg-muted/30 border border-border rounded-lg px-2 py-2 text-center">
+          <span className="text-[9px] text-muted-foreground block mb-0.5">코스피</span>
           {latestKospi !== undefined ? (
-            <div className={`text-[11px] font-semibold ${latestKospi >= 0 ? 'text-blue-400' : 'text-slate-400'}`}>
+            <div className={`text-[11px] font-semibold ${latestKospi >= 0 ? 'text-blue-500' : 'text-muted-foreground'}`}>
               {latestKospi >= 0 ? '+' : ''}{latestKospi.toFixed(1)}%
             </div>
           ) : (
-            <div className="text-[11px] font-semibold text-slate-500">-</div>
+            <div className="text-[11px] font-semibold text-muted-foreground">-</div>
           )}
         </div>
-        <div className="flex-1 min-w-[70px] bg-white/[0.03] border border-white/5 rounded-lg px-2 py-2 text-center">
-          <span className="text-[9px] text-slate-500 block mb-0.5">투자</span>
+        <div className="flex-1 min-w-[70px] bg-muted/30 border border-border rounded-lg px-2 py-2 text-center">
+          <span className="text-[9px] text-muted-foreground block mb-0.5">투자</span>
           {lastValidAccountValue != null ? (
-            <div className={`text-[11px] font-semibold ${lastValidAccountValue >= 0 ? 'text-green-400' : 'text-slate-400'}`}>
+            <div className={`text-[11px] font-semibold ${lastValidAccountValue >= 0 ? 'text-green-500' : 'text-muted-foreground'}`}>
               {lastValidAccountValue >= 0 ? '+' : ''}{lastValidAccountValue.toFixed(1)}%
             </div>
           ) : (
-            <div className="text-[11px] font-semibold text-slate-500">-</div>
+            <div className="text-[11px] font-semibold text-muted-foreground">-</div>
           )}
         </div>
       </div>

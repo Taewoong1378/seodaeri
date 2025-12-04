@@ -26,7 +26,7 @@ interface PerformanceComparisonChartProps {
 }
 
 const LINES = [
-  { dataKey: 'portfolio', name: '내 포트폴리오', color: '#ffffff', strokeWidth: 2.5 },
+  { dataKey: 'portfolio', name: '내 포트폴리오', color: '#059669', strokeWidth: 2.5 },
   { dataKey: 'kospi', name: '코스피', color: '#ef4444', strokeDasharray: '5 5' },
   { dataKey: 'sp500', name: 'S&P500', color: '#f59e0b', strokeDasharray: '5 5' },
   { dataKey: 'nasdaq', name: '나스닥', color: '#3b82f6', strokeDasharray: '5 5' },
@@ -100,7 +100,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                   backgroundImage: line.strokeDasharray ? 'none' : undefined,
                 }}
               />
-              <span className="text-[11px] text-slate-400">{line.name}</span>
+              <span className="text-[11px] text-muted-foreground">{line.name}</span>
             </div>
           ))}
         </div>
@@ -118,7 +118,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                     backgroundImage: line.strokeDasharray ? 'none' : undefined,
                   }}
                 />
-                <span className="text-sm text-slate-400">{line.name}</span>
+                <span className="text-sm text-muted-foreground">{line.name}</span>
               </div>
             ))}
           </div>
@@ -130,34 +130,35 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
               >
                 <defs>
                   <linearGradient id="portfolioGradientModal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ffffff" stopOpacity={0.1} />
-                    <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#059669" stopOpacity={0.1} />
+                    <stop offset="100%" stopColor="#059669" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis
                   dataKey="date"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                   tickFormatter={(value) => value}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                   tickFormatter={(value) => `${value}%`}
                   domain={[yMin, yMax]}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
                     borderRadius: '12px',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                     padding: '12px',
+                    color: '#1e293b',
                   }}
-                  labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                  labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 13, marginBottom: 8 }}
                   itemStyle={{ fontSize: 13, padding: '2px 0' }}
                   formatter={(value: number, name: string) => {
                     const lineConfig = LINES.find(l => l.dataKey === name);
@@ -188,7 +189,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
       {/* Scrollable Chart Container */}
       <div
         ref={scrollRef}
-        className="overflow-x-auto overflow-y-hidden pb-2 -mx-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+        className="overflow-x-auto overflow-y-hidden pb-2 -mx-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
         style={{
           scrollbarWidth: 'thin',
           WebkitOverflowScrolling: 'touch',
@@ -209,34 +210,35 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
             </defs>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="rgba(255,255,255,0.05)"
+              stroke="hsl(var(--border))"
               vertical={false}
             />
             <XAxis
               dataKey="date"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10 }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
               interval={2}
               tickFormatter={(value) => value}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10 }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
               tickFormatter={(value) => `${value}%`}
               domain={[yMin, yMax]}
               width={45}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#1e293b',
-                border: '1px solid rgba(255,255,255,0.1)',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '12px',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                 padding: '12px',
+                color: '#1e293b',
               }}
-              labelStyle={{ color: '#94a3b8', fontSize: 11, marginBottom: 8 }}
+              labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 11, marginBottom: 8 }}
               itemStyle={{ fontSize: 12, padding: '2px 0' }}
               formatter={(value: number, name: string) => {
                 const lineConfig = LINES.find(l => l.dataKey === name);
@@ -301,7 +303,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                   backgroundImage: line.strokeDasharray ? 'none' : undefined,
                 }}
               />
-              <span className="text-sm text-slate-400">{line.name}</span>
+              <span className="text-sm text-muted-foreground">{line.name}</span>
             </div>
           ))}
         </div>

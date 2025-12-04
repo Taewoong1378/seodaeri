@@ -90,9 +90,8 @@ Google 계정으로 로그인합니다.
 
 ## 문의
 
-- **이메일**: twkang43@gmail.com
+- **이메일**: xodndxnxn@gmail.com
 - **유튜브**: [서대리TV](https://www.youtube.com/@서대리TV)
 
 ---
 
-*Made with ❤️ for 월급쟁이 투자자들*

@@ -2,13 +2,13 @@
 
 import { type ReactElement, useEffect, useRef } from 'react';
 import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
+    Area,
+    AreaChart,
+    CartesianGrid,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
 } from 'recharts';
 import { LandscapeChartModal } from './LandscapeChartModal';
 import { ShareChartButton } from './ShareChartButton';
@@ -142,16 +142,16 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
     <div ref={chartRef} className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-white">월별 계좌추세</h4>
+        <h4 className="text-sm font-semibold text-foreground">월별 계좌추세</h4>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-3 mr-1">
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm bg-blue-500/70" />
-              <span className="text-[11px] text-slate-400">누적입금액</span>
+              <div className="w-3 h-3 rounded-sm bg-emerald-600/70" />
+              <span className="text-[11px] text-muted-foreground">누적입금액</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm bg-rose-400/70" />
-              <span className="text-[11px] text-slate-400">계좌총액</span>
+              <div className="w-3 h-3 rounded-sm bg-lime-400/70" />
+              <span className="text-[11px] text-muted-foreground">계좌총액</span>
             </div>
           </div>
           <ShareChartButton chartRef={hiddenChartRef} title="월별 계좌추세" />
@@ -174,37 +174,38 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
               >
                 <defs>
                   <linearGradient id="depositGradientModal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.1} />
+                    <stop offset="0%" stopColor="#059669" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#059669" stopOpacity={0.1} />
                   </linearGradient>
                   <linearGradient id="accountGradientModal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#fb7185" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="#fb7185" stopOpacity={0.1} />
+                    <stop offset="0%" stopColor="#a3e635" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="#a3e635" stopOpacity={0.1} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis
                   dataKey="date"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                   tickFormatter={(value) => formatCurrency(value)}
                   domain={[0, yMax]}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1e293b',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
                     borderRadius: '12px',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                     padding: '12px',
+                    color: '#1e293b',
                   }}
-                  labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                  labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 13, marginBottom: 8 }}
                   formatter={(value: number, name: string) => {
                     const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액';
                     return [`₩${value.toLocaleString()}`, label];
@@ -214,20 +215,20 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                 <Area
                   type="monotone"
                   dataKey="cumulativeDeposit"
-                  stroke="#3b82f6"
+                  stroke="#059669"
                   strokeWidth={2}
                   fill="url(#depositGradientModal)"
                   dot={false}
-                  activeDot={{ r: 6, fill: '#3b82f6', stroke: '#020617', strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: '#059669', stroke: '#020617', strokeWidth: 2 }}
                 />
                 <Area
                   type="monotone"
                   dataKey="totalAccount"
-                  stroke="#fb7185"
+                  stroke="#a3e635"
                   strokeWidth={2}
                   fill="url(#accountGradientModal)"
                   dot={false}
-                  activeDot={{ r: 6, fill: '#fb7185', stroke: '#020617', strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: '#a3e635', stroke: '#020617', strokeWidth: 2 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -239,7 +240,7 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
       {/* Scrollable Chart Container */}
       <div
         ref={scrollRef}
-        className="overflow-x-auto overflow-y-hidden pb-2 -mx-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+        className="overflow-x-auto overflow-y-hidden pb-2 -mx-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
         style={{
           scrollbarWidth: 'thin',
           WebkitOverflowScrolling: 'touch',
@@ -254,43 +255,44 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
           >
             <defs>
               <linearGradient id="depositGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.5} />
-                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.1} />
+                <stop offset="0%" stopColor="#059669" stopOpacity={0.5} />
+                <stop offset="100%" stopColor="#059669" stopOpacity={0.1} />
               </linearGradient>
               <linearGradient id="accountGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#fb7185" stopOpacity={0.5} />
-                <stop offset="100%" stopColor="#fb7185" stopOpacity={0.1} />
+                <stop offset="0%" stopColor="#a3e635" stopOpacity={0.5} />
+                <stop offset="100%" stopColor="#a3e635" stopOpacity={0.1} />
               </linearGradient>
             </defs>
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="rgba(255,255,255,0.05)"
+              stroke="hsl(var(--border))"
               vertical={false}
             />
             <XAxis
               dataKey="date"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10 }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
               interval={2}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10 }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
               tickFormatter={(value) => formatCurrency(value)}
               domain={[0, yMax]}
               width={55}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#1e293b',
-                border: '1px solid rgba(255,255,255,0.1)',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '12px',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                 padding: '12px',
+                color: '#1e293b',
               }}
-              labelStyle={{ color: '#94a3b8', fontSize: 11, marginBottom: 8 }}
+              labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 11, marginBottom: 8 }}
               formatter={(value: number, name: string) => {
                 const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액';
                 return [`₩${value.toLocaleString()}`, label];
@@ -301,13 +303,13 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
             <Area
               type="monotone"
               dataKey="cumulativeDeposit"
-              stroke="#3b82f6"
+              stroke="#059669"
               strokeWidth={2}
               fill="url(#depositGradient)"
               dot={false}
               activeDot={{
                 r: 4,
-                fill: '#3b82f6',
+                fill: '#059669',
                 stroke: '#020617',
                 strokeWidth: 2,
               }}
@@ -316,13 +318,13 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
             <Area
               type="monotone"
               dataKey="totalAccount"
-              stroke="#fb7185"
+              stroke="#a3e635"
               strokeWidth={2}
               fill="url(#accountGradient)"
               dot={false}
               activeDot={{
                 r: 4,
-                fill: '#fb7185',
+                fill: '#a3e635',
                 stroke: '#020617',
                 strokeWidth: 2,
               }}
@@ -359,11 +361,11 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
         </div>
         <div className="flex items-center justify-start gap-6 mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-sm bg-blue-500/70" />
+            <div className="w-4 h-4 rounded-sm bg-emerald-600/70" />
             <span className="text-sm text-slate-400">누적입금액</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-sm bg-rose-400/70" />
+            <div className="w-4 h-4 rounded-sm bg-lime-400/70" />
             <span className="text-sm text-slate-400">계좌총액</span>
           </div>
         </div>
@@ -375,12 +377,12 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
             >
               <defs>
                 <linearGradient id="depositGradientHidden" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.1} />
+                  <stop offset="0%" stopColor="#059669" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="#059669" stopOpacity={0.1} />
                 </linearGradient>
                 <linearGradient id="accountGradientHidden" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#fb7185" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="#fb7185" stopOpacity={0.1} />
+                  <stop offset="0%" stopColor="#a3e635" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="#a3e635" stopOpacity={0.1} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
@@ -399,11 +401,12 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1e293b',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '12px',
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                   padding: '12px',
+                  color: '#1e293b',
                 }}
                 labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
                 formatter={(value: number, name: string) => {
@@ -415,21 +418,21 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
               <Area
                 type="monotone"
                 dataKey="cumulativeDeposit"
-                stroke="#3b82f6"
+                stroke="#059669"
                 strokeWidth={2}
                 fill="url(#depositGradientHidden)"
                 dot={false}
-                activeDot={{ r: 6, fill: '#3b82f6', stroke: '#020617', strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: '#059669', stroke: '#020617', strokeWidth: 2 }}
                 isAnimationActive={false}
               />
               <Area
                 type="monotone"
                 dataKey="totalAccount"
-                stroke="#fb7185"
+                stroke="#a3e635"
                 strokeWidth={2}
                 fill="url(#accountGradientHidden)"
                 dot={false}
-                activeDot={{ r: 6, fill: '#fb7185', stroke: '#020617', strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: '#a3e635', stroke: '#020617', strokeWidth: 2 }}
                 isAnimationActive={false}
               />
             </AreaChart>

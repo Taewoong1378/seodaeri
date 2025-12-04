@@ -23,9 +23,9 @@ export default async function TransactionsPage() {
   const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit#gid=0` : null;
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-50 pb-24">
+    <div className="min-h-screen bg-background text-foreground pb-24">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 px-5 h-14 flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-5 h-14 flex items-center justify-between">
         <span className="font-bold text-lg tracking-tight">내역</span>
         <div className="flex items-center gap-3">
           {sheetUrl && (
@@ -33,7 +33,7 @@ export default async function TransactionsPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-3 text-xs text-slate-400 hover:text-white hover:bg-white/10 gap-1.5"
+                className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground hover:bg-muted gap-1.5"
               >
                 <ExternalLink size={14} />
                 시트 열기
@@ -46,7 +46,7 @@ export default async function TransactionsPage() {
               alt={session.user.name || '프로필'}
               width={32}
               height={32}
-              className="rounded-full border border-white/10"
+              className="rounded-full border border-border"
             />
           )}
         </div>

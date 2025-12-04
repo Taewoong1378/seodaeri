@@ -183,15 +183,15 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
   return (
     <div className="space-y-4">
       {/* Option 1: 기존 시트 연동 (메인) */}
-      <Card className="bg-white/5 border-white/10">
+      <Card className="bg-card border-border shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-white flex items-center gap-3 text-lg">
-            <div className="p-2 rounded-lg bg-blue-500/20">
-              <FileSpreadsheet className="w-5 h-5 text-blue-400" />
+          <CardTitle className="text-foreground flex items-center gap-3 text-lg">
+            <div className="p-2 rounded-lg bg-blue-100">
+              <FileSpreadsheet className="w-5 h-5 text-blue-600" />
             </div>
             내 스프레드시트 연동
           </CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             이미 사용 중인 투자기록 스프레드시트를 연동하세요.
           </CardDescription>
         </CardHeader>
@@ -222,23 +222,24 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
 
           {/* 또는 직접 입력 */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <div className="flex-1 h-px bg-white/10" />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex-1 h-px bg-border" />
               <span>또는 URL 직접 입력</span>
-              <div className="flex-1 h-px bg-white/10" />
+              <div className="flex-1 h-px bg-border" />
             </div>
             <div className="flex gap-2">
               <Input
                 placeholder="스프레드시트 URL 또는 ID"
                 value={sheetInput}
                 onChange={(e) => setSheetInput(e.target.value)}
-                className="flex-1 h-10 px-3 bg-white/5 border-white/10 text-white placeholder:text-slate-500 text-sm"
+                className="flex-1 h-10 px-3 bg-background border-input text-foreground placeholder:text-muted-foreground text-sm"
               />
               <Button
                 onClick={handleManualConnect}
                 disabled={loading !== null || !sheetInput.trim()}
                 size="sm"
-                className="h-10 px-4 bg-white/10 hover:bg-white/20 text-white disabled:opacity-50"
+                variant="outline"
+                className="h-10 px-4 text-foreground disabled:opacity-50"
               >
                 {loading === 'manual' ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -253,21 +254,21 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
 
       {/* Divider */}
       <div className="flex items-center gap-4">
-        <div className="flex-1 h-px bg-white/10" />
-        <span className="text-xs text-slate-500">처음이신가요?</span>
-        <div className="flex-1 h-px bg-white/10" />
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-xs text-muted-foreground">처음이신가요?</span>
+        <div className="flex-1 h-px bg-border" />
       </div>
 
       {/* Option 2: 새 시트 만들기 */}
-      <Card className="bg-white/5 border-white/10">
+      <Card className="bg-card border-border shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-white flex items-center gap-3 text-lg">
-            <div className="p-2 rounded-lg bg-emerald-500/20">
-              <Plus className="w-5 h-5 text-emerald-400" />
+          <CardTitle className="text-foreground flex items-center gap-3 text-lg">
+            <div className="p-2 rounded-lg bg-emerald-100">
+              <Plus className="w-5 h-5 text-emerald-600" />
             </div>
             새 시트 만들기
           </CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             서대리 투자기록 템플릿으로 새 스프레드시트를 생성합니다.
           </CardDescription>
         </CardHeader>
@@ -294,8 +295,8 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
 
       {/* Error Message */}
       {error && (
-        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-          <p className="text-sm text-red-400">{error}</p>
+        <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+          <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
     </div>

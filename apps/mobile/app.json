@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "서대리 투자기록",
-    "slug": "seodaeri-app",
+    "name": "굴림(Gulim)",
+    "slug": "gulim-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

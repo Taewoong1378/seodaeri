@@ -80,7 +80,7 @@ export function DashboardContent() {
             <div className="space-y-6">
               {/* Account Trend Chart (누적입금액 vs 계좌총액) */}
               {displayData.accountTrend.length > 0 && (
-                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
                     <AccountTrendChart
                       data={displayData.accountTrend}
@@ -95,10 +95,10 @@ export function DashboardContent() {
               {displayData.performanceComparison.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between px-1">
-                    <h3 className="text-base font-bold text-white">누적 수익률</h3>
-                    <span className="text-xs text-slate-500">vs 주요 지수</span>
+                    <h3 className="text-base font-bold text-foreground">누적 수익률</h3>
+                    <span className="text-xs text-muted-foreground">vs 주요 지수</span>
                   </div>
-                  <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                  <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                     <CardContent className="p-6">
                       <PerformanceComparisonChart data={displayData.performanceComparison} />
                     </CardContent>
@@ -112,12 +112,12 @@ export function DashboardContent() {
                 description="한국판 SCHD의 대명사"
                 image="/images/banners/banner-sol-etf.png"
                 link="#"
-                gradient="from-blue-600 to-cyan-600"
+                gradient="from-emerald-600 to-teal-600"
               />
 
               {/* Yield Comparison Bar Chart */}
               {displayData.yieldComparison && (
-                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
                     <YieldComparisonChart data={displayData.yieldComparison} />
                   </CardContent>
@@ -126,7 +126,7 @@ export function DashboardContent() {
 
               {/* Yield Comparison Dollar Bar Chart (달러환율 적용) */}
               {displayData.yieldComparisonDollar && (
-                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
                     <YieldComparisonDollarChart data={displayData.yieldComparisonDollar} />
                   </CardContent>
@@ -139,23 +139,23 @@ export function DashboardContent() {
                 description="미국 빅테크 상위 10개 종목 집중 투자"
                 image="/images/banners/banner-tiger-etf.png"
                 link="#"
-                gradient="from-orange-500 to-red-600"
+                gradient="from-lime-500 to-green-600"
               />
 
               {/* Portfolio Charts */}
               {displayData.portfolio.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between px-1">
-                    <h3 className="text-base font-bold text-white">포트폴리오</h3>
+                    <h3 className="text-base font-bold text-foreground">포트폴리오</h3>
                     <Link href="/portfolio">
-                      <button type="button" className="text-xs font-medium text-slate-500 hover:text-white transition-colors">
+                      <button type="button" className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
                         전체보기
                       </button>
                     </Link>
                   </div>
 
                   {/* Donut Chart Card */}
-                  <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                  <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                     <CardContent className="p-6">
                       <PortfolioDonutChart
                         data={displayData.portfolio}
@@ -165,11 +165,11 @@ export function DashboardContent() {
                   </Card>
 
                   {/* Holdings Chart Card */}
-                  <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                  <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-sm font-semibold text-white">상위 보유 종목</h4>
-                        <span className="text-xs text-slate-500">{displayData.portfolio.length}개 종목</span>
+                        <h4 className="text-sm font-semibold text-foreground">상위 보유 종목</h4>
+                        <span className="text-xs text-muted-foreground">{displayData.portfolio.length}개 종목</span>
                       </div>
                       <PortfolioHoldingsChart data={displayData.portfolio} />
                     </CardContent>
@@ -184,7 +184,7 @@ export function DashboardContent() {
             <div className="space-y-6">
               {/* Monthly Yield Comparison Chart (월, 누적 수익률 현황) */}
               {displayData.monthlyYieldComparison && (
-                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
                     <MonthlyYieldComparisonChart data={displayData.monthlyYieldComparison} />
                   </CardContent>
@@ -193,7 +193,7 @@ export function DashboardContent() {
 
               {/* Monthly Yield Comparison Dollar Applied Chart (환율 반영) */}
               {displayData.monthlyYieldComparisonDollarApplied && (
-                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
                     <MonthlyYieldComparisonDollarAppliedChart data={displayData.monthlyYieldComparisonDollarApplied} />
                   </CardContent>
@@ -202,7 +202,7 @@ export function DashboardContent() {
 
               {/* Major Index Yield Comparison Line Chart (주요지수 수익률 비교) */}
               {displayData.majorIndexYieldComparison && (
-                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
                     <MajorIndexYieldComparisonChart data={displayData.majorIndexYieldComparison} />
                   </CardContent>
@@ -211,22 +211,22 @@ export function DashboardContent() {
 
               {/* Monthly Profit/Loss Chart (월별 손익) */}
               {displayData.monthlyProfitLoss.length > 0 ? (
-                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
                     <MonthlyProfitLossChart data={displayData.monthlyProfitLoss} />
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
                         <span className="text-2xl">📊</span>
                       </div>
-                      <p className="text-sm text-slate-400 font-medium">
+                      <p className="text-sm text-muted-foreground font-medium">
                         올해 손익 데이터가 없습니다
                       </p>
-                      <p className="text-xs text-slate-600 mt-1.5">
+                      <p className="text-xs text-muted-foreground/80 mt-1.5">
                         시트에 데이터가 입력되면 자동으로 표시됩니다
                       </p>
                     </div>
@@ -241,29 +241,29 @@ export function DashboardContent() {
             <div className="space-y-6">
               {/* Quick Stats Summary */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/[0.03] border border-white/5 rounded-[20px] p-5 backdrop-blur-sm">
-                  <span className="text-xs font-medium text-slate-500 block mb-1">이번 달 배당금</span>
+                <div className="bg-card border border-border rounded-[20px] p-5 shadow-sm">
+                  <span className="text-xs font-medium text-muted-foreground block mb-1">이번 달 배당금</span>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-bold text-white tracking-tight">
+                    <span className="text-xl font-bold text-foreground tracking-tight">
                       {formatCurrency(displayData.thisMonthDividend)}
                     </span>
-                    <span className="text-xs text-slate-500 font-medium">원</span>
+                    <span className="text-xs text-muted-foreground font-medium">원</span>
                   </div>
                 </div>
-                <div className="bg-white/[0.03] border border-white/5 rounded-[20px] p-5 backdrop-blur-sm">
-                  <span className="text-xs font-medium text-slate-500 block mb-1">올해 총 배당금</span>
+                <div className="bg-card border border-border rounded-[20px] p-5 shadow-sm">
+                  <span className="text-xs font-medium text-muted-foreground block mb-1">올해 총 배당금</span>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-bold text-white tracking-tight">
+                    <span className="text-xl font-bold text-foreground tracking-tight">
                       {formatCurrency(displayData.yearlyDividend)}
                     </span>
-                    <span className="text-xs text-slate-500 font-medium">원</span>
+                    <span className="text-xs text-muted-foreground font-medium">원</span>
                   </div>
                 </div>
               </div>
               
               {/* Dividend By Year Chart (월별 배당금 현황) */}
               {displayData.dividendByYear && (
-                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
                     <DividendByYearChart data={displayData.dividendByYear} />
                   </CardContent>
@@ -272,7 +272,7 @@ export function DashboardContent() {
 
               {/* Yearly Dividend Summary Chart (연도별 배당금 현황) */}
               {displayData.yearlyDividendSummary && (
-                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
                     <YearlyDividendChart data={displayData.yearlyDividendSummary} />
                   </CardContent>
@@ -281,7 +281,7 @@ export function DashboardContent() {
 
               {/* Rolling Average Dividend Chart (12개월 월평균 배당금) */}
               {displayData.rollingAverageDividend && (
-                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
                     <RollingAverageDividendChart data={displayData.rollingAverageDividend} />
                   </CardContent>
@@ -290,7 +290,7 @@ export function DashboardContent() {
 
               {/* Cumulative Dividend Chart (배당금 누적 그래프) */}
               {displayData.cumulativeDividend && (
-                <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+                <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
                     <CumulativeDividendChart data={displayData.cumulativeDividend} />
                   </CardContent>
@@ -298,19 +298,19 @@ export function DashboardContent() {
               )}
 
               {/* Dividend Chart Section */}
-              <Card className="border-white/5 bg-white/[0.02] shadow-none rounded-[24px] overflow-hidden">
+              <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                 <CardContent className="pt-6 pb-6 px-6">
                   {displayData.monthlyDividends.length > 0 ? (
                     <DividendChart data={displayData.monthlyDividends} />
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
                         <span className="text-2xl">💰</span>
                       </div>
-                      <p className="text-sm text-slate-400 font-medium">
+                      <p className="text-sm text-muted-foreground font-medium">
                         배당금 내역이 없습니다
                       </p>
-                      <p className="text-xs text-slate-600 mt-1.5">
+                      <p className="text-xs text-muted-foreground/80 mt-1.5">
                         시트의 '7. 배당내역' 탭에 데이터를 입력해주세요
                       </p>
                     </div>

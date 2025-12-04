@@ -18,9 +18,9 @@ interface DividendChartProps {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-slate-800 border border-white/10 px-3 py-2 rounded-lg shadow-xl">
-        <p className="text-slate-400 text-[10px] mb-0.5">{label}</p>
-        <p className="text-white text-sm font-bold">
+      <div className="bg-popover border border-border px-3 py-2 rounded-lg shadow-xl">
+        <p className="text-muted-foreground text-[10px] mb-0.5">{label}</p>
+        <p className="text-foreground text-sm font-bold">
           {payload[0].value.toLocaleString()}원
         </p>
       </div>
@@ -88,7 +88,7 @@ export function DividendChart({ data }: DividendChartProps) {
             dataKey="month"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: '#64748b', fontSize: showYAxis ? 12 : 10, fontWeight: 500 }}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: showYAxis ? 12 : 10, fontWeight: 500 }}
             dy={8}
             tickFormatter={(value) => value.replace('월', '')}
           />
@@ -96,13 +96,13 @@ export function DividendChart({ data }: DividendChartProps) {
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10 }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
               tickFormatter={formatYAxisValue}
             />
           )}
           <Tooltip
             content={<CustomTooltip />}
-            cursor={{ fill: 'rgba(255, 255, 255, 0.03)', radius: 8 }}
+            cursor={{ fill: 'hsl(var(--muted)/0.3)', radius: 8 }}
           />
           <Bar
             dataKey="amount"
@@ -114,7 +114,7 @@ export function DividendChart({ data }: DividendChartProps) {
             {fullYearData.map((entry) => (
               <Cell
                 key={`cell-${entry.month}`}
-                fill={entry.amount > 0 ? 'url(#barGradientDividend)' : 'rgba(255,255,255,0.05)'}
+                fill={entry.amount > 0 ? 'url(#barGradientDividend)' : 'hsl(var(--muted))'}
                 style={{ filter: entry.amount > 0 ? 'drop-shadow(0 4px 6px rgba(59, 130, 246, 0.15))' : 'none' }}
               />
             ))}
@@ -128,13 +128,13 @@ export function DividendChart({ data }: DividendChartProps) {
     <div ref={chartRef} className="space-y-4 relative">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-white">월별 배당금</h4>
+        <h4 className="text-sm font-semibold text-foreground">월별 배당금</h4>
         <div className="flex items-center gap-2">
           <ShareChartButton chartRef={hiddenChartRef} title={`${selectedYear}년 월별 배당금`} />
           <LandscapeChartModal title={`${selectedYear}년 월별 배당금`}>
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-center mb-4 shrink-0">
-                <p className="text-lg text-slate-400">총 <span className="text-white font-bold">{yearTotal.toLocaleString()}원</span></p>
+                <p className="text-lg text-muted-foreground">총 <span className="text-foreground font-bold">{yearTotal.toLocaleString()}원</span></p>
               </div>
               <div className="flex-1 min-h-0">
                 {renderChart("100%", true)}
@@ -155,8 +155,8 @@ export function DividendChart({ data }: DividendChartProps) {
               onClick={() => setSelectedYear(year)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 selectedYear === year
-                  ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/30'
-                  : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                  ? 'bg-blue-500/20 text-blue-500 ring-1 ring-blue-500/30'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}
             >
               {year}
@@ -166,8 +166,8 @@ export function DividendChart({ data }: DividendChartProps) {
 
         {/* Total Amount */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">총</span>
-          <span className="text-base font-bold text-white">{yearTotal.toLocaleString()}원</span>
+          <span className="text-xs text-muted-foreground">총</span>
+          <span className="text-base font-bold text-foreground">{yearTotal.toLocaleString()}원</span>
         </div>
       </div>
 

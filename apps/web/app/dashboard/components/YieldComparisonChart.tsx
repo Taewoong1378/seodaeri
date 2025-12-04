@@ -2,14 +2,14 @@
 
 import { useRef } from 'react';
 import {
-    Bar,
-    BarChart,
-    CartesianGrid,
-    Cell,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from 'recharts';
 import type { YieldComparisonData } from '../../../lib/google-sheets';
 import { LandscapeChartModal } from './LandscapeChartModal';
@@ -62,21 +62,21 @@ export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-white">수익률 비교</h4>
+          <h4 className="text-sm font-semibold text-foreground">수익률 비교</h4>
           <div className="flex items-center gap-2">
             <ShareChartButton chartRef={hiddenChartRef} title="수익률 비교" />
             <LandscapeChartModal title="수익률 비교">
             <div className="flex flex-col w-full h-full">
               {/* Custom Legend for Modal */}
               <div className="flex items-center justify-center gap-6 mb-4 shrink-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
-                  <span className="text-sm text-slate-400">올해 수익률</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: COLORS.annualized }} />
-                  <span className="text-sm text-slate-400">연평균 수익률</span>
-                </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
+                    <span className="text-sm text-muted-foreground">올해 수익률</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: COLORS.annualized }} />
+                    <span className="text-sm text-muted-foreground">연평균 수익률</span>
+                  </div>
               </div>
 
               <div className="flex-1 min-h-0">
@@ -85,29 +85,30 @@ export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
                     data={chartData}
                     margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                     <XAxis
                       dataKey="name"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#94a3b8', fontSize: 14 }}
+                      tick={{ fill: 'var(--muted-foreground)', fontSize: 14 }}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#64748b', fontSize: 12 }}
+                      tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
                       tickFormatter={(value) => `${value}%`}
                     />
                     <Tooltip
-                      cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                      cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                       contentStyle={{
-                        backgroundColor: '#1e293b',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        backgroundColor: 'hsl(var(--popover))',
+                        border: '1px solid hsl(var(--border))',
                         borderRadius: '12px',
-                        boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                         padding: '12px',
+                        color: 'hsl(var(--popover-foreground))',
                       }}
-                      labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                      labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 13, marginBottom: 8 }}
                       formatter={(value: number, name: string) => {
                         const label = name === 'thisYear' ? '올해 수익률' : '연평균 수익률';
                         return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
@@ -135,11 +136,11 @@ export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
         <div className="flex items-center justify-end gap-3">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
-            <span className="text-[11px] text-slate-400">올해 수익률</span>
+            <span className="text-[11px] text-muted-foreground">올해 수익률</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.annualized }} />
-            <span className="text-[11px] text-slate-400">연평균 수익률</span>
+            <span className="text-[11px] text-muted-foreground">연평균 수익률</span>
           </div>
         </div>
       </div>
@@ -151,30 +152,31 @@ export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
             data={chartData}
             margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
             <XAxis
               dataKey="name"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#94a3b8', fontSize: 11 }}
+              tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10 }}
+              tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
               tickFormatter={(value) => `${value}%`}
               width={40}
             />
             <Tooltip
-              cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+              cursor={{ fill: 'rgba(16, 185, 129, 0.1)' }}
               contentStyle={{
-                backgroundColor: '#1e293b',
-                border: '1px solid rgba(255,255,255,0.1)',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
                 borderRadius: '12px',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                 padding: '12px',
+                color: '#1e293b',
               }}
-              labelStyle={{ color: '#94a3b8', fontSize: 11, marginBottom: 8 }}
+              labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 11, marginBottom: 8 }}
               formatter={(value: number, name: string) => {
                 const label = name === 'thisYear' ? '올해 수익률' : '연평균 수익률';
                 return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
@@ -199,14 +201,14 @@ export function YieldComparisonChart({ data }: YieldComparisonChartProps) {
         {chartData.map((item) => (
           <div
             key={item.name}
-            className="bg-white/[0.03] border border-white/5 rounded-xl p-3 text-center"
+            className="bg-card border border-border rounded-xl p-3 text-center"
           >
-            <span className="text-[10px] text-slate-500 block mb-1">{item.name}</span>
+            <span className="text-[10px] text-muted-foreground block mb-1">{item.name}</span>
             <div className="space-y-0.5">
-              <div className={`text-xs font-semibold ${item.thisYear >= 0 ? 'text-blue-400' : 'text-slate-400'}`}>
+              <div className={`text-xs font-semibold ${item.thisYear >= 0 ? 'text-blue-500' : 'text-muted-foreground'}`}>
                 {item.thisYear >= 0 ? '+' : ''}{item.thisYear.toFixed(1)}%
               </div>
-              <div className={`text-[10px] ${item.annualized >= 0 ? 'text-red-400' : 'text-slate-500'}`}>
+              <div className={`text-[10px] ${item.annualized >= 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
                 연평균 {item.annualized >= 0 ? '+' : ''}{item.annualized.toFixed(1)}%
               </div>
             </div>

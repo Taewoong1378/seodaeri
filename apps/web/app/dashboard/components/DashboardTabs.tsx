@@ -24,16 +24,16 @@ export function DashboardTabs({ children }: DashboardTabsProps) {
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
-      <div className="flex items-center gap-1 p-1 bg-white/[0.03] rounded-xl overflow-x-auto">
+      <div className="flex items-center gap-1 p-1 bg-muted rounded-full overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 min-w-fit px-4 py-2.5 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
+            className={`flex-1 min-w-fit px-4 py-2.5 text-sm font-medium rounded-full transition-all whitespace-nowrap ${
               activeTab === tab.id
-                ? 'bg-white/10 text-white'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
             }`}
           >
             {tab.label}

@@ -2,10 +2,10 @@
 
 import { Button } from '@repo/design-system/components/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle
 } from '@repo/design-system/components/dialog';
 import { toPng } from 'html-to-image';
 import { Monitor, Share2, Smartphone } from 'lucide-react';
@@ -81,7 +81,7 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
       // Web Share API 지원 확인
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
-          title: `서대리 - ${title}`,
+          title: `Gulim - ${title}`,
           files: [file],
         });
       } else {
@@ -89,7 +89,7 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
         const url = URL.createObjectURL(finalBlob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `서대리_${title}_${mode}_${new Date().toISOString().split('T')[0]}.png`;
+        link.download = `Gulim_${title}_${mode}_${new Date().toISOString().split('T')[0]}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

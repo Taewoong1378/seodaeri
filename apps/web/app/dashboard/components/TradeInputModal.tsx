@@ -1,18 +1,18 @@
 'use client';
 
 import { Button } from '@repo/design-system/components/button';
-import { createPortal } from 'react-dom';
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
 } from '@repo/design-system/components/dialog';
 import { Input } from '@repo/design-system/components/input';
 import { Label } from '@repo/design-system/components/label';
-import { Camera, Check, Loader2, Pen, Trash2, X, TrendingUp, TrendingDown } from 'lucide-react';
+import { Camera, Check, Loader2, Pen, Trash2, TrendingDown, TrendingUp, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSaveTradeTransactions } from '../../../hooks';
 import { analyzeTradeImages } from '../../actions/trade';
 
@@ -262,7 +262,7 @@ export function TradeInputModal() {
 
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="sm:max-w-[425px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-[20px] bg-[#0f172a] border-white/10 text-white"
+          className="sm:max-w-[425px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-[20px] bg-popover border-border text-popover-foreground"
           style={{
             left: '50%',
             top: '50%',
@@ -270,16 +270,16 @@ export function TradeInputModal() {
             maxWidth: 'min(425px, calc(100vw - 2rem))',
           }}
         >
-          <div className="p-5 pb-3 border-b border-white/10">
+          <div className="p-5 pb-3 border-b border-border">
             <DialogHeader className="flex flex-row items-center justify-between">
-              <DialogTitle className="text-white text-lg font-bold">
+              <DialogTitle className="text-foreground text-lg font-bold">
                 거래 내역 추가
               </DialogTitle>
               <DialogClose asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                 >
                   <X size={20} />
                 </Button>
@@ -291,23 +291,23 @@ export function TradeInputModal() {
             {/* Mode Selection */}
             {mode === 'select' && (
               <div className="space-y-4">
-                <p className="text-sm text-slate-400 text-center mb-6">
+                <p className="text-sm text-muted-foreground text-center mb-6">
                   입력 방식을 선택하세요
                 </p>
                 <Button
-                  className="w-full h-20 bg-white/5 hover:bg-white/10 border border-white/10 text-white flex flex-col gap-2"
+                  className="w-full h-20 bg-muted/50 hover:bg-muted border border-border text-foreground flex flex-col gap-2"
                   variant="ghost"
                   onClick={handleManualMode}
                 >
-                  <Pen size={24} className="text-emerald-400" />
+                  <Pen size={24} className="text-emerald-500" />
                   <span>직접 입력</span>
                 </Button>
                 <Button
-                  className="w-full h-20 bg-white/5 hover:bg-white/10 border border-white/10 text-white flex flex-col gap-2"
+                  className="w-full h-20 bg-muted/50 hover:bg-muted border border-border text-foreground flex flex-col gap-2"
                   variant="ghost"
                   onClick={handlePhotoMode}
                 >
-                  <Camera size={24} className="text-blue-400" />
+                  <Camera size={24} className="text-blue-500" />
                   <span>사진으로 입력 (여러 건)</span>
                 </Button>
               </div>
@@ -320,7 +320,7 @@ export function TradeInputModal() {
                 <div className="flex gap-2">
                   <Button
                     variant={singleForm.type === 'BUY' ? 'default' : 'outline'}
-                    className={`flex-1 ${singleForm.type === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-700' : 'border-white/20 text-slate-300'}`}
+                    className={`flex-1 ${singleForm.type === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'border-border text-muted-foreground'}`}
                     onClick={() => updateSingleField('type', 'BUY')}
                   >
                     <TrendingUp size={16} className="mr-2" />
@@ -328,7 +328,7 @@ export function TradeInputModal() {
                   </Button>
                   <Button
                     variant={singleForm.type === 'SELL' ? 'default' : 'outline'}
-                    className={`flex-1 ${singleForm.type === 'SELL' ? 'bg-red-600 hover:bg-red-700' : 'border-white/20 text-slate-300'}`}
+                    className={`flex-1 ${singleForm.type === 'SELL' ? 'bg-red-600 hover:bg-red-700 text-white' : 'border-border text-muted-foreground'}`}
                     onClick={() => updateSingleField('type', 'SELL')}
                   >
                     <TrendingDown size={16} className="mr-2" />
@@ -337,7 +337,7 @@ export function TradeInputModal() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="date" className="text-slate-300">
+                  <Label htmlFor="date" className="text-muted-foreground">
                     거래일
                   </Label>
                   <Input
@@ -345,11 +345,11 @@ export function TradeInputModal() {
                     type="date"
                     value={singleForm.date}
                     onChange={(e) => updateSingleField('date', e.target.value)}
-                    className="bg-white/5 border-white/10 text-white [color-scheme:dark]"
+                    className="bg-muted/50 border-border text-foreground"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ticker" className="text-slate-300">
+                  <Label htmlFor="ticker" className="text-muted-foreground">
                     종목코드
                   </Label>
                   <Input
@@ -357,11 +357,11 @@ export function TradeInputModal() {
                     value={singleForm.ticker}
                     onChange={(e) => updateSingleField('ticker', e.target.value)}
                     placeholder="예: 005930, AAPL"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-slate-500"
+                    className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-slate-300">
+                  <Label htmlFor="name" className="text-muted-foreground">
                     종목명 (선택)
                   </Label>
                   <Input
@@ -369,12 +369,12 @@ export function TradeInputModal() {
                     value={singleForm.name}
                     onChange={(e) => updateSingleField('name', e.target.value)}
                     placeholder="예: 삼성전자, Apple Inc"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-slate-500"
+                    className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="price" className="text-slate-300">
+                    <Label htmlFor="price" className="text-muted-foreground">
                       단가
                     </Label>
                     <Input
@@ -383,11 +383,11 @@ export function TradeInputModal() {
                       value={singleForm.price || ''}
                       onChange={(e) => updateSingleField('price', Number(e.target.value))}
                       placeholder="0"
-                      className="bg-white/5 border-white/10 text-white placeholder:text-slate-500"
+                      className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="quantity" className="text-slate-300">
+                    <Label htmlFor="quantity" className="text-muted-foreground">
                       수량
                     </Label>
                     <Input
@@ -396,14 +396,14 @@ export function TradeInputModal() {
                       value={singleForm.quantity || ''}
                       onChange={(e) => updateSingleField('quantity', Number(e.target.value))}
                       placeholder="0"
-                      className="bg-white/5 border-white/10 text-white placeholder:text-slate-500"
+                      className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
                     />
                   </div>
                 </div>
 
                 {singleForm.price > 0 && singleForm.quantity > 0 && (
-                  <div className={`p-3 rounded-xl border ${singleForm.type === 'BUY' ? 'bg-emerald-600/10 border-emerald-500/20' : 'bg-red-600/10 border-red-500/20'}`}>
-                    <p className={`text-sm text-center ${singleForm.type === 'BUY' ? 'text-emerald-300' : 'text-red-300'}`}>
+                  <div className={`p-3 rounded-xl border ${singleForm.type === 'BUY' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                    <p className={`text-sm text-center ${singleForm.type === 'BUY' ? 'text-emerald-600' : 'text-red-600'}`}>
                       {singleForm.type === 'BUY' ? '매수' : '매도'} 총액: <span className="font-bold">₩{formatCurrency(singleForm.price * singleForm.quantity)}</span>
                     </p>
                   </div>
@@ -429,7 +429,7 @@ export function TradeInputModal() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full border-white/20 text-slate-300 hover:bg-white/10 hover:text-white"
+                    className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                     onClick={() => setMode('select')}
                     disabled={isSaving}
                   >
@@ -442,7 +442,7 @@ export function TradeInputModal() {
             {/* Photo Preview */}
             {mode === 'photo-preview' && (
               <div className="space-y-4">
-                <div className="aspect-[3/4] bg-white/5 rounded-xl flex items-center justify-center relative overflow-hidden border border-white/10">
+                <div className="aspect-[3/4] bg-muted/50 rounded-xl flex items-center justify-center relative overflow-hidden border border-border">
                   {imageSrc ? (
                     <img
                       src={imageSrc}
@@ -450,7 +450,7 @@ export function TradeInputModal() {
                       className="w-full h-full object-contain"
                     />
                   ) : (
-                    <p className="text-slate-500">이미지 로딩 중...</p>
+                    <p className="text-muted-foreground">이미지 로딩 중...</p>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -470,7 +470,7 @@ export function TradeInputModal() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full border-white/20 text-slate-300 hover:bg-white/10 hover:text-white"
+                    className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                     onClick={() => {
                       setImageSrc(null);
                       setMode('select');
@@ -487,13 +487,13 @@ export function TradeInputModal() {
             {mode === 'photo-verify' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-muted-foreground">
                     {multipleItems.length}건의 거래내역을 찾았습니다
                   </p>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-xs text-emerald-400 hover:text-emerald-300"
+                    className="text-xs text-emerald-500 hover:text-emerald-600"
                     onClick={toggleSelectAll}
                   >
                     {selectedItems.size === multipleItems.length ? '전체 해제' : '전체 선택'}
@@ -507,9 +507,9 @@ export function TradeInputModal() {
                       className={`p-3 rounded-xl border transition-colors ${
                         selectedItems.has(idx)
                           ? item.type === 'BUY'
-                            ? 'bg-emerald-600/10 border-emerald-500/30'
-                            : 'bg-red-600/10 border-red-500/30'
-                          : 'bg-white/5 border-white/10'
+                            ? 'bg-emerald-500/10 border-emerald-500/30'
+                            : 'bg-red-500/10 border-red-500/30'
+                          : 'bg-muted/50 border-border'
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -521,7 +521,7 @@ export function TradeInputModal() {
                               ? item.type === 'BUY'
                                 ? 'bg-emerald-600 border-emerald-600'
                                 : 'bg-red-600 border-red-600'
-                              : 'border-white/30'
+                              : 'border-muted-foreground/30'
                           }`}
                         >
                           {selectedItems.has(idx) && <Check size={12} className="text-white" />}
@@ -530,15 +530,15 @@ export function TradeInputModal() {
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <span className={`text-xs px-2 py-0.5 rounded ${item.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                              <span className={`text-xs px-2 py-0.5 rounded ${item.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-600' : 'bg-red-500/20 text-red-600'}`}>
                                 {item.type === 'BUY' ? '매수' : '매도'}
                               </span>
-                              <span className="font-medium text-white text-sm">{item.name || item.ticker}</span>
+                              <span className="font-medium text-foreground text-sm">{item.name || item.ticker}</span>
                             </div>
                             <button
                               type="button"
                               onClick={() => removeItem(idx)}
-                              className="text-slate-500 hover:text-red-400 transition-colors"
+                              className="text-muted-foreground hover:text-destructive transition-colors"
                             >
                               <Trash2 size={14} />
                             </button>
@@ -549,13 +549,13 @@ export function TradeInputModal() {
                               value={item.date}
                               onChange={(e) => updateMultipleItem(idx, 'date', e.target.value)}
                               type="date"
-                              className="h-8 text-xs bg-white/5 border-white/10 text-white [color-scheme:dark]"
+                              className="h-8 text-xs bg-muted/50 border-border text-foreground"
                             />
                             <Input
                               value={item.ticker}
                               onChange={(e) => updateMultipleItem(idx, 'ticker', e.target.value)}
                               placeholder="종목코드"
-                              className="h-8 text-xs bg-white/5 border-white/10 text-white"
+                              className="h-8 text-xs bg-muted/50 border-border text-foreground"
                             />
                           </div>
 
@@ -566,9 +566,9 @@ export function TradeInputModal() {
                                 value={item.price || ''}
                                 onChange={(e) => updateMultipleItem(idx, 'price', Number(e.target.value))}
                                 placeholder="단가"
-                                className="h-8 text-xs bg-white/5 border-white/10 text-white pr-8"
+                                className="h-8 text-xs bg-muted/50 border-border text-foreground pr-8"
                               />
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">원</span>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">원</span>
                             </div>
                             <div className="relative">
                               <Input
@@ -576,13 +576,13 @@ export function TradeInputModal() {
                                 value={item.quantity || ''}
                                 onChange={(e) => updateMultipleItem(idx, 'quantity', Number(e.target.value))}
                                 placeholder="수량"
-                                className="h-8 text-xs bg-white/5 border-white/10 text-white pr-8"
+                                className="h-8 text-xs bg-muted/50 border-border text-foreground pr-8"
                               />
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">주</span>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">주</span>
                             </div>
                           </div>
 
-                          <div className={`text-xs text-right ${item.type === 'BUY' ? 'text-emerald-400' : 'text-red-400'}`}>
+                          <div className={`text-xs text-right ${item.type === 'BUY' ? 'text-emerald-600' : 'text-red-600'}`}>
                             총 ₩{formatCurrency(item.price * item.quantity)}
                           </div>
                         </div>
@@ -592,8 +592,8 @@ export function TradeInputModal() {
                 </div>
 
                 {selectedItems.size > 0 && (
-                  <div className="p-3 bg-emerald-600/10 rounded-xl border border-emerald-500/20">
-                    <p className="text-sm text-emerald-300 text-center">
+                  <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                    <p className="text-sm text-emerald-600 text-center">
                       선택된 {selectedItems.size}건의 총 거래금액:{' '}
                       <span className="font-bold">
                         ₩{formatCurrency(
@@ -626,7 +626,7 @@ export function TradeInputModal() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full border-white/20 text-slate-300 hover:bg-white/10 hover:text-white"
+                    className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                     onClick={() => {
                       setImageSrc(null);
                       setMultipleItems([]);

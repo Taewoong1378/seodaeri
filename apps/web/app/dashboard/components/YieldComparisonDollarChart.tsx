@@ -2,14 +2,14 @@
 
 import { useRef } from 'react';
 import {
-    Bar,
-    BarChart,
-    CartesianGrid,
-    Cell,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from 'recharts';
 import type { YieldComparisonDollarData } from '../../../lib/google-sheets';
 import { LandscapeChartModal } from './LandscapeChartModal';
@@ -68,7 +68,7 @@ export function YieldComparisonDollarChart({ data }: YieldComparisonDollarChartP
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-white">수익률 비교 (달러환율 적용)</h4>
+          <h4 className="text-sm font-semibold text-foreground">수익률 비교 (달러환율 적용)</h4>
           <div className="flex items-center gap-2">
             <ShareChartButton chartRef={hiddenChartRef} title="수익률 비교 (달러환율 적용)" />
             <LandscapeChartModal title="수익률 비교 (달러환율 적용)">
@@ -77,11 +77,11 @@ export function YieldComparisonDollarChart({ data }: YieldComparisonDollarChartP
                 <div className="flex items-center justify-center gap-6 mb-4 shrink-0">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
-                    <span className="text-sm text-slate-400">올해 수익률</span>
+                    <span className="text-sm text-muted-foreground">올해 수익률</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: COLORS.annualized }} />
-                    <span className="text-sm text-slate-400">연평균 수익률</span>
+                    <span className="text-sm text-muted-foreground">연평균 수익률</span>
                   </div>
                 </div>
                 
@@ -105,15 +105,16 @@ export function YieldComparisonDollarChart({ data }: YieldComparisonDollarChartP
                         tickFormatter={(value) => `${value}%`}
                       />
                       <Tooltip
-                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                        cursor={{ fill: 'rgba(16, 185, 129, 0.1)' }}
                         contentStyle={{
-                          backgroundColor: '#1e293b',
-                          border: '1px solid rgba(255,255,255,0.1)',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '12px',
-                          boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                          boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                           padding: '12px',
+                          color: '#1e293b',
                         }}
-                        labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                        labelStyle={{ color: 'hsl(var(--muted-foreground))', fontSize: 13, marginBottom: 8 }}
                         formatter={(value: number, name: string) => {
                           const label = name === 'thisYear' ? '올해 수익률' : '연평균 수익률';
                           return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
@@ -141,11 +142,11 @@ export function YieldComparisonDollarChart({ data }: YieldComparisonDollarChartP
         <div className="flex items-center justify-end gap-3">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
-            <span className="text-[11px] text-slate-400">올해 수익률</span>
+            <span className="text-[11px] text-muted-foreground">올해 수익률</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: COLORS.annualized }} />
-            <span className="text-[11px] text-slate-400">연평균 수익률</span>
+            <span className="text-[11px] text-muted-foreground">연평균 수익률</span>
           </div>
         </div>
       </div>
@@ -157,17 +158,17 @@ export function YieldComparisonDollarChart({ data }: YieldComparisonDollarChartP
             data={chartData}
             margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis
               dataKey="name"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#94a3b8', fontSize: 10 }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10 }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
               tickFormatter={(value) => `${value}%`}
               width={45}
             />
@@ -205,14 +206,14 @@ export function YieldComparisonDollarChart({ data }: YieldComparisonDollarChartP
         {chartData.map((item) => (
           <div
             key={item.name}
-            className="flex-1 min-w-[56px] bg-white/[0.03] border border-white/5 rounded-lg px-1.5 py-2 text-center"
+            className="flex-1 min-w-[56px] bg-muted/30 border border-border rounded-lg px-1.5 py-2 text-center"
           >
-            <span className="text-[8px] text-slate-500 block mb-0.5 truncate">{item.name}</span>
+            <span className="text-[8px] text-muted-foreground block mb-0.5 truncate">{item.name}</span>
             <div className="space-y-0">
-              <div className={`text-[10px] font-semibold leading-tight ${item.thisYear >= 0 ? 'text-blue-400' : 'text-slate-400'}`}>
+              <div className={`text-[10px] font-semibold leading-tight ${item.thisYear >= 0 ? 'text-blue-500' : 'text-muted-foreground'}`}>
                 {item.thisYear >= 0 ? '+' : ''}{item.thisYear.toFixed(1)}%
               </div>
-              <div className={`text-[8px] leading-tight ${item.annualized >= 0 ? 'text-red-400' : 'text-slate-500'}`}>
+              <div className={`text-[8px] leading-tight ${item.annualized >= 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
                 연{item.annualized >= 0 ? '+' : ''}{item.annualized.toFixed(1)}%
               </div>
             </div>

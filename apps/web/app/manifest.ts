@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: '서대리 투자기록',
-    short_name: '서대리',
+    name: '굴림(Gulim)',
+    short_name: '굴림',
     description: '입력은 1초, 데이터는 평생 - AI OCR 기반 투자 기록 앱',
     start_url: '/',
     display: 'standalone',

@@ -71,7 +71,7 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
     <div ref={chartRef} className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-white">자산 비중</h4>
+        <h4 className="text-sm font-semibold text-foreground">자산 비중</h4>
         <div className="flex items-center gap-2">
           <ShareChartButton chartRef={hiddenChartRef} title="포트폴리오 비중" />
           <LandscapeChartModal title="포트폴리오 비중">
@@ -99,12 +99,14 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#1e293b',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e2e8f0',
                         borderRadius: '12px',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                         padding: '12px',
+                        color: '#1e293b',
                       }}
-                      itemStyle={{ color: '#fff' }}
+                      itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
                       formatter={(value: number) => formatCurrency(value)}
                     />
                   </PieChart>
@@ -132,7 +134,7 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
         </div>
       </div>
 
-      <div className="flex items-center gap-4 bg-white/[0.02] rounded-xl p-4">
+      <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4">
         {/* Donut Chart */}
         <div className="relative w-[140px] h-[140px] flex-shrink-0">
           <ResponsiveContainer width="100%" height="100%">
@@ -159,8 +161,8 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
           </ResponsiveContainer>
           {/* Center text */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-[10px] text-slate-500">총 자산</span>
-            <span className="text-sm font-bold text-white">{formatCurrency(totalAsset)}</span>
+            <span className="text-[10px] text-muted-foreground">총 자산</span>
+            <span className="text-sm font-bold text-foreground">{formatCurrency(totalAsset)}</span>
           </div>
         </div>
 
@@ -172,8 +174,8 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
                 className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                 style={{ backgroundColor: COLORS[index % COLORS.length] }}
               />
-              <span className="text-xs text-slate-400 truncate flex-1">{item.name}</span>
-              <span className="text-xs font-semibold text-white">{item.weight.toFixed(1)}%</span>
+              <span className="text-xs text-muted-foreground truncate flex-1">{item.name}</span>
+              <span className="text-xs font-semibold text-foreground">{item.weight.toFixed(1)}%</span>
             </div>
           ))}
         </div>

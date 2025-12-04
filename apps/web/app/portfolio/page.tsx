@@ -51,17 +51,17 @@ export default async function PortfolioPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-50 pb-24">
+    <div className="min-h-screen bg-background text-foreground pb-24">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 px-5 h-14 flex items-center justify-between">
-        <span className="font-bold text-lg tracking-tight text-white">포트폴리오</span>
+      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-5 h-14 flex items-center justify-between">
+        <span className="font-bold text-lg tracking-tight text-foreground">포트폴리오</span>
         <div className="flex items-center gap-3">
           {sheetUrl && (
             <Link href={sheetUrl} target="_blank">
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-3 text-xs text-slate-400 hover:text-white hover:bg-white/10 gap-1.5 rounded-full"
+                className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground hover:bg-muted gap-1.5 rounded-full"
               >
                 <ExternalLink size={14} />
                 시트
@@ -75,7 +75,7 @@ export default async function PortfolioPage() {
               alt={session.user.name || '프로필'}
               width={32}
               height={32}
-              className="rounded-full border border-white/10 ring-2 ring-white/5"
+              className="rounded-full border border-border ring-2 ring-background"
             />
           )}
         </div>
@@ -85,26 +85,26 @@ export default async function PortfolioPage() {
         {/* Summary */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-slate-400">총 평가금액</h2>
-            <span className="text-xs text-slate-500">{portfolio.length}개 종목</span>
+            <h2 className="text-sm font-medium text-muted-foreground">총 평가금액</h2>
+            <span className="text-xs text-muted-foreground">{portfolio.length}개 종목</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-white tracking-tight">
+            <span className="text-3xl font-bold text-foreground tracking-tight">
               {formatCurrency(totalAsset, true)}
             </span>
-            <span className="text-sm text-slate-500 font-medium">원</span>
+            <span className="text-sm text-muted-foreground font-medium">원</span>
           </div>
           {data && (
-            <div className="flex items-center gap-4 text-sm bg-white/5 p-3 rounded-xl border border-white/5">
+            <div className="flex items-center gap-4 text-sm bg-card p-4 rounded-[20px] border border-border shadow-sm">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] text-slate-500">투자원금</span>
-                <span className="text-white font-medium">{formatCurrency(data.totalInvested, true)}원</span>
+                <span className="text-[10px] text-muted-foreground">투자원금</span>
+                <span className="text-foreground font-medium">{formatCurrency(data.totalInvested, true)}원</span>
               </div>
-              <div className="w-px h-8 bg-white/10" />
+              <div className="w-px h-8 bg-border" />
               <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] text-slate-500">수익금</span>
+                <span className="text-[10px] text-muted-foreground">수익금</span>
                 <span
-                  className={`font-medium ${data.totalProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
+                  className={`font-medium ${data.totalProfit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}
                 >
                   {formatCurrency(data.totalProfit, true)}원
                 </span>
@@ -119,11 +119,11 @@ export default async function PortfolioPage() {
         {/* Portfolio Content (List or Chart) */}
         {portfolio.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-              <PieChart className="w-8 h-8 text-slate-500" />
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <PieChart className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-medium text-white mb-2">보유 종목이 없습니다</h3>
-            <p className="text-sm text-slate-400 max-w-[280px]">
+            <h3 className="text-lg font-medium text-foreground mb-2">보유 종목이 없습니다</h3>
+            <p className="text-sm text-muted-foreground max-w-[280px]">
               시트의 '3. 종목현황' 탭에 데이터를 입력하거나
               <br />
               매매 인증을 통해 종목을 추가해보세요.

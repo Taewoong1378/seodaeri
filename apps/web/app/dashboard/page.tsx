@@ -26,17 +26,17 @@ export default async function DashboardPage() {
   const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : null;
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-50 pb-24">
+    <div className="min-h-screen bg-background text-foreground pb-24">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 px-5 h-14 flex items-center justify-between">
-        <span className="font-bold text-lg tracking-tight text-white">서대리</span>
+      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-5 h-14 flex items-center justify-between">
+        <span className="font-bold text-lg tracking-tight text-foreground">굴림</span>
         <div className="flex items-center gap-3">
           {sheetUrl && (
             <Link href={sheetUrl} target="_blank">
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-3 text-xs text-slate-400 hover:text-white hover:bg-white/10 gap-1.5 rounded-full"
+                className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground hover:bg-muted gap-1.5 rounded-full"
               >
                 <ExternalLink size={14} />
                 시트
@@ -50,7 +50,7 @@ export default async function DashboardPage() {
               alt={session.user.name || '프로필'}
               width={32}
               height={32}
-              className="rounded-full border border-white/10 ring-2 ring-white/5"
+              className="rounded-full border border-border ring-2 ring-background"
             />
           )}
         </div>

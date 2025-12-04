@@ -48,16 +48,16 @@ export function PortfolioHoldingsChart({ data }: PortfolioHoldingsChartProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <div className={`w-2 h-2 rounded-full ${COLORS[index % COLORS.length]?.bg} flex-shrink-0`} />
-              <span className="text-sm font-medium text-white truncate">
+              <span className="text-sm font-medium text-foreground truncate">
                 {item.name || item.ticker}
               </span>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0 ml-3">
-              <span className="text-sm font-semibold text-white">
+              <span className="text-sm font-semibold text-foreground">
                 {formatCurrency(item.totalValue)}원
               </span>
               <div className={`flex items-center gap-0.5 text-xs font-medium ${
-                item.yieldPercent >= 0 ? 'text-emerald-400' : 'text-red-400'
+                item.yieldPercent >= 0 ? 'text-emerald-500' : 'text-red-500'
               }`}>
                 {item.yieldPercent >= 0 ? (
                   <TrendingUp size={12} />
@@ -70,7 +70,7 @@ export function PortfolioHoldingsChart({ data }: PortfolioHoldingsChartProps) {
           </div>
 
           {/* Progress bar */}
-          <div className="relative h-2 bg-white/5 rounded-full overflow-hidden">
+          <div className="relative h-2 bg-muted rounded-full overflow-hidden">
             <div
               className={`absolute inset-y-0 left-0 bg-gradient-to-r ${COLORS[index % COLORS.length]?.bar} rounded-full transition-all duration-700 ease-out`}
               style={{ width: `${(item.weight / maxWeight) * 100}%` }}

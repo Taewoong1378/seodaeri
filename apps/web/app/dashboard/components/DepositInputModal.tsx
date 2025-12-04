@@ -1,7 +1,6 @@
 'use client';
 
 import { Button } from '@repo/design-system/components/button';
-import { createPortal } from 'react-dom';
 import {
   Dialog,
   DialogClose,
@@ -18,9 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@repo/design-system/components/select';
-import { Check, Loader2, Pen, X, Calendar, RefreshCw, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Calendar, Check, Loader2, Pen, RefreshCw, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useSaveDeposit, useAccountList } from '../../../hooks';
+import { createPortal } from 'react-dom';
+import { useAccountList, useSaveDeposit } from '../../../hooks';
 import type { DepositInput } from '../../actions/deposit';
 
 type InputMode = 'select' | 'single' | 'recurring';
@@ -185,7 +185,7 @@ export function DepositInputModal() {
 
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="sm:max-w-[425px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-[20px] bg-[#0f172a] border-white/10 text-white"
+          className="sm:max-w-[425px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-[20px] bg-popover border-border text-popover-foreground"
           style={{
             left: '50%',
             top: '50%',
@@ -193,16 +193,16 @@ export function DepositInputModal() {
             maxWidth: 'min(425px, calc(100vw - 2rem))',
           }}
         >
-          <div className="p-5 pb-3 border-b border-white/10">
+          <div className="p-5 pb-3 border-b border-border">
             <DialogHeader className="flex flex-row items-center justify-between">
-              <DialogTitle className="text-white text-lg font-bold">
+              <DialogTitle className="text-foreground text-lg font-bold">
                 입출금 내역 추가
               </DialogTitle>
               <DialogClose asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                 >
                   <X size={20} />
                 </Button>
@@ -214,23 +214,23 @@ export function DepositInputModal() {
             {/* Mode Selection */}
             {mode === 'select' && (
               <div className="space-y-4">
-                <p className="text-sm text-slate-400 text-center mb-6">
+                <p className="text-sm text-muted-foreground text-center mb-6">
                   입력 방식을 선택하세요
                 </p>
                 <Button
-                  className="w-full h-20 bg-white/5 hover:bg-white/10 border border-white/10 text-white flex flex-col gap-2"
+                  className="w-full h-20 bg-muted/50 hover:bg-muted border border-border text-foreground flex flex-col gap-2"
                   variant="ghost"
                   onClick={() => setMode('single')}
                 >
-                  <Calendar size={24} className="text-purple-400" />
+                  <Calendar size={24} className="text-purple-500" />
                   <span>단일 입금/출금</span>
                 </Button>
                 <Button
-                  className="w-full h-20 bg-white/5 hover:bg-white/10 border border-white/10 text-white flex flex-col gap-2"
+                  className="w-full h-20 bg-muted/50 hover:bg-muted border border-border text-foreground flex flex-col gap-2"
                   variant="ghost"
                   onClick={() => setMode('recurring')}
                 >
-                  <RefreshCw size={24} className="text-emerald-400" />
+                  <RefreshCw size={24} className="text-emerald-500" />
                   <span>정기 입금 (매월)</span>
                 </Button>
               </div>
@@ -243,7 +243,7 @@ export function DepositInputModal() {
                 <div className="flex gap-2">
                   <Button
                     variant={!isWithdraw ? 'default' : 'outline'}
-                    className={`flex-1 ${!isWithdraw ? 'bg-purple-600 hover:bg-purple-700' : 'border-white/20 text-slate-300'}`}
+                    className={`flex-1 ${!isWithdraw ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'border-border text-muted-foreground'}`}
                     onClick={() => setIsWithdraw(false)}
                   >
                     <ArrowDownLeft size={16} className="mr-2" />
@@ -251,7 +251,7 @@ export function DepositInputModal() {
                   </Button>
                   <Button
                     variant={isWithdraw ? 'default' : 'outline'}
-                    className={`flex-1 ${isWithdraw ? 'bg-orange-600 hover:bg-orange-700' : 'border-white/20 text-slate-300'}`}
+                    className={`flex-1 ${isWithdraw ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'border-border text-muted-foreground'}`}
                     onClick={() => setIsWithdraw(true)}
                   >
                     <ArrowUpRight size={16} className="mr-2" />
@@ -260,7 +260,7 @@ export function DepositInputModal() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="account" className="text-slate-300">
+                  <Label htmlFor="account" className="text-muted-foreground">
                     계좌
                   </Label>
                   <Select
@@ -268,15 +268,15 @@ export function DepositInputModal() {
                     onValueChange={(value) => updateField('account', value)}
                     disabled={isLoadingAccounts}
                   >
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                    <SelectTrigger className="bg-muted/50 border-border text-foreground">
                       <SelectValue placeholder="계좌 선택" />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700">
+                    <SelectContent className="bg-popover border-border">
                       {accounts.map((account) => (
                         <SelectItem
                           key={account}
                           value={account}
-                          className="text-white hover:bg-white/10 focus:bg-white/10"
+                          className="text-foreground hover:bg-muted focus:bg-muted"
                         >
                           {account}
                         </SelectItem>
@@ -286,7 +286,7 @@ export function DepositInputModal() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="date" className="text-slate-300">
+                  <Label htmlFor="date" className="text-muted-foreground">
                     {isWithdraw ? '출금일' : '입금일'}
                   </Label>
                   <Input
@@ -294,12 +294,12 @@ export function DepositInputModal() {
                     type="date"
                     value={form.date}
                     onChange={(e) => updateField('date', e.target.value)}
-                    className="bg-white/5 border-white/10 text-white [color-scheme:dark]"
+                    className="bg-muted/50 border-border text-foreground"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="amount" className="text-slate-300">
+                  <Label htmlFor="amount" className="text-muted-foreground">
                     금액
                   </Label>
                   <div className="relative">
@@ -309,14 +309,14 @@ export function DepositInputModal() {
                       value={form.amount || ''}
                       onChange={(e) => updateField('amount', Number(e.target.value))}
                       placeholder="0"
-                      className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 pr-8"
+                      className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground pr-8"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">원</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">원</span>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="memo" className="text-slate-300">
+                  <Label htmlFor="memo" className="text-muted-foreground">
                     비고 (선택)
                   </Label>
                   <Input
@@ -324,13 +324,13 @@ export function DepositInputModal() {
                     value={form.memo}
                     onChange={(e) => updateField('memo', e.target.value)}
                     placeholder="예: 월급, 보너스"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-slate-500"
+                    className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
 
                 {form.amount > 0 && (
-                  <div className={`p-3 rounded-xl border ${isWithdraw ? 'bg-orange-600/10 border-orange-500/20' : 'bg-purple-600/10 border-purple-500/20'}`}>
-                    <p className={`text-sm text-center ${isWithdraw ? 'text-orange-300' : 'text-purple-300'}`}>
+                  <div className={`p-3 rounded-xl border ${isWithdraw ? 'bg-orange-500/10 border-orange-500/20' : 'bg-purple-500/10 border-purple-500/20'}`}>
+                    <p className={`text-sm text-center ${isWithdraw ? 'text-orange-600' : 'text-purple-600'}`}>
                       {isWithdraw ? '출금' : '입금'} 금액: <span className="font-bold">₩{formatCurrency(form.amount)}</span>
                     </p>
                   </div>
@@ -356,7 +356,7 @@ export function DepositInputModal() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full border-white/20 text-slate-300 hover:bg-white/10 hover:text-white"
+                    className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                     onClick={() => setMode('select')}
                     disabled={isSaving}
                   >
@@ -370,13 +370,13 @@ export function DepositInputModal() {
             {mode === 'recurring' && (
               <div className="space-y-4">
                 <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-                  <p className="text-sm text-emerald-300 text-center">
+                  <p className="text-sm text-emerald-600 text-center">
                     매월 같은 날짜에 입금 내역을 추가합니다
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="recurringAccount" className="text-slate-300">
+                  <Label htmlFor="recurringAccount" className="text-muted-foreground">
                     계좌
                   </Label>
                   <Select
@@ -392,7 +392,7 @@ export function DepositInputModal() {
                         <SelectItem
                           key={account}
                           value={account}
-                          className="text-white hover:bg-white/10 focus:bg-white/10"
+                          className="text-foreground hover:bg-muted focus:bg-muted"
                         >
                           {account}
                         </SelectItem>
@@ -402,7 +402,7 @@ export function DepositInputModal() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="dayOfMonth" className="text-slate-300">
+                  <Label htmlFor="dayOfMonth" className="text-muted-foreground">
                     입금일 (매월)
                   </Label>
                   <div className="relative">
@@ -413,14 +413,14 @@ export function DepositInputModal() {
                       max={31}
                       value={recurringForm.dayOfMonth}
                       onChange={(e) => setRecurringForm(prev => ({ ...prev, dayOfMonth: Number(e.target.value) }))}
-                      className="bg-white/5 border-white/10 text-white pr-8"
+                      className="bg-muted/50 border-border text-foreground pr-8"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">일</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">일</span>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="recurringAmount" className="text-slate-300">
+                  <Label htmlFor="recurringAmount" className="text-muted-foreground">
                     입금 금액
                   </Label>
                   <div className="relative">
@@ -430,14 +430,14 @@ export function DepositInputModal() {
                       value={recurringForm.amount || ''}
                       onChange={(e) => setRecurringForm(prev => ({ ...prev, amount: Number(e.target.value) }))}
                       placeholder="0"
-                      className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 pr-8"
+                      className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground pr-8"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">원</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">원</span>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="recurringMemo" className="text-slate-300">
+                  <Label htmlFor="recurringMemo" className="text-muted-foreground">
                     비고
                   </Label>
                   <Input
@@ -445,13 +445,13 @@ export function DepositInputModal() {
                     value={recurringForm.memo}
                     onChange={(e) => setRecurringForm(prev => ({ ...prev, memo: e.target.value }))}
                     placeholder="예: 월 적립금"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-slate-500"
+                    className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
 
                 {recurringForm.amount > 0 && (
-                  <div className="p-3 bg-emerald-600/10 rounded-xl border border-emerald-500/20">
-                    <p className="text-sm text-emerald-300 text-center">
+                  <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                    <p className="text-sm text-emerald-600 text-center">
                       매월 {recurringForm.dayOfMonth}일: <span className="font-bold">₩{formatCurrency(recurringForm.amount)}</span>
                     </p>
                   </div>
@@ -477,7 +477,7 @@ export function DepositInputModal() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-full border-white/20 text-slate-300 hover:bg-white/10 hover:text-white"
+                    className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                     onClick={() => setMode('select')}
                     disabled={isSaving}
                   >
