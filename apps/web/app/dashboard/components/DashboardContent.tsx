@@ -112,7 +112,7 @@ export function DashboardContent() {
                 description="한국판 SCHD의 대명사"
                 image="/images/banners/banner-sol-etf.png"
                 link="#"
-                gradient="from-emerald-600 to-teal-600"
+                gradient="from-blue-600 to-cyan-600"
               />
 
               {/* Yield Comparison Bar Chart */}
@@ -139,7 +139,7 @@ export function DashboardContent() {
                 description="미국 빅테크 상위 10개 종목 집중 투자"
                 image="/images/banners/banner-tiger-etf.png"
                 link="#"
-                gradient="from-lime-500 to-green-600"
+                gradient="from-orange-500 to-amber-500"
               />
 
               {/* Portfolio Charts */}
