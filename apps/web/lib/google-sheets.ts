@@ -1707,9 +1707,8 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
   console.log('[parseYieldComparisonDollarData] Columns 28-36 (AI~AQ):', currentRow.slice(28, 37));
 
   // G17:AQ78 범위 기준 컬럼 인덱스 (G=0 기준):
-  // 시트 공식: T열(실제 지수값)을 사용하여 수익률 계산
   const COL_ACCOUNT = 8;          // O열 - 계좌종합 지수 (100 기준)
-  const COL_KOSPI = 13;           // T열 - 코스피 실제 지수값
+  const COL_KOSPI = 9;            // P열 - 코스피 지수 (100 기준, 원화)
   const COL_SP500_DOLLAR = 28;    // AI열 - S&P500 달러환율 적용 지수
   const COL_NASDAQ_DOLLAR = 29;   // AJ열 - NASDAQ 달러환율 적용 지수
   const COL_DOLLAR_THIS_YEAR = 23; // AD열 - 달러 환율값 (올해 수익률 계산용)
