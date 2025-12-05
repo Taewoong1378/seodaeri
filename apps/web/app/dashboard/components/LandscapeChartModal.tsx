@@ -54,7 +54,7 @@ export function LandscapeChartModal({ title, children, trigger }: LandscapeChart
 
           {/* Content Container */}
           <div
-            className="w-full h-full flex flex-col p-6 transition-all duration-300 ease-in-out"
+            className="w-full h-full flex flex-col transition-all duration-300 ease-in-out"
             style={{
               transform: isPortrait ? 'rotate(90deg)' : 'none',
               width: isPortrait ? '100vh' : '100vw',
@@ -64,6 +64,20 @@ export function LandscapeChartModal({ title, children, trigger }: LandscapeChart
               left: isPortrait ? '50%' : 0,
               marginTop: isPortrait ? '-50vw' : 0,
               marginLeft: isPortrait ? '-50vh' : 0,
+              
+              // Safe Area Handling
+              paddingTop: isPortrait 
+                ? 'calc(1.5rem + env(safe-area-inset-right))' 
+                : 'calc(1.5rem + env(safe-area-inset-top))',
+              paddingBottom: isPortrait 
+                ? 'calc(1.5rem + env(safe-area-inset-left))' 
+                : 'calc(1.5rem + env(safe-area-inset-bottom))',
+              paddingLeft: isPortrait 
+                ? 'calc(1.5rem + env(safe-area-inset-top))' 
+                : 'calc(1.5rem + env(safe-area-inset-left))',
+              paddingRight: isPortrait 
+                ? 'calc(1.5rem + env(safe-area-inset-bottom))' 
+                : 'calc(1.5rem + env(safe-area-inset-right))',
             }}
           >
             <div className="flex items-center justify-between mb-4 shrink-0">
