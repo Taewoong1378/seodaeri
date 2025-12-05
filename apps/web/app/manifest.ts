@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: '입력은 1초, 데이터는 평생 - AI OCR 기반 투자 기록 앱',
     start_url: '/',
     display: 'standalone',
-    background_color: '#0a0a0a',
+    background_color: '#ffffff',
     theme_color: '#10b981',
     orientation: 'portrait',
     icons: [
