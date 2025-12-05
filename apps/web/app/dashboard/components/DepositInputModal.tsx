@@ -2,20 +2,20 @@
 
 import { Button } from '@repo/design-system/components/button';
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
 } from '@repo/design-system/components/dialog';
 import { Input } from '@repo/design-system/components/input';
 import { Label } from '@repo/design-system/components/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@repo/design-system/components/select';
 import { ArrowDownLeft, ArrowUpRight, Calendar, Check, Loader2, Pen, RefreshCw, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -175,7 +175,7 @@ export function DepositInputModal() {
             <Button
               size="icon"
               onClick={() => setIsOpen(true)}
-              className="h-14 w-14 rounded-full shadow-xl bg-purple-600 hover:bg-purple-700 active:scale-90 active:bg-purple-800 text-white absolute right-5 bottom-0 pointer-events-auto animate-in zoom-in duration-300 transition-transform"
+              className="h-14 w-14 rounded-full shadow-xl bg-blue-600 hover:bg-blue-700 active:scale-90 active:bg-blue-800 text-white absolute right-5 bottom-0 pointer-events-auto animate-in zoom-in duration-300 transition-transform"
             >
               <Pen size={24} />
             </Button>
@@ -222,7 +222,7 @@ export function DepositInputModal() {
                   variant="ghost"
                   onClick={() => setMode('single')}
                 >
-                  <Calendar size={24} className="text-purple-500" />
+                  <Calendar size={24} className="text-blue-500" />
                   <span>단일 입금/출금</span>
                 </Button>
                 <Button
@@ -243,7 +243,7 @@ export function DepositInputModal() {
                 <div className="flex gap-2">
                   <Button
                     variant={!isWithdraw ? 'default' : 'outline'}
-                    className={`flex-1 ${!isWithdraw ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'border-border text-muted-foreground'}`}
+                    className={`flex-1 ${!isWithdraw ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'border-border text-muted-foreground'}`}
                     onClick={() => setIsWithdraw(false)}
                   >
                     <ArrowDownLeft size={16} className="mr-2" />
@@ -329,8 +329,8 @@ export function DepositInputModal() {
                 </div>
 
                 {form.amount > 0 && (
-                  <div className={`p-3 rounded-xl border ${isWithdraw ? 'bg-orange-500/10 border-orange-500/20' : 'bg-purple-500/10 border-purple-500/20'}`}>
-                    <p className={`text-sm text-center ${isWithdraw ? 'text-orange-600' : 'text-purple-600'}`}>
+                  <div className={`p-3 rounded-xl border ${isWithdraw ? 'bg-orange-500/10 border-orange-500/20' : 'bg-blue-500/10 border-blue-500/20'}`}>
+                    <p className={`text-sm text-center ${isWithdraw ? 'text-orange-600' : 'text-blue-600'}`}>
                       {isWithdraw ? '출금' : '입금'} 금액: <span className="font-bold">₩{formatCurrency(form.amount)}</span>
                     </p>
                   </div>
@@ -338,7 +338,7 @@ export function DepositInputModal() {
 
                 <div className="pt-4 space-y-2">
                   <Button
-                    className={`w-full ${isWithdraw ? 'bg-orange-600 hover:bg-orange-700' : 'bg-purple-600 hover:bg-purple-700'} text-white`}
+                    className={`w-full ${isWithdraw ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
                     onClick={handleSave}
                     disabled={isSaving}
                   >
