@@ -188,12 +188,12 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                   <ReferenceLine
                     key={marker.date}
                     x={marker.date}
-                    stroke="#e2e8f0"
+                    stroke="#cbd5e1"
                     label={{
                       value: `20${marker.date.split('.')[0]}년`,
                       position: 'insideTopLeft',
                       angle: -90,
-                      fill: '#94a3b8',
+                      fill: '#475569',
                       fontSize: 12,
                       dy: 30,
                     }}
@@ -289,12 +289,12 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
               <ReferenceLine
                 key={marker.date}
                 x={marker.date}
-                stroke="#e2e8f0"
+                stroke="#cbd5e1"
                 label={{
                   value: `20${marker.date.split('.')[0]}년`,
                   position: 'insideTopLeft',
                   angle: -90,
-                  fill: '#94a3b8',
+                  fill: '#475569',
                   fontSize: 12,
                   dy: 30,
                 }}
@@ -423,12 +423,12 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                 <ReferenceLine
                   key={marker.date}
                   x={marker.date}
-                  stroke="rgba(255,255,255,0.1)"
+                  stroke="rgba(255,255,255,0.2)"
                   label={{
                     value: `20${marker.date.split('.')[0]}년`,
                     position: 'insideTopLeft',
                     angle: -90,
-                    fill: '#94a3b8',
+                    fill: '#cbd5e1',
                     fontSize: 12,
                     dy: 30,
                   }}

@@ -113,7 +113,7 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+        className="h-8 w-8 text-muted-foreground hover:text-foreground bg-muted/50 hover:bg-muted transition-colors"
         onClick={() => setIsOpen(true)}
         disabled={isCapturing}
       >
@@ -122,7 +122,7 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent
-          className="sm:max-w-[425px] bg-slate-900 border-white/10 text-white z-[100] fixed rounded-[20px]"
+          className="sm:max-w-[425px] bg-background border-border text-foreground z-[100] fixed rounded-[24px] p-6 shadow-xl"
           style={{
             left: '50%',
             top: '50%',
@@ -131,21 +131,22 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
           }}
         >
           <DialogHeader>
-            <DialogTitle className="text-center text-xl font-bold">공유하기</DialogTitle>
+            <DialogTitle className="text-center text-xl font-bold text-foreground">공유하기</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
+          <div className="grid grid-cols-2 gap-4 py-2">
             <button
               type="button"
               onClick={() => handleShare('vertical')}
               disabled={isCapturing}
-              className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl bg-slate-800 hover:bg-slate-700 transition-all border border-slate-700 hover:border-blue-500/50 group"
+              className="flex flex-col items-center justify-center gap-4 p-6 rounded-2xl bg-white border border-border hover:border-blue-500 hover:shadow-md transition-all group relative overflow-hidden"
             >
-              <div className="p-3 rounded-full bg-blue-500/10 text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                <Smartphone size={32} />
+              <div className="absolute inset-0 bg-blue-50/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative p-4 rounded-full bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform duration-300">
+                <Smartphone size={28} strokeWidth={2.5} />
               </div>
-              <div className="text-center">
-                <span className="block font-semibold mb-1">세로 모드</span>
-                <span className="text-xs text-slate-400">모바일 최적화 (회전)</span>
+              <div className="relative text-center space-y-1">
+                <span className="block font-bold text-foreground">세로 모드</span>
+                <span className="text-xs text-muted-foreground">모바일 최적화</span>
               </div>
             </button>
 
@@ -153,14 +154,15 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
               type="button"
               onClick={() => handleShare('landscape')}
               disabled={isCapturing}
-              className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl bg-slate-800 hover:bg-slate-700 transition-all border border-slate-700 hover:border-blue-500/50 group"
+              className="flex flex-col items-center justify-center gap-4 p-6 rounded-2xl bg-white border border-border hover:border-purple-500 hover:shadow-md transition-all group relative overflow-hidden"
             >
-              <div className="p-3 rounded-full bg-purple-500/10 text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
-                <Monitor size={32} />
+              <div className="absolute inset-0 bg-purple-50/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative p-4 rounded-full bg-purple-50 text-purple-600 group-hover:scale-110 transition-transform duration-300">
+                <Monitor size={28} strokeWidth={2.5} />
               </div>
-              <div className="text-center">
-                <span className="block font-semibold mb-1">가로 모드</span>
-                <span className="text-xs text-slate-400">PC/태블릿 최적화</span>
+              <div className="relative text-center space-y-1">
+                <span className="block font-bold text-foreground">가로 모드</span>
+                <span className="text-xs text-muted-foreground">PC/태블릿 최적화</span>
               </div>
             </button>
           </div>
