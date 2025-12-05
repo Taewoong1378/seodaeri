@@ -5,6 +5,7 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -135,12 +136,27 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                {displayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
+                  <ReferenceLine
+                    key={marker.date}
+                    x={marker.date}
+                    stroke="#e2e8f0"
+                    label={{
+                      value: `20${marker.date.split('.')[0]}년`,
+                      position: 'insideTopLeft',
+                      angle: -90,
+                      fill: '#94a3b8',
+                      fontSize: 12,
+                      dy: 30,
+                    }}
+                  />
+                ))}
                 <XAxis
                   dataKey="date"
                   axisLine={{ stroke: '#cbd5e1' }}
                   tickLine={false}
                   tick={{ fill: '#64748b', fontSize: 12 }}
-                  tickFormatter={(value) => value}
+                  tickFormatter={(value) => `${Number.parseInt(value.split('.')[1])}월`}
                 />
                 <YAxis
                   axisLine={false}
@@ -208,18 +224,29 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                 <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="#e2e8f0"
               vertical={false}
-            />
+            {displayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
+              <ReferenceLine
+                key={marker.date}
+                x={marker.date}
+                stroke="#e2e8f0"
+                label={{
+                  value: `20${marker.date.split('.')[0]}년`,
+                  position: 'insideTopLeft',
+                  angle: -90,
+                  fill: '#94a3b8',
+                  fontSize: 12,
+                  dy: 30,
+                }}
+              />
+            ))}
             <XAxis
               dataKey="date"
               axisLine={{ stroke: '#cbd5e1' }}
               tickLine={false}
               tick={{ fill: '#64748b', fontSize: 10 }}
               interval={2}
-              tickFormatter={(value) => value}
+              tickFormatter={(value) => `${Number.parseInt(value.split('.')[1])}월`}
             />
             <YAxis
               axisLine={false}
@@ -320,12 +347,27 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              {displayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
+                <ReferenceLine
+                  key={marker.date}
+                  x={marker.date}
+                  stroke="rgba(255,255,255,0.1)"
+                  label={{
+                    value: `20${marker.date.split('.')[0]}년`,
+                    position: 'insideTopLeft',
+                    angle: -90,
+                    fill: '#94a3b8',
+                    fontSize: 12,
+                    dy: 30,
+                  }}
+                />
+              ))}
               <XAxis
                 dataKey="date"
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: '#64748b', fontSize: 12 }}
-                tickFormatter={(value) => value}
+                tickFormatter={(value) => `${Number.parseInt(value.split('.')[1])}월`}
               />
               <YAxis
                 axisLine={false}

@@ -138,7 +138,7 @@ export default function DashboardLoading() {
       </main>
 
       {/* Bottom Nav Skeleton */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-t border-border h-[84px] pb-6">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-t border-border h-[84px] pb-6 max-w-[500px] mx-auto">
         <div className="flex justify-around items-center h-full px-2 max-w-[500px] mx-auto">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="flex flex-col items-center gap-1">
