@@ -6,6 +6,10 @@ export {
   defaultDashboardData,
 } from './use-dashboard';
 
+// Stock search hook
+export { useStockSearch } from './use-stock-search';
+export type { StockSearchResult } from './use-stock-search';
+
 // Transaction hooks
 export {
   useTransactions,
