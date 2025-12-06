@@ -186,8 +186,8 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
       <Card className="bg-card border-border shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-foreground flex items-center gap-3 text-lg">
-            <div className="p-2 rounded-lg bg-blue-100">
-              <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+            <div className="p-2 rounded-lg bg-blue-100 dark:bg-white">
+              <FileSpreadsheet className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             내 스프레드시트 연동
           </CardTitle>
@@ -204,17 +204,17 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
           >
             {loading === 'picker' ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 선택 중...
               </>
             ) : !pickerReady ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 로딩 중...
               </>
             ) : (
               <>
-                <FolderOpen className="w-4 h-4" />
+                <FolderOpen className="w-4 h-4 mr-2" />
                 Google Drive에서 선택
               </>
             )}
@@ -239,7 +239,7 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
                 disabled={loading !== null || !sheetInput.trim()}
                 size="sm"
                 variant="outline"
-                className="h-10 px-4 text-foreground disabled:opacity-50"
+                className="h-10 px-4 text-foreground hover:bg-muted disabled:opacity-50"
               >
                 {loading === 'manual' ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -263,8 +263,8 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
       <Card className="bg-card border-border shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-foreground flex items-center gap-3 text-lg">
-            <div className="p-2 rounded-lg bg-emerald-100">
-              <Plus className="w-5 h-5 text-emerald-600" />
+            <div className="p-2 rounded-lg bg-emerald-100 dark:bg-white">
+              <Plus className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             새 시트 만들기
           </CardTitle>
@@ -280,12 +280,12 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
           >
             {loading === 'create' ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 생성 중...
               </>
             ) : (
               <>
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4 mr-2" />
                 새 시트 생성하기
               </>
             )}
@@ -295,8 +295,8 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
 
       {/* Error Message */}
       {error && (
-        <div className="p-4 rounded-lg bg-red-50 border border-red-200">
-          <p className="text-sm text-red-600">{error}</p>
+        <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30">
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         </div>
       )}
     </div>

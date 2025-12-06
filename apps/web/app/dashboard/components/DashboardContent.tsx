@@ -66,10 +66,12 @@ export function DashboardContent() {
       {/* Hero Section */}
       <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <BannerCarousel />
-        <HeroCard
-          totalAsset={displayData.totalAsset}
-          totalYield={displayData.totalYield}
-        />
+        {displayData.totalAsset > 0 && (
+          <HeroCard
+            totalAsset={displayData.totalAsset}
+            totalYield={displayData.totalYield}
+          />
+        )}
       </section>
 
       {/* Tabbed Content */}
