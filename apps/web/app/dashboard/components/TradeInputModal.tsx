@@ -2,11 +2,11 @@
 
 import { Button } from '@repo/design-system/components/button';
 import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
 } from '@repo/design-system/components/dialog';
 import { Input } from '@repo/design-system/components/input';
 import { Label } from '@repo/design-system/components/label';
@@ -221,13 +221,13 @@ export function TradeInputModal() {
     const newSelected = new Set(selectedItems);
     newSelected.delete(idx);
     const adjusted = new Set<number>();
-    newSelected.forEach((i) => {
+    for (const i of newSelected) {
       if (i > idx) {
         adjusted.add(i - 1);
       } else {
         adjusted.add(i);
       }
-    });
+    };
     setSelectedItems(adjusted);
   };
 
@@ -528,7 +528,7 @@ export function TradeInputModal() {
                 <div className="space-y-3 max-h-[40vh] overflow-y-auto">
                   {multipleItems.map((item, idx) => (
                     <div
-                      key={idx}
+                      key={`${item.date}-${item.ticker}`}
                       className={`p-3 rounded-xl border transition-colors ${
                         selectedItems.has(idx)
                           ? item.type === 'BUY'
