@@ -1545,7 +1545,7 @@ export function parseYieldComparisonData(rows: any[]): YieldComparisonData | nul
   if (!currentRow || !currentRowDate) return null;
 
   // 현재 데이터 연도 기준으로 작년 12월 찾기
-  const [currentYearPart] = currentRowDate.split('.');
+  const currentYearPart = currentRowDate.split('.')[0] ?? '00';
   const currentDataYear = Number.parseInt(currentYearPart, 10);
   const prevYearDecStr = `${String(currentDataYear - 1).padStart(2, '0')}.12`;
 
@@ -1740,7 +1740,7 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
   }
 
   // 현재 데이터 연도 기준으로 작년 12월 찾기
-  const [currentYearPart] = currentRowDate.split('.');
+  const currentYearPart = currentRowDate.split('.')[0] ?? '00';
   const currentDataYear = Number.parseInt(currentYearPart, 10);
   const prevYearDecStr = `${String(currentDataYear - 1).padStart(2, '0')}.12`;
 
