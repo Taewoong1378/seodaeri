@@ -1,7 +1,17 @@
 import { GoogleLogin } from '@repo/auth/components'
 import { auth } from '@repo/auth/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/design-system'
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+
+export const metadata: Metadata = {
+  title: '로그인',
+  description: 'Google 계정으로 굴림에 로그인하세요. 투자 기록을 시작하고 배당금 성장을 추적해보세요.',
+  robots: {
+    index: true,
+    follow: true,
+  },
+}
 
 export default async function LoginPage() {
   const session = await auth()

@@ -1,8 +1,12 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: '개인정보처리방침 - 굴림(Gulim)',
-  description: '굴림(Gulim) 애플리케이션의 개인정보처리방침입니다.',
+  title: '개인정보처리방침',
+  description: '굴림(Gulim) 애플리케이션의 개인정보처리방침입니다. Google API 서비스 이용 및 데이터 처리 방침을 안내합니다.',
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function PrivacyPolicyPage() {
