@@ -69,7 +69,10 @@ export function DashboardContent() {
         {displayData.totalAsset > 0 && (
           <HeroCard
             totalAsset={displayData.totalAsset}
+            totalInvested={displayData.totalInvested}
+            totalProfit={displayData.totalProfit}
             totalYield={displayData.totalYield}
+            investmentDays={displayData.investmentDays}
           />
         )}
       </section>

@@ -65,5 +65,6 @@ export const defaultDashboardData: DashboardData = {
   monthlyYieldComparison: null,
   monthlyYieldComparisonDollarApplied: null,
   majorIndexYieldComparison: null,
+  investmentDays: 0,
   lastSyncAt: null,
 };
