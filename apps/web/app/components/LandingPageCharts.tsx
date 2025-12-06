@@ -1,5 +1,6 @@
 'use client';
 
+import type { JSX } from 'react';
 import { DividendByYearChart } from '../dashboard/components/DividendByYearChart';
 import { MonthlyProfitLossChart } from '../dashboard/components/MonthlyProfitLossChart';
 
@@ -38,13 +39,13 @@ const profitLossData = [
   { month: '12월', profit: 2450000, loss: 160000 },
 ];
 
-export function LandingDividendChart() {
+export function LandingDividendChart(): JSX.Element {
   return (
     <DividendByYearChart data={dividendData} variant="landing" />
   );
 }
 
-export function LandingProfitLossChart() {
+export function LandingProfitLossChart(): JSX.Element {
   return (
     <div className="w-full bg-white rounded-xl p-4 shadow-sm">
       <MonthlyProfitLossChart data={profitLossData} variant="landing" />
