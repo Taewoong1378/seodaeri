@@ -472,9 +472,20 @@ export function parseDividendData(rows: any[]): DividendRecord[] {
     return Number.parseFloat(cleaned) || 0;
   };
 
-  // 날짜 형식 감지 (YYYY/MM/DD, YYYY-MM-DD, MM/DD/YYYY 등)
+  // 날짜 형식 감지 (YYYY/MM/DD, YYYY-MM-DD, MM/DD/YYYY, 시리얼넘버 등)
   const parseDate = (val: any): string | null => {
     if (!val) return null;
+
+    // 시리얼 넘버 처리 (UNFORMATTED_VALUE로 숫자가 오는 경우)
+    if (typeof val === 'number' && val > 30000 && val < 100000) {
+      // Google Sheets 시리얼: 1899-12-30 기준
+      const date = new Date((val - 25569) * 86400 * 1000);
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
     const str = String(val).trim();
 
     // YYYY/MM/DD 또는 YYYY-MM-DD 형식
@@ -1068,6 +1079,17 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
 
   const parseDate = (val: any): string | null => {
     if (!val) return null;
+
+    // Google Sheets 시리얼 넘버 처리 (UNFORMATTED_VALUE로 인해 날짜가 숫자로 옴)
+    if (typeof val === 'number' && val > 30000 && val < 100000) {
+      // Google Sheets 시리얼 넘버: 1899-12-30 기준
+      const date = new Date((val - 25569) * 86400 * 1000);
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
     const str = String(val).trim();
 
     // YYYY/MM/DD 또는 YYYY-MM-DD 형식
