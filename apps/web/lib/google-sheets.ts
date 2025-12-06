@@ -87,6 +87,7 @@ export async function fetchSheetData(accessToken: string, spreadsheetId: string,
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range,
+      valueRenderOption: 'UNFORMATTED_VALUE', // 소수점 등 원본 값 그대로 반환
     });
     return response.data.values;
   } catch (error) {
@@ -1506,25 +1507,24 @@ export function parseYieldComparisonData(rows: any[]): YieldComparisonData | nul
   const currentDateStr = `${currentYY}.${currentMM}`;
 
   // G17:AB78 범위 기준 컬럼 인덱스:
-  // G(0)=날짜, H(1)=평가금액, ...O(8)=계좌지수, P(9)=코스피, Q(10)=S&P500, R(11)=나스닥
+  // G(0)=날짜, H(1)=계좌총액, ...
+  // O(8)=계좌종합(100기준지수), P(9)=코스피지수, Q(10)=S&P500지수, R(11)=나스닥지수
+  // T(13)=코스피가격, U(14)=S&P500가격, V(15)=나스닥가격
 
   // 현재 월 데이터 찾기
   let currentRow: any[] | null = null;
-  let prevYearRow: any[] | null = null; // 작년 12월 데이터
+  let prevYearDecRow: any[] | null = null; // 작년 12월 데이터
+  let currentRowDate: string | null = null;
 
-  // 작년 12월 날짜 계산
-  const prevYear = now.getFullYear() - 1;
-  const prevYearDateStr = `${String(prevYear).slice(2)}.12`;
-
+  // 먼저 현재 월 또는 가장 최근 데이터 찾기
   for (const row of rows) {
     if (!row || !Array.isArray(row) || row.length === 0) continue;
     const dateCell = String(row[0] || '').trim();
 
     if (dateCell === currentDateStr) {
       currentRow = row;
-    }
-    if (dateCell === prevYearDateStr) {
-      prevYearRow = row;
+      currentRowDate = dateCell;
+      break;
     }
   }
 
@@ -1536,41 +1536,82 @@ export function parseYieldComparisonData(rows: any[]): YieldComparisonData | nul
       const dateCell = String(row[0] || '').trim();
       if (/^\d{2}\.\d{2}$/.test(dateCell)) {
         currentRow = row;
+        currentRowDate = dateCell;
         break;
       }
     }
   }
 
-  if (!currentRow) return null;
+  if (!currentRow || !currentRowDate) return null;
 
-  // 올해 수익률 계산
-  // 시트의 O열(index 8)은 계좌지수 (100 기준)
-  const currentAccountIdx = parsePercent(currentRow[8]); // O열
-  const currentKospiIdx = parsePercent(currentRow[9]); // P열
-  const currentSp500Idx = parsePercent(currentRow[10]); // Q열
-  const currentNasdaqIdx = parsePercent(currentRow[11]); // R열
+  // 현재 데이터 연도 기준으로 작년 12월 찾기
+  const [currentYearPart] = currentRowDate.split('.');
+  const currentDataYear = Number.parseInt(currentYearPart, 10);
+  const prevYearDecStr = `${String(currentDataYear - 1).padStart(2, '0')}.12`;
 
-  let prevAccountIdx = 100;
-  let prevKospiIdx = 100;
-  let prevSp500Idx = 100;
-  let prevNasdaqIdx = 100;
+  console.log('[parseYieldComparisonData] Looking for prev year dec:', prevYearDecStr);
 
-  if (prevYearRow) {
-    prevAccountIdx = parsePercent(prevYearRow[8]) || 100;
-    prevKospiIdx = parsePercent(prevYearRow[9]) || 100;
-    prevSp500Idx = parsePercent(prevYearRow[10]) || 100;
-    prevNasdaqIdx = parsePercent(prevYearRow[11]) || 100;
+  for (const row of rows) {
+    if (!row || !Array.isArray(row) || row.length === 0) continue;
+    const dateCell = String(row[0] || '').trim();
+
+    if (dateCell === prevYearDecStr) {
+      prevYearDecRow = row;
+      break;
+    }
   }
 
-  // 올해 수익률 계산 (작년말 대비 증감률)
-  const thisYearYield = {
-    account: prevAccountIdx > 0 ? ((currentAccountIdx / prevAccountIdx) - 1) * 100 : 0,
-    kospi: prevKospiIdx > 0 ? ((currentKospiIdx / prevKospiIdx) - 1) * 100 : 0,
-    sp500: prevSp500Idx > 0 ? ((currentSp500Idx / prevSp500Idx) - 1) * 100 : 0,
-    nasdaq: prevNasdaqIdx > 0 ? ((currentNasdaqIdx / prevNasdaqIdx) - 1) * 100 : 0,
+  if (!currentRow) return null;
+
+  // 숫자 파싱 (가격용 - 퍼센트 변환 없이 순수 숫자)
+  const parseNumber = (val: any): number => {
+    if (!val) return 0;
+    const str = String(val).replace(/[,\s₩$]/g, '');
+    const num = Number.parseFloat(str);
+    return Number.isNaN(num) ? 0 : num;
   };
 
-  // 누적 수익률
+  // 올해 수익률용: O열(계좌지수), T열(코스피가격), U열(S&P500가격), V열(나스닥가격)
+  const currentAccountIdx = parseNumber(currentRow[8]); // O열: 계좌종합 (100 기준 지수)
+  const currentKospiPrice = parseNumber(currentRow[13]); // T열: 코스피 가격
+  const currentSp500Price = parseNumber(currentRow[14]); // U열: S&P500 가격
+  const currentNasdaqPrice = parseNumber(currentRow[15]); // V열: 나스닥 가격
+
+  // 연평균 수익률용: O열(계좌지수), P열(코스피지수), Q열(S&P500지수), R열(나스닥지수)
+  const currentKospiIdx = parseNumber(currentRow[9]); // P열: 코스피 지수 (100 기준)
+  const currentSp500Idx = parseNumber(currentRow[10]); // Q열: S&P500 지수 (100 기준)
+  const currentNasdaqIdx = parseNumber(currentRow[11]); // R열: 나스닥 지수 (100 기준)
+
+  let prevAccountIdx = 100;
+  let prevKospiPrice = 1;
+  let prevSp500Price = 1;
+  let prevNasdaqPrice = 1;
+
+  if (prevYearDecRow) {
+    prevAccountIdx = parseNumber(prevYearDecRow[8]) || 100;
+    prevKospiPrice = parseNumber(prevYearDecRow[13]) || 1;
+    prevSp500Price = parseNumber(prevYearDecRow[14]) || 1;
+    prevNasdaqPrice = parseNumber(prevYearDecRow[15]) || 1;
+  }
+
+  // 디버깅 로그
+  console.log('[parseYieldComparisonData] Current row date:', currentRowDate);
+  console.log('[parseYieldComparisonData] Prev year dec row date:', prevYearDecRow?.[0]);
+  console.log('[parseYieldComparisonData] RAW O열 - Current:', currentRow[8], 'Prev:', prevYearDecRow?.[8]);
+  console.log('[parseYieldComparisonData] Current values - Account:', currentAccountIdx, 'KOSPI:', currentKospiPrice, 'S&P500:', currentSp500Price, 'NASDAQ:', currentNasdaqPrice);
+  console.log('[parseYieldComparisonData] Prev values - Account:', prevAccountIdx, 'KOSPI:', prevKospiPrice, 'S&P500:', prevSp500Price, 'NASDAQ:', prevNasdaqPrice);
+  console.log('[parseYieldComparisonData] 계좌 올해 수익률 계산:', currentAccountIdx, '/', prevAccountIdx, '=', (currentAccountIdx / prevAccountIdx - 1) * 100);
+
+  // 올해 수익률 계산 (작년말 대비 증감률)
+  // 계좌: O열 지수 기준, 지수(KOSPI/S&P500/NASDAQ): T/U/V열 가격 기준
+  const thisYearYield = {
+    account: prevAccountIdx > 0 ? ((currentAccountIdx / prevAccountIdx) - 1) * 100 : 0,
+    kospi: prevKospiPrice > 0 ? ((currentKospiPrice / prevKospiPrice) - 1) * 100 : 0,
+    sp500: prevSp500Price > 0 ? ((currentSp500Price / prevSp500Price) - 1) * 100 : 0,
+    nasdaq: prevNasdaqPrice > 0 ? ((currentNasdaqPrice / prevNasdaqPrice) - 1) * 100 : 0,
+  };
+
+  // 누적 수익률 (연평균 수익률 계산용) - O, P, Q, R열 지수 기준
   const cumulativeYield = currentAccountIdx - 100;
   const cumulativeKospi = currentKospiIdx - 100;
   const cumulativeSp500 = currentSp500Idx - 100;
@@ -1663,22 +1704,20 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
   const currentMM = String(now.getMonth() + 1).padStart(2, '0');
   const currentDateStr = `${currentYY}.${currentMM}`;
 
-  // 작년 12월 날짜
-  const prevYear = now.getFullYear() - 1;
-  const prevYearDateStr = `${String(prevYear).slice(2)}.12`;
-
+  // 현재 월 데이터 찾기
   let currentRow: any[] | null = null;
-  let prevYearRow: any[] | null = null;
+  let prevYearDecRow: any[] | null = null;
+  let currentRowDate: string | null = null;
 
+  // 먼저 현재 월 또는 가장 최근 데이터 찾기
   for (const row of rows) {
     if (!row || !Array.isArray(row) || row.length === 0) continue;
     const dateCell = String(row[0] || '').trim();
 
     if (dateCell === currentDateStr) {
       currentRow = row;
-    }
-    if (dateCell === prevYearDateStr) {
-      prevYearRow = row;
+      currentRowDate = dateCell;
+      break;
     }
   }
 
@@ -1690,25 +1729,43 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
       const dateCell = String(row[0] || '').trim();
       if (/^\d{2}\.\d{2}$/.test(dateCell)) {
         currentRow = row;
+        currentRowDate = dateCell;
         break;
       }
     }
   }
 
-  if (!currentRow) {
+  if (!currentRow || !currentRowDate) {
     return null;
   }
 
+  // 현재 데이터 연도 기준으로 작년 12월 찾기
+  const [currentYearPart] = currentRowDate.split('.');
+  const currentDataYear = Number.parseInt(currentYearPart, 10);
+  const prevYearDecStr = `${String(currentDataYear - 1).padStart(2, '0')}.12`;
+
+  for (const row of rows) {
+    if (!row || !Array.isArray(row) || row.length === 0) continue;
+    const dateCell = String(row[0] || '').trim();
+
+    if (dateCell === prevYearDecStr) {
+      prevYearDecRow = row;
+      break;
+    }
+  }
+
   // Debug: 현재 행의 컬럼 값 출력
-  console.log('[parseYieldComparisonDollarData] Current date:', currentRow[0]);
+  console.log('[parseYieldComparisonDollarData] Current date:', currentRowDate);
+  console.log('[parseYieldComparisonDollarData] Prev year dec:', prevYearDecStr, prevYearDecRow?.[0]);
   console.log('[parseYieldComparisonDollarData] Row length:', currentRow.length);
   console.log('[parseYieldComparisonDollarData] Header 20-27 (AA~AH):', headerRow?.slice(20, 28));
   console.log('[parseYieldComparisonDollarData] Columns 20-27 (AA~AH):', currentRow.slice(20, 28));
   console.log('[parseYieldComparisonDollarData] Columns 28-36 (AI~AQ):', currentRow.slice(28, 37));
 
-  // G17:AQ78 범위 기준 컬럼 인덱스 (G=0 기준):
+  // G17:AQ200 범위 기준 컬럼 인덱스 (G=0 기준):
   const COL_ACCOUNT = 8;          // O열 - 계좌종합 지수 (100 기준)
-  const COL_KOSPI = 9;            // P열 - 코스피 지수 (100 기준, 원화)
+  const COL_KOSPI_PRICE = 13;     // T열 - 코스피 가격 (YieldComparisonChart와 동일하게 올해 수익률용)
+  const COL_KOSPI_IDX = 9;        // P열 - 코스피 지수 (100 기준, 연평균용)
   const COL_SP500_DOLLAR = 28;    // AI열 - S&P500 달러환율 적용 지수
   const COL_NASDAQ_DOLLAR = 29;   // AJ열 - NASDAQ 달러환율 적용 지수
   const COL_DOLLAR_THIS_YEAR = 23; // AD열 - 달러 환율값 (올해 수익률 계산용)
@@ -1722,49 +1779,62 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
     return Number.isNaN(num) ? 0 : num;
   };
 
-  // 달러환율 적용 지수 데이터 (100 기준)
-  const currentAccountIdx = parsePercent(currentRow[COL_ACCOUNT]);
-  const currentKospiIdx = parsePercent(currentRow[COL_KOSPI]);
-  const currentSp500Idx = parsePercent(currentRow[COL_SP500_DOLLAR]);
-  const currentNasdaqIdx = parsePercent(currentRow[COL_NASDAQ_DOLLAR]);
+  // 숫자 파싱 (가격용 - 퍼센트 변환 없이 순수 숫자)
+  const parseNumber = (val: any): number => {
+    if (!val) return 0;
+    const str = String(val).replace(/[,\s₩$]/g, '');
+    const num = Number.parseFloat(str);
+    return Number.isNaN(num) ? 0 : num;
+  };
+
+  // 올해 수익률용 데이터
+  const currentAccountIdx = parsePercent(currentRow[COL_ACCOUNT]); // O열: 계좌 지수
+  const currentKospiPrice = parseNumber(currentRow[COL_KOSPI_PRICE]); // T열: 코스피 가격 (올해 수익률용)
+  const currentSp500Idx = parsePercent(currentRow[COL_SP500_DOLLAR]); // AI열: S&P500 달러환율 적용 지수
+  const currentNasdaqIdx = parsePercent(currentRow[COL_NASDAQ_DOLLAR]); // AJ열: NASDAQ 달러환율 적용 지수
   // 달러 환율값 (올해 수익률 계산용) - AD열
   const currentDollarExchangeRate = parseExchangeRate(currentRow[COL_DOLLAR_THIS_YEAR]);
-  // 달러 지수값 (연평균 계산용) - AH열
-  const currentDollarIdx = parsePercent(currentRow[COL_DOLLAR_ANNUAL]);
+
+  // 연평균 수익률용 데이터
+  const currentKospiIdx = parsePercent(currentRow[COL_KOSPI_IDX]); // P열: 코스피 지수
+  const currentDollarIdx = parsePercent(currentRow[COL_DOLLAR_ANNUAL]); // AH열: DOLLAR 지수
 
   let prevAccountIdx = 100;
+  let prevKospiPrice = 1;
   let prevKospiIdx = 100;
   let prevSp500Idx = 100;
   let prevNasdaqIdx = 100;
   let prevDollarExchangeRate = 0;
   let prevDollarIdx = 100;
 
-  if (prevYearRow) {
-    prevAccountIdx = parsePercent(prevYearRow[COL_ACCOUNT]) || 100;
-    prevKospiIdx = parsePercent(prevYearRow[COL_KOSPI]) || 100;
-    prevSp500Idx = parsePercent(prevYearRow[COL_SP500_DOLLAR]) || 100;
-    prevNasdaqIdx = parsePercent(prevYearRow[COL_NASDAQ_DOLLAR]) || 100;
-    prevDollarExchangeRate = parseExchangeRate(prevYearRow[COL_DOLLAR_THIS_YEAR]);
-    prevDollarIdx = parsePercent(prevYearRow[COL_DOLLAR_ANNUAL]) || 100;
+  if (prevYearDecRow) {
+    prevAccountIdx = parsePercent(prevYearDecRow[COL_ACCOUNT]) || 100;
+    prevKospiPrice = parseNumber(prevYearDecRow[COL_KOSPI_PRICE]) || 1;
+    prevKospiIdx = parsePercent(prevYearDecRow[COL_KOSPI_IDX]) || 100;
+    prevSp500Idx = parsePercent(prevYearDecRow[COL_SP500_DOLLAR]) || 100;
+    prevNasdaqIdx = parsePercent(prevYearDecRow[COL_NASDAQ_DOLLAR]) || 100;
+    prevDollarExchangeRate = parseExchangeRate(prevYearDecRow[COL_DOLLAR_THIS_YEAR]);
+    prevDollarIdx = parsePercent(prevYearDecRow[COL_DOLLAR_ANNUAL]) || 100;
   }
 
-  console.log('[parseYieldComparisonDollarData] Current indices:', { currentAccountIdx, currentKospiIdx, currentSp500Idx, currentNasdaqIdx, currentDollarIdx });
-  console.log('[parseYieldComparisonDollarData] Prev indices:', { prevAccountIdx, prevKospiIdx, prevSp500Idx, prevNasdaqIdx, prevDollarIdx });
+  console.log('[parseYieldComparisonDollarData] Current - Account:', currentAccountIdx, 'KospiPrice:', currentKospiPrice, 'S&P500:', currentSp500Idx, 'NASDAQ:', currentNasdaqIdx);
+  console.log('[parseYieldComparisonDollarData] Prev - Account:', prevAccountIdx, 'KospiPrice:', prevKospiPrice, 'S&P500:', prevSp500Idx, 'NASDAQ:', prevNasdaqIdx);
   console.log('[parseYieldComparisonDollarData] Dollar exchange rates:', { current: currentDollarExchangeRate, prev: prevDollarExchangeRate });
 
   // 올해 수익률 계산 (작년말 대비 증감률)
+  // KOSPI는 T열 가격 기준 (YieldComparisonChart와 동일)
   const thisYearYield = {
     account: prevAccountIdx > 0 ? ((currentAccountIdx / prevAccountIdx) - 1) * 100 : 0,
-    kospi: prevKospiIdx > 0 ? ((currentKospiIdx / prevKospiIdx) - 1) * 100 : 0,
+    kospi: prevKospiPrice > 0 ? ((currentKospiPrice / prevKospiPrice) - 1) * 100 : 0,
     sp500: prevSp500Idx > 0 ? ((currentSp500Idx / prevSp500Idx) - 1) * 100 : 0,
     nasdaq: prevNasdaqIdx > 0 ? ((currentNasdaqIdx / prevNasdaqIdx) - 1) * 100 : 0,
     // 달러 올해 수익률: 환율 변동률 (AD열 사용)
     dollar: prevDollarExchangeRate > 0 ? ((currentDollarExchangeRate / prevDollarExchangeRate) - 1) * 100 : 0,
   };
 
-  // 누적 수익률 (100 기준 대비)
+  // 누적 수익률 (100 기준 대비) - 연평균 계산용
   const cumulativeYield = currentAccountIdx - 100;
-  const cumulativeKospi = currentKospiIdx - 100;
+  const cumulativeKospi = currentKospiIdx - 100; // P열 지수 기준
   const cumulativeSp500 = currentSp500Idx - 100;
   const cumulativeNasdaq = currentNasdaqIdx - 100;
   const cumulativeDollar = currentDollarIdx - 100;

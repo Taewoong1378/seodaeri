@@ -173,12 +173,12 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'1. 계좌현황(누적)'!A:K", user.id),
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!A:J", user.id),
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'3. 종목현황'!A:P", user.id),
-      // 수익률 비교 데이터는 "5. 계좌내역(누적)" 시트에 있음
-      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AB78", user.id),
+      // 수익률 비교 데이터는 "5. 계좌내역(누적)" 시트에 있음 (행 범위 확장: 78 -> 200)
+      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AB200", user.id),
       // 월별 손익 데이터는 "5. 계좌내역(누적)" 시트 원본 입력 데이터 (E:J열)
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!E:J", user.id),
-      // 수익률 비교(달러환율 적용) 데이터 - "5. 계좌내역(누적)" 시트의 AI~AM 컬럼 (달러환율 적용 지수)
-      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AQ78", user.id),
+      // 수익률 비교(달러환율 적용) 데이터 - "5. 계좌내역(누적)" 시트의 AI~AM 컬럼 (달러환율 적용 지수) (행 범위 확장: 78 -> 200)
+      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AQ200", user.id),
     ]);
 
     // 계좌 요약 파싱
