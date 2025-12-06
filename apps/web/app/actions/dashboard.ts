@@ -184,8 +184,9 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AQ200", user.id),
       // 투자 일수 계산용 - 6. 입금내역의 B열 (날짜)
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'6. 입금내역'!B:B", user.id),
-      // 총자산/원금 계산용 - 5. 계좌내역(누적)의 E:I열 (연도, 월, ?, 계좌총액, 누적입금액)
-      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!E:I", user.id),
+      // 총자산/원금/수익률 계산용 - 5. 계좌내역(누적)의 E:Y열
+      // E=연도, F=월, H=계좌총액, I=입금액, Y=누적수익률
+      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!E:Y", user.id),
     ]);
 
     // 계좌 요약 파싱
@@ -223,17 +224,29 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       ? parsePortfolioData(portfolioRows)
       : [];
 
-    // '5. 계좌내역(누적)'에서 총자산과 원금 계산
-    // E열=연도, F열=월, H열=계좌총액, I열=입금액(각 월별)
+    // '5. 계좌내역(누적)'에서 총자산, 원금, 수익률 계산
+    // E열(0)=연도, F열(1)=월, H열(3)=계좌총액, I열(4)=입금액, Y열(20)=누적수익률
     // 총자산: 현재 연도/월에 해당하는 H열 값 (SUMIFS 로직)
     // 원금: I열 전체 합계 (SUM)
+    // 수익률: 현재 연도/월에 해당하는 Y열 값 (SUMIFS 로직)
     let totalAsset = 0;
     let totalInvested = 0;
+    let totalYield = 0;
 
     const parseNumber = (val: any): number => {
       if (!val || val === '-') return 0;
       const cleaned = String(val).replace(/[₩$,%\s,]/g, '');
       return Number.parseFloat(cleaned) || 0;
+    };
+
+    const parsePercent = (val: any): number => {
+      if (!val || val === '-') return 0;
+      const num = parseNumber(val);
+      // UNFORMATTED_VALUE로 인해 소수점 형식일 수 있음 (1.566 = 156.6%)
+      if (num > 0 && num < 10) {
+        return num * 100;
+      }
+      return num;
     };
 
     if (accountHistoryRows && accountHistoryRows.length > 0) {
@@ -247,7 +260,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         totalInvested += investedVal;
       }
 
-      // 현재 연도/월에 해당하는 H열 값 찾기 = SUMIFS 로직
+      // 현재 연도/월에 해당하는 H열, Y열 값 찾기 = SUMIFS 로직
       for (const row of accountHistoryRows) {
         if (!row || !Array.isArray(row)) continue;
 
@@ -264,13 +277,14 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         const month = Number.parseInt(monthMatch[1] || '', 10);
 
         if (month === currentMonth) {
-          // H열(index 3) = 계좌총액
+          // H열(index 3) = 계좌총액, Y열(index 20) = 누적수익률
           totalAsset = parseNumber(row[3]);
+          totalYield = parsePercent(row[20]);
           break;
         }
       }
 
-      // 현재 월 데이터가 없으면 가장 최근 H열 값 사용
+      // 현재 월 데이터가 없으면 가장 최근 데이터 사용
       if (totalAsset === 0) {
         for (let i = accountHistoryRows.length - 1; i >= 0; i--) {
           const row = accountHistoryRows[i];
@@ -279,6 +293,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
           const assetVal = parseNumber(row[3]);
           if (assetVal > 0) {
             totalAsset = assetVal;
+            totalYield = parsePercent(row[20]);
             break;
           }
         }
@@ -296,11 +311,11 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         totalInvested += item.avgPrice * item.quantity;
       }
     }
+    if (totalYield === 0 && totalInvested > 0) {
+      totalYield = ((totalAsset - totalInvested) / totalInvested) * 100;
+    }
 
     const totalProfit = totalAsset - totalInvested;
-    const totalYield = totalInvested > 0
-      ? ((totalAsset - totalInvested) / totalInvested) * 100
-      : accountSummary.totalYield; // 시트의 수익률 fallback
 
     // 백그라운드에서 DB 동기화 (에러 무시)
     const userId = user.id as string; // user.id는 위에서 검증됨
