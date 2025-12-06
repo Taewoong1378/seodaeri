@@ -962,7 +962,11 @@ export function parsePortfolioData(rows: any[]): PortfolioItem[] {
     if (totalValue === 0) continue;
 
     // 투자비중: 시트에서 직접 가져옴 (%)
-    const weight = parseNumber(row[11]); // 투자비중 컬럼 (L열, index 11)
+    // UNFORMATTED_VALUE로 인해 퍼센트가 소수점 형식으로 옴 (28.6% -> 0.286)
+    let weight = parseNumber(row[11]); // 투자비중 컬럼 (L열, index 11)
+    if (weight > 0 && weight < 1) {
+      weight = weight * 100; // 소수점 형식을 퍼센트로 변환
+    }
 
     const invested = avgPrice * quantity;
     const profit = totalValue - invested;
