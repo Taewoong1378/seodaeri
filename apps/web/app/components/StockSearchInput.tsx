@@ -3,8 +3,9 @@
 import { Input } from '@repo/design-system/components/input';
 import { Label } from '@repo/design-system/components/label';
 import { Loader2, Search, X } from 'lucide-react';
+import type { JSX } from 'react';
 import { useEffect } from 'react';
-import { useStockSearch, type StockSearchResult } from '../../hooks';
+import { type StockSearchResult, useStockSearch } from '../../hooks';
 
 interface StockSearchInputProps {
   /** 선택된 종목 코드 */
@@ -34,7 +35,7 @@ export function StockSearchInput({
   placeholder = '종목명 또는 종목코드 검색',
   darkTheme = false,
   resetKey = 0,
-}: StockSearchInputProps) {
+}: StockSearchInputProps): JSX.Element {
   const {
     query,
     results,
