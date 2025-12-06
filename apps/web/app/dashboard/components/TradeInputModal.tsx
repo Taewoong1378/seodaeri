@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSaveTradeTransactions } from '../../../hooks';
 import { analyzeTradeImages } from '../../actions/trade';
+import { StockSearchInput } from '../../components/StockSearchInput';
 
 type InputMode = 'select' | 'manual' | 'photo-preview' | 'photo-verify';
 type TradeType = 'BUY' | 'SELL';
@@ -35,6 +36,9 @@ export function TradeInputModal() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 종목 검색 리셋용 키
+  const [searchResetKey, setSearchResetKey] = useState(0);
 
   // TanStack Query mutation
   const { mutate: saveTradeTransactions, isPending: isSaving } = useSaveTradeTransactions();
@@ -77,6 +81,7 @@ export function TradeInputModal() {
     });
     setMultipleItems([]);
     setSelectedItems(new Set());
+    setSearchResetKey((prev) => prev + 1);
   };
 
   const handleManualMode = () => {
@@ -139,7 +144,7 @@ export function TradeInputModal() {
 
   const handleSaveSingle = () => {
     if (!singleForm.ticker) {
-      alert('종목코드를 입력해주세요.');
+      alert('종목을 선택하거나 종목코드를 입력해주세요.');
       return;
     }
     if (singleForm.price === 0 || singleForm.quantity === 0) {
@@ -348,30 +353,50 @@ export function TradeInputModal() {
                     className="bg-muted/50 border-border text-foreground"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ticker" className="text-muted-foreground">
-                    종목코드
-                  </Label>
-                  <Input
-                    id="ticker"
-                    value={singleForm.ticker}
-                    onChange={(e) => updateSingleField('ticker', e.target.value)}
-                    placeholder="예: 005930, AAPL"
-                    className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-muted-foreground">
-                    종목명 (선택)
-                  </Label>
-                  <Input
-                    id="name"
-                    value={singleForm.name}
-                    onChange={(e) => updateSingleField('name', e.target.value)}
-                    placeholder="예: 삼성전자, Apple Inc"
-                    className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
-                  />
-                </div>
+
+                {/* 종목 검색 컴포넌트 */}
+                <StockSearchInput
+                  selectedCode={singleForm.ticker}
+                  selectedName={singleForm.name}
+                  onSelect={(code, name) => {
+                    setSingleForm((prev) => ({ ...prev, ticker: code, name }));
+                  }}
+                  onClear={() => {
+                    setSingleForm((prev) => ({ ...prev, ticker: '', name: '' }));
+                  }}
+                  resetKey={searchResetKey}
+                />
+
+                {/* 직접 입력 (검색되지 않는 종목용) */}
+                {!singleForm.ticker && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="ticker" className="text-muted-foreground text-xs">
+                        종목코드 (직접입력)
+                      </Label>
+                      <Input
+                        id="ticker"
+                        value={singleForm.ticker}
+                        onChange={(e) => updateSingleField('ticker', e.target.value)}
+                        placeholder="예: AAPL"
+                        className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-muted-foreground text-xs">
+                        종목명 (선택)
+                      </Label>
+                      <Input
+                        id="name"
+                        value={singleForm.name}
+                        onChange={(e) => updateSingleField('name', e.target.value)}
+                        placeholder="예: Apple"
+                        className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground h-9 text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="price" className="text-muted-foreground">

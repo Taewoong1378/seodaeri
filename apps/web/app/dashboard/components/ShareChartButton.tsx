@@ -28,7 +28,7 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
     try {
       // 차트를 이미지로 캡처 (html-to-image 사용)
       const dataUrl = await toPng(chartRef.current, {
-        backgroundColor: '#020617', // 배경색
+        backgroundColor: '#ffffff', // 배경색
         pixelRatio: 2, // 고해상도
         cacheBust: true,
         style: {

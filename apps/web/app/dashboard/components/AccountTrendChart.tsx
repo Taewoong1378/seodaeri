@@ -2,14 +2,14 @@
 
 import { type ReactElement, useEffect, useRef } from 'react';
 import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
+    Area,
+    AreaChart,
+    CartesianGrid,
+    ReferenceLine,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
 } from 'recharts';
 import { LandscapeChartModal } from './LandscapeChartModal';
 import { ShareChartButton } from './ShareChartButton';
@@ -383,23 +383,23 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
           opacity: 0,
           width: '800px',
           height: '450px',
-          backgroundColor: '#020617',
+          backgroundColor: '#ffffff',
           padding: '20px',
           pointerEvents: 'none',
         }}
       >
         <div className="mb-4">
-          <h3 className="text-xl font-bold text-white">월별 계좌추세</h3>
-          <p className="text-sm text-slate-400">누적입금액 vs 계좌총액</p>
+          <h3 className="text-xl font-bold text-foreground">월별 계좌추세</h3>
+          <p className="text-sm text-muted-foreground">누적입금액 vs 계좌총액</p>
         </div>
         <div className="flex items-center justify-start gap-6 mb-4">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded-sm bg-emerald-600/70" />
-            <span className="text-sm text-slate-400">누적입금액</span>
+            <span className="text-sm text-muted-foreground">누적입금액</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded-sm bg-lime-400/70" />
-            <span className="text-sm text-slate-400">계좌총액</span>
+            <span className="text-sm text-muted-foreground">계좌총액</span>
           </div>
         </div>
         <div className="w-full h-[350px]">
@@ -418,17 +418,17 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                   <stop offset="100%" stopColor="#a3e635" stopOpacity={0.1} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
               {displayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
                 <ReferenceLine
                   key={marker.date}
                   x={marker.date}
-                  stroke="rgba(255,255,255,0.2)"
+                  stroke="#cbd5e1"
                   label={{
                     value: `20${marker.date.split('.')[0]}년`,
                     position: 'insideTopLeft',
                     angle: -90,
-                    fill: '#cbd5e1',
+                    fill: '#475569',
                     fontSize: 12,
                     dy: 30,
                   }}
@@ -457,7 +457,7 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                   padding: '12px',
                   color: '#1e293b',
                 }}
-                labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
                 formatter={(value: number, name: string) => {
                   const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액';
                   return [`₩${value.toLocaleString()}`, label];

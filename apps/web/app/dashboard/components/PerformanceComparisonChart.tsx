@@ -2,14 +2,14 @@
 
 import { useEffect, useRef } from 'react';
 import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
+    CartesianGrid,
+    Line,
+    LineChart,
+    ReferenceLine,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis
 } from 'recharts';
 import { LandscapeChartModal } from './LandscapeChartModal';
 import { ShareChartButton } from './ShareChartButton';
@@ -311,14 +311,14 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
           opacity: 0,
           width: '800px',
           height: '450px',
-          backgroundColor: '#020617',
+          backgroundColor: '#ffffff',
           padding: '20px',
           pointerEvents: 'none',
         }}
       >
         <div className="mb-4">
-          <h3 className="text-xl font-bold text-white">수익률 비교</h3>
-          <p className="text-sm text-slate-400">vs 주요 지수</p>
+          <h3 className="text-xl font-bold text-foreground">수익률 비교</h3>
+          <p className="text-sm text-muted-foreground">vs 주요 지수</p>
         </div>
         <div className="flex flex-wrap items-center justify-start gap-x-6 gap-y-2 mb-4">
           {LINES.map((line) => (
@@ -346,17 +346,17 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                   <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
               {displayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
                 <ReferenceLine
                   key={marker.date}
                   x={marker.date}
-                  stroke="rgba(255,255,255,0.2)"
+                  stroke="#cbd5e1"
                   label={{
                     value: `20${marker.date.split('.')[0]}년`,
                     position: 'insideTopLeft',
                     angle: -90,
-                    fill: '#cbd5e1',
+                    fill: '#475569',
                     fontSize: 12,
                     dy: 30,
                   }}
@@ -393,13 +393,14 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
               {/* Legend for captured image */}
               <Tooltip
                  contentStyle={{
-                   backgroundColor: '#1e293b',
-                   border: '1px solid rgba(255,255,255,0.1)',
+                   backgroundColor: '#ffffff',
+                   border: '1px solid #e2e8f0',
                    borderRadius: '12px',
-                   boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                   boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                    padding: '12px',
+                   color: '#1e293b',
                  }}
-                 labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                 labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
                  itemStyle={{ fontSize: 13, padding: '2px 0' }}
                  formatter={(value: number, name: string) => {
                    const lineConfig = LINES.find(l => l.dataKey === name);
