@@ -44,9 +44,10 @@ function DashboardSkeleton() {
 }
 
 export function DashboardContent() {
-  const { data, isLoading, error } = useDashboard();
+  const { data, isLoading, isFetching, error } = useDashboard();
 
-  if (isLoading) {
+  // 최초 로딩 중이거나, 데이터가 없는 상태에서 fetching 중일 때 스켈레톤 표시
+  if (isLoading || (isFetching && !data)) {
     return <DashboardSkeleton />;
   }
 
