@@ -36,7 +36,7 @@ export function ConfirmDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[360px] flex flex-col p-0 gap-0 overflow-hidden rounded-[20px] bg-[#0f172a] border-white/10 text-white"
+        className="sm:max-w-[360px] flex flex-col p-0 gap-0 overflow-hidden rounded-[20px] bg-popover border-border text-foreground"
         style={{
           left: '50%',
           top: '50%',
@@ -44,16 +44,16 @@ export function ConfirmDialog({
           maxWidth: 'min(360px, calc(100vw - 2rem))',
         }}
       >
-        <div className="p-5 pb-3 border-b border-white/10">
+        <div className="p-5 pb-3 border-b border-border">
           <DialogHeader className="flex flex-row items-center justify-between">
-            <DialogTitle className="text-white text-lg font-bold">
+            <DialogTitle className="text-foreground text-lg font-bold">
               {title}
             </DialogTitle>
             <DialogClose asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                 disabled={isLoading}
               >
                 <X size={20} />
@@ -66,10 +66,10 @@ export function ConfirmDialog({
           <div className="flex flex-col items-center text-center gap-3">
             {variant === 'danger' && (
               <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-red-400" />
+                <AlertTriangle className="w-6 h-6 text-red-500" />
               </div>
             )}
-            <p className="text-sm text-slate-300 leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               {description}
             </p>
           </div>
@@ -77,7 +77,7 @@ export function ConfirmDialog({
           <div className="flex gap-2 pt-2">
             <Button
               variant="outline"
-              className="flex-1 border-white/20 text-slate-300 hover:bg-white/10 hover:text-white"
+              className="flex-1 border-border text-muted-foreground hover:bg-muted hover:text-foreground"
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
@@ -128,7 +128,7 @@ export function AlertDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[360px] flex flex-col p-0 gap-0 overflow-hidden rounded-[20px] bg-[#0f172a] border-white/10 text-white"
+        className="sm:max-w-[360px] flex flex-col p-0 gap-0 overflow-hidden rounded-[20px] bg-popover border-border text-foreground"
         style={{
           left: '50%',
           top: '50%',
@@ -136,16 +136,16 @@ export function AlertDialog({
           maxWidth: 'min(360px, calc(100vw - 2rem))',
         }}
       >
-        <div className="p-5 pb-3 border-b border-white/10">
+        <div className="p-5 pb-3 border-b border-border">
           <DialogHeader className="flex flex-row items-center justify-between">
-            <DialogTitle className="text-white text-lg font-bold">
+            <DialogTitle className="text-foreground text-lg font-bold">
               {title}
             </DialogTitle>
             <DialogClose asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-slate-400 hover:text-white hover:bg-white/10"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
               >
                 <X size={20} />
               </Button>
@@ -157,10 +157,10 @@ export function AlertDialog({
           <div className="flex flex-col items-center text-center gap-3">
             {variant === 'error' && (
               <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-red-400" />
+                <AlertTriangle className="w-6 h-6 text-red-500" />
               </div>
             )}
-            <p className="text-sm text-slate-300 leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               {description}
             </p>
           </div>

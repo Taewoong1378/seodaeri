@@ -125,7 +125,8 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
       if (result.success) {
         setSuccess(`"${sheetName || '시트'}" 연동 완료!`);
         setSheetInput('');
-        router.refresh();
+        // 시트 변경 후 대시보드로 이동
+        router.push('/dashboard');
       } else {
         setError(result.error || '연동에 실패했습니다.');
       }

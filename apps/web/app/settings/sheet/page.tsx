@@ -16,16 +16,16 @@ export default async function SheetManagePage() {
   const { connected, sheetId } = await checkSheetConnection();
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-50 pb-24">
+    <div className="min-h-screen bg-background text-foreground pb-24">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5 px-5 h-14 flex items-center gap-3">
+      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-5 h-14 flex items-center gap-3">
         <Link
           href="/settings"
-          className="p-1 -ml-1 rounded-lg hover:bg-white/10 transition-colors"
+          className="p-1 -ml-1 rounded-lg hover:bg-muted transition-colors"
         >
-          <ChevronLeft size={24} className="text-slate-400" />
+          <ChevronLeft size={24} className="text-muted-foreground" />
         </Link>
-        <span className="font-bold text-lg tracking-tight text-white">시트 연동 관리</span>
+        <span className="font-bold text-lg tracking-tight text-foreground">시트 연동 관리</span>
       </header>
 
       <main className="p-5">
