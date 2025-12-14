@@ -1,7 +1,6 @@
 'use client';
 
 import { Input } from '@repo/design-system/components/input';
-import { Label } from '@repo/design-system/components/label';
 import { Loader2, Search, X } from 'lucide-react';
 import type { JSX } from 'react';
 import { useEffect } from 'react';
@@ -62,9 +61,9 @@ export function StockSearchInput({
   if (selectedCode) {
     return (
       <div className="space-y-2">
-        <Label className={darkTheme ? 'text-slate-300' : 'text-muted-foreground'}>
+        <label className={`text-sm font-medium ${darkTheme ? 'text-slate-300' : 'text-muted-foreground'}`}>
           {label}
-        </Label>
+        </label>
         <div className={`flex items-center gap-2 p-3 rounded-lg border ${
           darkTheme
             ? 'bg-white/5 border-white/10'
@@ -99,9 +98,9 @@ export function StockSearchInput({
 
   return (
     <div className="space-y-2">
-      <Label className={darkTheme ? 'text-slate-300' : 'text-muted-foreground'}>
+      <label className={`text-sm font-medium ${darkTheme ? 'text-slate-300' : 'text-muted-foreground'}`}>
         {label}
-      </Label>
+      </label>
       <div className="relative">
         <div className="relative">
           <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${

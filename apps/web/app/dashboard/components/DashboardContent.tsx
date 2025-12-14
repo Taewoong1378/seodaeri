@@ -3,7 +3,7 @@
 import { SmallBanner } from '@/app/dashboard/components/SmallBanner';
 import { Card, CardContent } from '@repo/design-system/components/card';
 import Link from 'next/link';
-import { defaultDashboardData, useDashboard } from '../../../hooks';
+import { useDashboard } from '../../../hooks';
 import { AccountTrendChart } from './AccountTrendChart';
 import { BannerCarousel } from './BannerCarousel';
 import { CumulativeDividendChart } from './CumulativeDividendChart';
@@ -44,7 +44,7 @@ function DashboardSkeleton() {
 }
 
 export function DashboardContent() {
-  const { data, isPending, status, error } = useDashboard();
+  const { data, isPending, error } = useDashboard();
 
   // 로딩 중이거나 데이터가 아직 없으면 스켈레톤 표시
   // data가 있으면 바로 컨텐츠를 보여줌 (백그라운드 refetch 중에도)
