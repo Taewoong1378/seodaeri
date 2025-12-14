@@ -175,7 +175,7 @@ export function DepositInputModal() {
             <Button
               size="icon"
               onClick={() => setIsOpen(true)}
-              className="h-14 w-14 rounded-full shadow-xl bg-blue-600 hover:bg-blue-700 active:scale-90 active:bg-blue-800 text-white absolute right-5 bottom-0 pointer-events-auto animate-in zoom-in duration-300 transition-transform"
+              className="h-14 w-14 rounded-full shadow-xl bg-purple-600 hover:bg-purple-700 active:scale-90 active:bg-purple-800 text-white absolute right-5 bottom-0 pointer-events-auto animate-in zoom-in duration-300 transition-transform"
             >
               <Pen size={24} />
             </Button>
