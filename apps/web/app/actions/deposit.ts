@@ -256,6 +256,43 @@ export interface DeleteDepositInput {
   amount: number;
 }
 
+// 날짜 파싱 헬퍼 (시리얼 넘버 및 다양한 형식 지원)
+function parseSheetDate(val: any): string | null {
+  if (!val) return null;
+
+  // 시리얼 넘버 처리 (Google Sheets는 숫자로 날짜를 저장)
+  if (typeof val === 'number' && val > 30000 && val < 100000) {
+    const date = new Date((val - 25569) * 86400 * 1000);
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  const str = String(val).trim();
+
+  // YYYY/MM/DD 또는 YYYY-MM-DD 형식
+  const match1 = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+  if (match1) {
+    return `${match1[1]}-${match1[2]?.padStart(2, '0')}-${match1[3]?.padStart(2, '0')}`;
+  }
+
+  // MM/DD/YYYY 형식
+  const match2 = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (match2) {
+    return `${match2[3]}-${match2[1]?.padStart(2, '0')}-${match2[2]?.padStart(2, '0')}`;
+  }
+
+  return null;
+}
+
+// 숫자 파싱 헬퍼
+function parseSheetNumber(val: any): number {
+  if (!val) return 0;
+  const cleaned = String(val).replace(/[₩$,\s-]/g, '');
+  return Number.parseFloat(cleaned) || 0;
+}
+
 /**
  * 입출금내역 삭제 (Supabase + Google Sheet)
  */
@@ -327,8 +364,33 @@ export async function deleteDeposit(input: DeleteDepositInput): Promise<SaveDepo
 
     console.log('[deleteDeposit] Sheet rows count:', rows?.length || 0);
 
-    if (rows) {
+    if (rows && rows.length > 1) {
       let found = false;
+
+      // 헤더 행 분석하여 컬럼 인덱스 찾기
+      const headerRow = rows[0] || [];
+      let dateCol = -1;
+      let typeCol = -1;
+      let amountCol = -1;
+
+      for (let i = 0; i < headerRow.length; i++) {
+        const header = String(headerRow[i] || '').toLowerCase();
+        if (header.includes('날짜') || header.includes('date') || header.includes('일자')) {
+          dateCol = i;
+        } else if (header.includes('구분') || header.includes('type') || header.includes('유형')) {
+          typeCol = i;
+        } else if (header.includes('금액') || header.includes('amount') || header.includes('원')) {
+          if (amountCol === -1) amountCol = i;
+        }
+      }
+
+      // 헤더를 찾지 못한 경우 기존 템플릿 시트 구조 기준 기본값 사용
+      // 템플릿: A=빈칸, B=시리얼날짜, C=연도, D=월, E=일, F=증권사, G=계좌, H=금액
+      if (dateCol === -1) dateCol = 1; // B열 (시리얼 날짜)
+      if (typeCol === -1) typeCol = -1; // 템플릿에 타입 컬럼 없음 (금액 부호로 판단)
+      if (amountCol === -1) amountCol = 7; // H열
+
+      console.log('[deleteDeposit] Column indices:', { dateCol, typeCol, amountCol });
 
       // 첫 몇 행의 raw 데이터 로깅
       console.log('[deleteDeposit] First 3 rows raw data:');
@@ -339,40 +401,42 @@ export async function deleteDeposit(input: DeleteDepositInput): Promise<SaveDepo
       // 매칭되는 행 찾기 (날짜 + 금액 + 타입)
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
-        if (!row || row.length < 5) continue;
+        if (!row || !Array.isArray(row)) continue;
 
-        // 시트 구조 확인: 앞에 빈 컬럼이 있을 수 있음
-        // 실제 데이터 위치 찾기: 날짜 형식(YYYY-MM-DD 또는 YYYY/MM/DD)을 찾아서 offset 결정
-        let offset = 0;
-        for (let j = 0; j < Math.min(3, row.length); j++) {
-          const val = String(row[j] || '');
-          if (/^\d{4}[-/]\d{2}[-/]\d{2}$/.test(val)) {
-            offset = j;
-            break;
-          }
+        // 날짜 찾기 - 여러 컬럼 시도
+        let rowDate: string | null = null;
+        for (let col = 0; col < Math.min(row.length, 5); col++) {
+          rowDate = parseSheetDate(row[col]);
+          if (rowDate) break;
         }
 
-        const rowDate = String(row[offset] || '').trim(); // 일자
-        const rowType = String(row[offset + 4] || '').trim(); // 구분
-        const rowAmountStr = String(row[offset + 6] || '0'); // 금액
-        const rowAmount = Math.abs(parseFloat(rowAmountStr.replace(/[₩,\s-]/g, '')) || 0);
+        if (!rowDate) continue; // 유효한 날짜 없으면 skip
 
-        // 날짜 형식 맞추기
-        const normalizedRowDate = rowDate.replace(/\//g, '-');
+        const rowType = typeCol >= 0 ? String(row[typeCol] || '').trim() : '';
+        const rowAmountStr = String(row[amountCol] || '0');
+        const rowAmountRaw = parseSheetNumber(row[amountCol]);
+        // 실제 금액 (부호 제거)
+        const rowAmount = Math.abs(rowAmountRaw);
 
-        // 타입 매칭
-        const isDeposit = rowType.includes('입금') || !rowAmountStr.includes('-');
+        // 타입 매칭: 타입 컬럼이 있으면 텍스트로, 없으면 금액 부호로 판단
+        let isDeposit: boolean;
+        if (typeCol >= 0 && rowType) {
+          isDeposit = rowType.includes('입금') || !rowType.includes('출금');
+        } else {
+          // 금액이 음수이거나 "-" 포함하면 출금
+          isDeposit = !rowAmountStr.includes('-') && rowAmountRaw >= 0;
+        }
         const matchType = (input.type === 'DEPOSIT' && isDeposit) ||
                          (input.type === 'WITHDRAW' && !isDeposit);
 
         // 처음 몇 개 행만 상세 로깅
         if (i <= 5) {
-          console.log(`[deleteDeposit] Row ${i} (offset=${offset}): date=${normalizedRowDate}, type=${rowType}, amount=${rowAmount}, isDeposit=${isDeposit}`);
+          console.log(`[deleteDeposit] Row ${i}: date=${rowDate}, type=${rowType}, amount=${rowAmount}, isDeposit=${isDeposit}`);
           console.log(`[deleteDeposit] Input: date=${input.date}, type=${input.type}, amount=${input.amount}`);
         }
 
         if (
-          normalizedRowDate === input.date &&
+          rowDate === input.date &&
           matchType &&
           Math.abs(rowAmount - input.amount) < 1
         ) {
