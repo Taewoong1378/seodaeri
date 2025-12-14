@@ -22,10 +22,11 @@ export function useStockSearch(options: UseStockSearchOptions = {}) {
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // API 호출
+  // API 호출 (최소 2글자 이상)
   const searchStocks = useCallback(async (searchQuery: string) => {
-    if (!searchQuery || searchQuery.length < 1) {
+    if (!searchQuery || searchQuery.length < 2) {
       setResults([]);
+      setShowResults(false);
       return;
     }
 

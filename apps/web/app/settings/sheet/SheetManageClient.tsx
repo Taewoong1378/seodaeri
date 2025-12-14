@@ -158,11 +158,11 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
   return (
     <div className="space-y-4">
       {/* 현재 연결된 시트 */}
-      <Card className="bg-white/5 border-white/10">
+      <Card className="border-border bg-card shadow-none rounded-[24px]">
         <CardHeader className="pb-3">
-          <CardTitle className="text-white flex items-center gap-3 text-lg">
-            <div className="p-2 rounded-lg bg-emerald-500/20">
-              <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+          <CardTitle className="text-foreground flex items-center gap-3 text-lg">
+            <div className="p-2 rounded-lg bg-emerald-500/10">
+              <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
             </div>
             현재 연결된 시트
           </CardTitle>
@@ -171,11 +171,11 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
           {connected && currentSheetId ? (
             <div className="space-y-3">
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                <div className="flex items-center gap-2 text-emerald-400 mb-2">
+                <div className="flex items-center gap-2 text-emerald-600 mb-2">
                   <Check className="w-4 h-4" />
                   <span className="text-sm font-medium">연결됨</span>
                 </div>
-                <p className="text-xs text-slate-400 font-mono break-all">
+                <p className="text-xs text-muted-foreground font-mono break-all">
                   ID: {currentSheetId}
                 </p>
               </div>
@@ -183,7 +183,7 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
                 <Link
                   href={sheetUrl}
                   target="_blank"
-                  className="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300"
+                  className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
                 >
                   <ExternalLink className="w-4 h-4" />
                   스프레드시트 열기
@@ -192,7 +192,7 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
             </div>
           ) : (
             <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-              <div className="flex items-center gap-2 text-yellow-400">
+              <div className="flex items-center gap-2 text-yellow-600">
                 <AlertCircle className="w-4 h-4" />
                 <span className="text-sm font-medium">연결된 시트가 없습니다</span>
               </div>
@@ -202,15 +202,15 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
       </Card>
 
       {/* 시트 변경 */}
-      <Card className="bg-white/5 border-white/10">
+      <Card className="border-border bg-card shadow-none rounded-[24px]">
         <CardHeader className="pb-3">
-          <CardTitle className="text-white flex items-center gap-3 text-lg">
-            <div className="p-2 rounded-lg bg-blue-500/20">
-              <RefreshCw className="w-5 h-5 text-blue-400" />
+          <CardTitle className="text-foreground flex items-center gap-3 text-lg">
+            <div className="p-2 rounded-lg bg-blue-500/10">
+              <RefreshCw className="w-5 h-5 text-blue-500" />
             </div>
             {connected ? '다른 시트로 변경' : '시트 연동하기'}
           </CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             {connected
               ? '다른 스프레드시트로 변경하려면 아래에서 선택하세요.'
               : '투자기록 스프레드시트를 연동하세요.'}
@@ -243,23 +243,23 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
 
           {/* 또는 직접 입력 */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <div className="flex-1 h-px bg-white/10" />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex-1 h-px bg-border" />
               <span>또는 URL 직접 입력</span>
-              <div className="flex-1 h-px bg-white/10" />
+              <div className="flex-1 h-px bg-border" />
             </div>
             <div className="flex gap-2">
               <Input
                 placeholder="스프레드시트 URL 또는 ID"
                 value={sheetInput}
                 onChange={(e) => setSheetInput(e.target.value)}
-                className="flex-1 h-10 px-3 bg-white/5 border-white/10 text-white placeholder:text-slate-500 text-sm"
+                className="flex-1 h-10 px-3 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground text-sm"
               />
               <Button
                 onClick={handleManualConnect}
                 disabled={loading !== null || !sheetInput.trim()}
                 size="sm"
-                className="h-10 px-4 bg-white/10 hover:bg-white/20 text-white disabled:opacity-50"
+                className="h-10 px-4 bg-muted hover:bg-muted/80 text-foreground disabled:opacity-50"
               >
                 {loading === 'manual' ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -275,7 +275,7 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
       {/* Success Message */}
       {success && (
         <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-          <div className="flex items-center gap-2 text-emerald-400">
+          <div className="flex items-center gap-2 text-emerald-600">
             <Check className="w-4 h-4" />
             <p className="text-sm">{success}</p>
           </div>
@@ -285,7 +285,7 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
       {/* Error Message */}
       {error && (
         <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-          <p className="text-sm text-red-400">{error}</p>
+          <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
     </div>
