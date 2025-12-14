@@ -1,4 +1,4 @@
-import { GoogleLogin } from '@repo/auth/components'
+import { AppleLogin, GoogleLogin } from '@repo/auth/components'
 import { auth } from '@repo/auth/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/design-system'
 import type { Metadata } from 'next'
@@ -30,10 +30,13 @@ export default async function LoginPage() {
             Google 계정으로 로그인하여 투자 기록을 시작하세요
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <GoogleLogin
             callbackUrl="/dashboard"
             className="flex w-full items-center justify-center gap-2 rounded-md border bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          />
+          <AppleLogin
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-black px-4 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-900"
           />
         </CardContent>
       </Card>

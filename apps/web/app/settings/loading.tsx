@@ -1,12 +1,14 @@
-import { Card, CardContent } from '@repo/design-system/components/card';
-import { Skeleton } from '@repo/design-system/components/skeleton';
+import { Card, CardContent } from "@repo/design-system/components/card";
+import { Skeleton } from "@repo/design-system/components/skeleton";
 
 export default function SettingsLoading() {
   return (
     <div className="min-h-screen bg-background text-foreground pb-24">
       {/* Header Skeleton */}
       <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-5 h-14 flex items-center">
-        <span className="font-bold text-lg tracking-tight text-foreground">설정</span>
+        <span className="font-bold text-lg tracking-tight text-foreground">
+          설정
+        </span>
       </header>
 
       <main className="p-5 space-y-6">
@@ -50,7 +52,7 @@ export default function SettingsLoading() {
       </main>
 
       {/* Bottom Nav Skeleton */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-t border-border h-[84px] pb-6">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-t border-border h-[84px] pb-6 max-w-[500px] mx-auto">
         <div className="flex justify-around items-center h-full px-2 max-w-[500px] mx-auto">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="flex flex-col items-center gap-1">

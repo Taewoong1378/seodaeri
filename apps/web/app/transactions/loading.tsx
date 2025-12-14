@@ -1,11 +1,13 @@
-import { Skeleton } from '@repo/design-system/components/skeleton';
+import { Skeleton } from "@repo/design-system/components/skeleton";
 
 export default function TransactionsLoading() {
   return (
     <div className="min-h-screen bg-background text-foreground pb-24">
       {/* Header Skeleton */}
       <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-5 h-14 flex items-center justify-between">
-        <span className="font-bold text-lg tracking-tight text-foreground">내역</span>
+        <span className="font-bold text-lg tracking-tight text-foreground">
+          내역
+        </span>
         <div className="flex items-center gap-3">
           {/* Sheet Button Skeleton */}
           <Skeleton className="h-8 w-20 rounded-full bg-muted" />
@@ -18,7 +20,10 @@ export default function TransactionsLoading() {
         {/* Transactions List Skeleton */}
         <div className="space-y-3">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <div key={i} className="bg-card border border-border rounded-xl p-4 flex items-center justify-between">
+            <div
+              key={i}
+              className="bg-card border border-border rounded-xl p-4 flex items-center justify-between"
+            >
               <div className="flex items-center gap-3">
                 <Skeleton className="h-10 w-10 rounded-full bg-muted" />
                 <div className="space-y-1">
@@ -36,7 +41,7 @@ export default function TransactionsLoading() {
       </main>
 
       {/* Bottom Nav Skeleton */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-t border-border h-[84px] pb-6">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-t border-border h-[84px] pb-6 max-w-[500px] mx-auto">
         <div className="flex justify-around items-center h-full px-2 max-w-[500px] mx-auto">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="flex flex-col items-center gap-1">
