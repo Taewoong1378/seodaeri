@@ -44,14 +44,15 @@ function DashboardSkeleton() {
 }
 
 export function DashboardContent() {
-  const { data, isLoading, isFetching, error } = useDashboard();
+  const { data, isPending, status, error } = useDashboard();
 
-  // 최초 로딩 중이거나, 데이터가 없는 상태에서 fetching 중일 때 스켈레톤 표시
-  if (isLoading || (isFetching && !data)) {
+  // 로딩 중이거나 데이터가 아직 없으면 스켈레톤 표시
+  // data가 있으면 바로 컨텐츠를 보여줌 (백그라운드 refetch 중에도)
+  if (isPending || !data) {
     return <DashboardSkeleton />;
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <div className="p-6 text-center">
         <p className="text-red-400">데이터를 불러오는 중 오류가 발생했습니다.</p>
@@ -60,7 +61,7 @@ export function DashboardContent() {
     );
   }
 
-  const displayData = data || defaultDashboardData;
+  const displayData = data;
 
   return (
     <div className="space-y-6">
