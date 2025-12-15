@@ -16,6 +16,7 @@ import { createPortal } from 'react-dom';
 import { useSaveDividend, useSaveDividends } from '../../../hooks';
 import type { DividendInput } from '../../actions/dividend';
 import { analyzeDividendImage } from '../../actions/ocr';
+import { StockSearchInput } from '../../components/StockSearchInput';
 
 type InputMode = 'select' | 'manual' | 'photo-preview' | 'photo-verify';
 
@@ -26,6 +27,9 @@ export function DividendInputModal() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 종목 검색 리셋용 키
+  const [searchResetKey, setSearchResetKey] = useState(0);
 
   // TanStack Query mutations
   const { mutate: saveDividend, isPending: isSavingSingle } = useSaveDividend();
@@ -69,6 +73,7 @@ export function DividendInputModal() {
     });
     setMultipleItems([]);
     setSelectedItems(new Set());
+    setSearchResetKey((prev) => prev + 1);
   };
 
   const handleManualMode = () => {
@@ -316,33 +321,48 @@ export function DividendInputModal() {
                   />
                 </div>
 
-                {/* 종목 입력 */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="ticker" className="text-muted-foreground">
-                      종목코드
-                    </Label>
-                    <Input
-                      id="ticker"
-                      value={singleForm.ticker}
-                      onChange={(e) => updateSingleField('ticker', e.target.value.toUpperCase())}
-                      placeholder="예: AAPL, 005930"
-                      className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
-                    />
+                {/* 종목 검색 컴포넌트 */}
+                <StockSearchInput
+                  selectedCode={singleForm.ticker}
+                  selectedName={singleForm.name}
+                  onSelect={(code, name) => {
+                    setSingleForm((prev) => ({ ...prev, ticker: code, name }));
+                  }}
+                  onClear={() => {
+                    setSingleForm((prev) => ({ ...prev, ticker: '', name: '' }));
+                  }}
+                  resetKey={searchResetKey}
+                />
+
+                {/* 직접 입력 (검색되지 않는 종목용 - 미국주식 등) */}
+                {!singleForm.ticker && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="ticker" className="text-muted-foreground text-xs">
+                        종목코드 (직접입력)
+                      </Label>
+                      <Input
+                        id="ticker"
+                        value={singleForm.ticker}
+                        onChange={(e) => updateSingleField('ticker', e.target.value.toUpperCase())}
+                        placeholder="예: AAPL"
+                        className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-muted-foreground text-xs">
+                        종목명 (선택)
+                      </Label>
+                      <Input
+                        id="name"
+                        value={singleForm.name}
+                        onChange={(e) => updateSingleField('name', e.target.value)}
+                        placeholder="예: Apple"
+                        className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground h-9 text-sm"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-muted-foreground">
-                      종목명 (선택)
-                    </Label>
-                    <Input
-                      id="name"
-                      value={singleForm.name}
-                      onChange={(e) => updateSingleField('name', e.target.value)}
-                      placeholder="예: Apple"
-                      className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
-                    />
-                  </div>
-                </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
