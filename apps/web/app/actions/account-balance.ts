@@ -3,11 +3,7 @@
 import { auth } from "@repo/auth/server";
 import { createServiceClient } from "@repo/database/server";
 import { revalidatePath } from "next/cache";
-import {
-  batchUpdateSheet,
-  deleteSheetRow,
-  fetchSheetData,
-} from "../../lib/google-sheets";
+import { batchUpdateSheet, fetchSheetData } from "../../lib/google-sheets";
 
 export interface AccountBalanceInput {
   yearMonth: string; // YYYY-MM 형식
@@ -51,7 +47,10 @@ export async function saveAccountBalance(
       .eq("id", session.user.id)
       .single();
 
-    console.log("[saveAccountBalance] User by ID lookup:", user ? "found" : "not found");
+    console.log(
+      "[saveAccountBalance] User by ID lookup:",
+      user ? "found" : "not found"
+    );
 
     if (!user && session.user.email) {
       const { data: userByEmail } = await supabase
@@ -101,8 +100,11 @@ export async function saveAccountBalance(
           // B열(0)에 숫자가 있고, H열(6)에 유효한 계좌총액이 있는지 확인
           const bVal = row[0];
           const hVal = row[6];
-          const isValidRow = typeof bVal === 'number' && bVal > 0 &&
-                            typeof hVal === 'number' && hVal > 0;
+          const isValidRow =
+            typeof bVal === "number" &&
+            bVal > 0 &&
+            typeof hVal === "number" &&
+            hVal > 0;
           if (isValidRow) {
             lastDataRow = i + 1; // 1-based row number
             break;
@@ -114,8 +116,26 @@ export async function saveAccountBalance(
     // 마지막 유효 데이터 행이 없으면 44행부터 시작 (Row 45가 첫 데이터)
     const nextRow = lastDataRow > 0 ? lastDataRow + 1 : 45;
 
-    console.log("[saveAccountBalance] Last valid data row:", lastDataRow, "Writing to row:", nextRow);
-    console.log("[saveAccountBalance] Data: yearShort=", yearShort, "monthNum=", monthNum, "yearMonthKey=", yearMonthKey, "year=", year, "monthStr=", monthStr, "balance=", input.balance);
+    console.log(
+      "[saveAccountBalance] Last valid data row:",
+      lastDataRow,
+      "Writing to row:",
+      nextRow
+    );
+    console.log(
+      "[saveAccountBalance] Data: yearShort=",
+      yearShort,
+      "monthNum=",
+      monthNum,
+      "yearMonthKey=",
+      yearMonthKey,
+      "year=",
+      year,
+      "monthStr=",
+      monthStr,
+      "balance=",
+      input.balance
+    );
 
     // 시트에 추가할 데이터
     // 구조: B열=연도앞두자리(25), C열=월숫자(8), D열=연도+월(20258), E열=전체연도(2025), F열=월텍스트(8월), G열=날짜(수식), H열=계좌총액
@@ -272,10 +292,11 @@ export async function deleteAccountBalance(
         const rowBalance = parseSheetNumber(row[6]);
 
         // #REF! 오류 행 건너뛰기
-        if (String(row[0]).includes("#REF") || String(row[6]).includes("#REF")) continue;
+        if (String(row[0]).includes("#REF") || String(row[6]).includes("#REF"))
+          continue;
 
         // 월 파싱 (C열 숫자 사용)
-        const rowMonth = typeof cVal === 'number' ? cVal : 0;
+        const rowMonth = typeof cVal === "number" ? cVal : 0;
 
         // 처음 몇 개 행만 상세 로깅
         if (i <= 5) {
@@ -293,16 +314,12 @@ export async function deleteAccountBalance(
             `[deleteAccountBalance] Match found at row ${i}, clearing H column...`
           );
           // H열(계좌총액)만 비우기 (다른 열은 수식이므로 건드리지 않음)
-          await batchUpdateSheet(
-            session.accessToken,
-            user.spreadsheet_id,
-            [
-              {
-                range: `'${sheetName}'!H${i + 1}`,
-                values: [[""]], // H열만 빈 값으로
-              },
-            ]
-          );
+          await batchUpdateSheet(session.accessToken, user.spreadsheet_id, [
+            {
+              range: `'${sheetName}'!H${i + 1}`,
+              values: [[""]], // H열만 빈 값으로
+            },
+          ]);
           found = true;
           break;
         }
@@ -393,19 +410,32 @@ export async function getAccountBalances(): Promise<AccountBalanceRecord[]> {
     console.log("[getAccountBalances] Sheet structure analysis");
     console.log("[getAccountBalances] Total rows:", allRows?.length || 0);
     if (allRows && allRows.length > 0) {
-      console.log("[getAccountBalances] Header row (row 1):", JSON.stringify(allRows[0]));
+      console.log(
+        "[getAccountBalances] Header row (row 1):",
+        JSON.stringify(allRows[0])
+      );
       // Row 45-55 영역 확인 (수식이 참조하는 영역)
       console.log("[getAccountBalances] Rows 45-55 (formula reference area):");
       for (let i = 44; i < Math.min(55, allRows.length); i++) {
-        if (allRows[i] && allRows[i].some((cell: any) => cell !== "" && cell !== null && cell !== undefined)) {
-          console.log(`[getAccountBalances] Row ${i + 1}:`, JSON.stringify(allRows[i]));
+        if (
+          allRows[i]?.some(
+            (cell: any) => cell !== "" && cell !== null && cell !== undefined
+          )
+        ) {
+          console.log(
+            `[getAccountBalances] Row ${i + 1}:`,
+            JSON.stringify(allRows[i])
+          );
         }
       }
       // 마지막 몇 개 행도 출력 (최근 데이터)
       const lastRows = allRows.slice(-5);
       console.log("[getAccountBalances] Last 5 rows:");
       lastRows.forEach((row, idx) => {
-        console.log(`[getAccountBalances] Row ${allRows.length - 5 + idx + 1}:`, JSON.stringify(row));
+        console.log(
+          `[getAccountBalances] Row ${allRows.length - 5 + idx + 1}:`,
+          JSON.stringify(row)
+        );
       });
     }
     console.log("===========================================");
@@ -436,15 +466,16 @@ export async function getAccountBalances(): Promise<AccountBalanceRecord[]> {
       const rowBalance = parseSheetNumber(row[6]); // 계좌총액
 
       // #REF! 오류 행 건너뛰기
-      if (String(row[0]).includes("#REF") || String(row[6]).includes("#REF")) continue;
+      if (String(row[0]).includes("#REF") || String(row[6]).includes("#REF"))
+        continue;
 
       // 유효하지 않은 데이터 건너뛰기
       if (!rowYear || rowBalance === 0) continue;
-      if (typeof bVal !== 'number' || bVal <= 0) continue;
+      if (typeof bVal !== "number" || bVal <= 0) continue;
 
       // 월 파싱 (C열 숫자 또는 F열 "N월" 형식)
       let month = 0;
-      if (typeof cVal === 'number' && cVal >= 1 && cVal <= 12) {
+      if (typeof cVal === "number" && cVal >= 1 && cVal <= 12) {
         month = cVal;
       } else {
         const monthMatch = rowMonthStr.match(/^(\d{1,2})월?$/);
