@@ -101,6 +101,18 @@ CREATE TABLE IF NOT EXISTS public.holdings (
     PRIMARY KEY (user_id, ticker)
 );
 
+-- 8. Account Balances (월별 계좌총액 - Sheet 동기화)
+CREATE TABLE IF NOT EXISTS public.account_balances (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id TEXT REFERENCES public.users(id) NOT NULL,
+    year_month VARCHAR(7) NOT NULL,     -- YYYY-MM 형식 (예: 2025-01)
+    balance NUMERIC NOT NULL,           -- 계좌총액 (월말 기준)
+    sheet_synced BOOLEAN DEFAULT TRUE,  -- 시트 동기화 여부
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    UNIQUE(user_id, year_month)         -- 유저당 월별 1개
+);
+
 -- RLS Policies
 -- NextAuth 사용 시 service_role key로 접근하므로 RLS는 비활성화하거나
 -- 서버 사이드에서 user_id 필터링으로 보안 처리
@@ -113,6 +125,7 @@ ALTER TABLE public.dividends ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.deposits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.holdings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.account_balances ENABLE ROW LEVEL SECURITY;
 
 -- Service role은 RLS 우회 가능, 일반 anon key는 접근 불가
 CREATE POLICY "Service role full access" ON public.users FOR ALL USING (true);
@@ -122,9 +135,11 @@ CREATE POLICY "Service role full access" ON public.dividends FOR ALL USING (true
 CREATE POLICY "Service role full access" ON public.deposits FOR ALL USING (true);
 CREATE POLICY "Service role full access" ON public.portfolio_snapshots FOR ALL USING (true);
 CREATE POLICY "Service role full access" ON public.holdings FOR ALL USING (true);
+CREATE POLICY "Service role full access" ON public.account_balances FOR ALL USING (true);
 
 -- Indexes for faster queries
 CREATE INDEX IF NOT EXISTS idx_dividends_user_date ON public.dividends(user_id, dividend_date);
 CREATE INDEX IF NOT EXISTS idx_deposits_user_date ON public.deposits(user_id, deposit_date);
 CREATE INDEX IF NOT EXISTS idx_portfolio_snapshots_user_date ON public.portfolio_snapshots(user_id, snapshot_date);
 CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON public.transactions(user_id, trade_date);
+CREATE INDEX IF NOT EXISTS idx_account_balances_user_yearmonth ON public.account_balances(user_id, year_month);

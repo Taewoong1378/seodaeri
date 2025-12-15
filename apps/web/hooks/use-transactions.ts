@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/query-client';
+import { getAccountBalances, type AccountBalanceRecord } from '../app/actions/account-balance';
 import { getTransactions, type Transaction, type TransactionsResult } from '../app/actions/transactions';
 import { saveDeposit, type DepositInput, type SaveDepositResult } from '../app/actions/deposit';
 import { saveDividend, saveDividends, type DividendInput, type SaveDividendResult } from '../app/actions/dividend';
@@ -14,6 +15,19 @@ export function useTransactions() {
   return useQuery<TransactionsResult>({
     queryKey: queryKeys.transactions,
     queryFn: () => getTransactions(),
+    staleTime: 60 * 1000, // 60초
+    gcTime: 5 * 60 * 1000, // 5분
+    refetchOnWindowFocus: true,
+  });
+}
+
+/**
+ * 계좌총액 내역을 가져오는 훅
+ */
+export function useAccountBalances() {
+  return useQuery<AccountBalanceRecord[]>({
+    queryKey: [...queryKeys.transactions, 'accountBalances'],
+    queryFn: () => getAccountBalances(),
     staleTime: 60 * 1000, // 60초
     gcTime: 5 * 60 * 1000, // 5분
     refetchOnWindowFocus: true,
@@ -93,6 +107,7 @@ export function useInvalidateTransactions() {
 }
 
 // Export types
+export type { AccountBalanceRecord } from '../app/actions/account-balance';
 export type { Transaction, TransactionsResult } from '../app/actions/transactions';
 export type { DepositInput, SaveDepositResult } from '../app/actions/deposit';
 export type { DividendInput, SaveDividendResult } from '../app/actions/dividend';

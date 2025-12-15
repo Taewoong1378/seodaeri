@@ -2,8 +2,9 @@
 
 import { Card, CardContent } from '@repo/design-system/components/card';
 import { cn } from '@repo/design-system/lib/utils';
-import { BarChart3, List, TrendingDown, TrendingUp } from 'lucide-react';
+import { BarChart3, List, Plus, TrendingDown, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
+import { HoldingInputModal } from './HoldingInputModal';
 import { PortfolioTreemap } from './PortfolioTreemap';
 
 interface PortfolioItem {
@@ -39,6 +40,7 @@ function formatPercent(value: number): string {
 
 export function PortfolioClient({ portfolio }: PortfolioClientProps) {
   const [view, setView] = useState<'list' | 'chart'>('list');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // 비중 순으로 정렬 (높은 비중부터)
   const sortedPortfolio = [...portfolio].sort(
@@ -47,8 +49,9 @@ export function PortfolioClient({ portfolio }: PortfolioClientProps) {
 
   return (
     <div className="space-y-6">
-      {/* View Switcher */}
-      <div className="flex justify-center">
+      {/* Header with View Switcher and Add Button */}
+      <div className="flex items-center justify-between">
+        {/* View Switcher */}
         <div className="flex items-center bg-muted p-1 rounded-full border border-border">
           <button
             type="button"
@@ -77,7 +80,23 @@ export function PortfolioClient({ portfolio }: PortfolioClientProps) {
             차트
           </button>
         </div>
+
+        {/* Add Button */}
+        <button
+          type="button"
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
+        >
+          <Plus size={16} />
+          종목 추가
+        </button>
       </div>
+
+      {/* Modal */}
+      <HoldingInputModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
 
       {/* Content */}
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

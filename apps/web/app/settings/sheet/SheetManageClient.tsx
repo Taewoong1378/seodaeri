@@ -3,6 +3,7 @@
 import { Button } from '@repo/design-system/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/design-system/components/card';
 import { Input } from '@repo/design-system/components/input';
+import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Check, ExternalLink, FileSpreadsheet, FolderOpen, Loader2, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -36,6 +37,7 @@ const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || '';
 
 export function SheetManageClient({ connected, currentSheetId, accessToken }: SheetManageClientProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState<'manual' | 'picker' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -125,8 +127,13 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
       if (result.success) {
         setSuccess(`"${sheetName || '시트'}" 연동 완료!`);
         setSheetInput('');
+
+        // 시트 변경 시 모든 캐시 무효화 (새 시트 데이터로 갱신)
+        queryClient.clear();
+
         // 시트 변경 후 대시보드로 이동
         router.push('/dashboard');
+        router.refresh(); // Next.js 서버 캐시도 갱신
       } else {
         setError(result.error || '연동에 실패했습니다.');
       }

@@ -64,4 +64,5 @@ export const queryKeys = {
   accountList: ['accountList'] as const,
   autoDepositSetting: ['autoDepositSetting'] as const,
   sheetConnection: ['sheetConnection'] as const,
+  portfolio: ['portfolio'] as const,
 } as const;

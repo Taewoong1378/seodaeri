@@ -13,6 +13,7 @@ export type { StockSearchResult } from './use-stock-search';
 // Transaction hooks
 export {
   useTransactions,
+  useAccountBalances,
   useSaveDeposit,
   useSaveDividend,
   useSaveDividends,
@@ -28,6 +29,6 @@ export {
 } from './use-deposit';
 
 // Re-export types
-export type { Transaction, TransactionsResult } from './use-transactions';
+export type { AccountBalanceRecord, Transaction, TransactionsResult } from './use-transactions';
 export type { DashboardData } from '../app/actions/dashboard';
 export type { AutoDepositSetting } from './use-deposit';
