@@ -21,7 +21,8 @@ export interface SaveHoldingResult {
 
 /**
  * 종목 보유현황을 Google Sheet와 Supabase에 저장
- * 시트 구조: "3. 종목현황" - C열=국가, D열=종목코드, E열=종목명, F열=수량, G열=평단가(원화)
+ * 시트 구조: "3. 종목현황" - C열=국가(수식), D열=종목코드, E열=종목명, F열=수량, G열=평단가(원화), H열=평단가(달러)
+ * D~H열만 수정 가능 (C열은 수식이므로 건드리지 않음)
  * Row 9부터 데이터 시작
  */
 export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResult> {
@@ -70,10 +71,11 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
     console.log('[saveHolding] Using dbUserId:', dbUserId);
 
     // 기존 데이터를 읽어서 해당 종목이 이미 있는지 확인
+    // D~H열 범위로 읽기
     const existingData = await fetchSheetData(
       session.accessToken,
       user.spreadsheet_id,
-      "'3. 종목현황'!C:G"
+      "'3. 종목현황'!D:H"
     );
 
     console.log('[saveHolding] Existing data rows:', existingData?.length || 0);
@@ -83,8 +85,8 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
     if (existingData && existingData.length > 0) {
       for (let i = 8; i < existingData.length; i++) { // Row 9 = index 8
         const row = existingData[i];
-        if (row && Array.isArray(row) && row.length >= 2) {
-          const rowTicker = String(row[1] || '').trim(); // D열 = index 1 (C:G 범위에서)
+        if (row && Array.isArray(row) && row.length >= 1) {
+          const rowTicker = String(row[0] || '').trim(); // D열 = index 0 (D:H 범위에서)
           if (rowTicker === input.ticker) {
             existingRow = i + 1; // 1-based row number
             console.log('[saveHolding] Found existing ticker at row:', existingRow);
@@ -97,14 +99,13 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
     // 새 종목이면 빈 행 찾기 (Row 9부터)
     let targetRow = existingRow;
     if (targetRow === -1) {
-      // 빈 행 찾기 (C열에 "한국" 또는 "미국"이 없는 행)
+      // 빈 행 찾기 (D열에 종목코드가 없는 행)
       for (let i = 8; i < Math.max(existingData?.length || 0, 30); i++) {
         const row = existingData?.[i];
-        const cVal = row?.[0]; // C열 = index 0
-        const dVal = row?.[1]; // D열 = index 1 (종목코드)
+        const dVal = row?.[0]; // D열 = index 0 (종목코드)
 
-        // C열이 비어있거나 종목코드가 비어있으면 빈 행
-        if (!cVal || !dVal || (typeof cVal === 'string' && cVal.trim() === '')) {
+        // D열(종목코드)이 비어있으면 빈 행
+        if (!dVal || (typeof dVal === 'string' && dVal.trim() === '')) {
           targetRow = i + 1;
           console.log('[saveHolding] Found empty row at:', targetRow);
           break;
@@ -121,14 +122,18 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
     console.log('[saveHolding] Writing to row:', targetRow);
 
     // 시트에 데이터 저장
-    // 구조: C열=국가, D열=종목코드, E열=종목명, F열=수량, G열=평단가(원화)
+    // D~H열만 수정 (C열은 수식이므로 건드리지 않음)
+    // D열=종목코드, E열=종목명, F열=수량, G열=평단가(원화), H열=평단가(달러, 미국 종목만)
+    const avgPriceUSD = input.currency === 'USD' ? input.avgPrice : '';
+    const avgPriceKRW = input.currency === 'KRW' ? input.avgPrice : '';
+
     const sheetResult = await batchUpdateSheet(
       session.accessToken,
       user.spreadsheet_id,
       [
         {
-          range: `'3. 종목현황'!C${targetRow}:G${targetRow}`,
-          values: [[input.country, input.ticker, input.name, input.quantity, input.avgPrice]],
+          range: `'3. 종목현황'!D${targetRow}:H${targetRow}`,
+          values: [[input.ticker, input.name, input.quantity, avgPriceKRW, avgPriceUSD]],
         },
       ]
     );
@@ -169,6 +174,7 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
 
 /**
  * 종목 삭제 (Google Sheet와 Supabase에서)
+ * D~H열만 비움 (C열은 수식이므로 건드리지 않음)
  */
 export async function deleteHolding(ticker: string): Promise<SaveHoldingResult> {
   console.log('[deleteHolding] Called with ticker:', ticker);
@@ -210,28 +216,28 @@ export async function deleteHolding(ticker: string): Promise<SaveHoldingResult> 
 
     const dbUserId = user.id as string;
 
-    // Google Sheet에서 해당 종목 찾아서 삭제
+    // Google Sheet에서 해당 종목 찾아서 D~H열만 비우기
     const sheetName = '3. 종목현황';
     const rows = await fetchSheetData(
       session.accessToken,
       user.spreadsheet_id,
-      `'${sheetName}'!C:G`
+      `'${sheetName}'!D:H`
     );
 
     if (rows && rows.length > 0) {
       for (let i = 8; i < rows.length; i++) { // Row 9부터
         const row = rows[i];
-        if (row && Array.isArray(row) && row.length >= 2) {
-          const rowTicker = String(row[1] || '').trim(); // D열
+        if (row && Array.isArray(row) && row.length >= 1) {
+          const rowTicker = String(row[0] || '').trim(); // D열 = index 0
           if (rowTicker === ticker) {
-            console.log('[deleteHolding] Found at row:', i + 1, ', clearing...');
-            // 행 내용 지우기 (행 삭제 대신 내용만 지움)
+            console.log('[deleteHolding] Found at row:', i + 1, ', clearing D~H...');
+            // D~H열만 비우기 (C열은 수식이므로 건드리지 않음)
             await batchUpdateSheet(
               session.accessToken,
               user.spreadsheet_id,
               [
                 {
-                  range: `'${sheetName}'!C${i + 1}:G${i + 1}`,
+                  range: `'${sheetName}'!D${i + 1}:H${i + 1}`,
                   values: [['', '', '', '', '']],
                 },
               ]

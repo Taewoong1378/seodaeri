@@ -2,9 +2,9 @@
 
 import { Card, CardContent } from '@repo/design-system/components/card';
 import { cn } from '@repo/design-system/lib/utils';
-import { BarChart3, List, Plus, TrendingDown, TrendingUp } from 'lucide-react';
+import { BarChart3, List, Pencil, Plus, TrendingDown, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
-import { HoldingInputModal } from './HoldingInputModal';
+import { HoldingInputModal, type HoldingEditData } from './HoldingInputModal';
 import { PortfolioTreemap } from './PortfolioTreemap';
 
 interface PortfolioItem {
@@ -17,6 +17,7 @@ interface PortfolioItem {
   profit: number;
   yieldPercent: number;
   weight: number;
+  country?: string;
 }
 
 interface PortfolioClientProps {
@@ -41,11 +42,33 @@ function formatPercent(value: number): string {
 export function PortfolioClient({ portfolio }: PortfolioClientProps) {
   const [view, setView] = useState<'list' | 'chart'>('list');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editData, setEditData] = useState<HoldingEditData | undefined>(undefined);
 
   // 비중 순으로 정렬 (높은 비중부터)
   const sortedPortfolio = [...portfolio].sort(
     (a, b) => b.weight - a.weight
   );
+
+  const handleAddNew = () => {
+    setEditData(undefined);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (item: PortfolioItem) => {
+    setEditData({
+      ticker: item.ticker,
+      name: item.name,
+      quantity: item.quantity,
+      avgPrice: item.avgPrice,
+      country: item.country || '한국',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setEditData(undefined);
+  };
 
   return (
     <div className="space-y-6">
@@ -84,7 +107,7 @@ export function PortfolioClient({ portfolio }: PortfolioClientProps) {
         {/* Add Button */}
         <button
           type="button"
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleAddNew}
           className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
         >
           <Plus size={16} />
@@ -95,7 +118,8 @@ export function PortfolioClient({ portfolio }: PortfolioClientProps) {
       {/* Modal */}
       <HoldingInputModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleModalClose}
+        editData={editData}
       />
 
       {/* Content */}
@@ -134,7 +158,8 @@ export function PortfolioClient({ portfolio }: PortfolioClientProps) {
               {sortedPortfolio.map((item) => (
                 <Card
                   key={item.ticker}
-                  className="bg-card border-border shadow-sm rounded-[24px] overflow-hidden hover:bg-muted/50 transition-colors"
+                  className="bg-card border-border shadow-sm rounded-[24px] overflow-hidden hover:bg-muted/50 transition-colors cursor-pointer active:scale-[0.99]"
+                  onClick={() => handleEdit(item)}
                 >
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
@@ -157,21 +182,27 @@ export function PortfolioClient({ portfolio }: PortfolioClientProps) {
                           </span>
                         </div>
                       </div>
-                      <div className="text-right ml-4">
-                        <div className="font-semibold text-foreground">
-                          {formatCurrency(item.totalValue, true)}원
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <div className="font-semibold text-foreground">
+                            {formatCurrency(item.totalValue, true)}원
+                          </div>
+                          <div
+                            className={`flex items-center justify-end gap-1 text-xs ${
+                              item.yieldPercent >= 0 ? 'text-emerald-600' : 'text-red-500'
+                            }`}
+                          >
+                            {item.yieldPercent >= 0 ? (
+                              <TrendingUp size={12} />
+                            ) : (
+                              <TrendingDown size={12} />
+                            )}
+                            {formatPercent(item.yieldPercent)}
+                          </div>
                         </div>
-                        <div
-                          className={`flex items-center justify-end gap-1 text-xs ${
-                            item.yieldPercent >= 0 ? 'text-emerald-600' : 'text-red-500'
-                          }`}
-                        >
-                          {item.yieldPercent >= 0 ? (
-                            <TrendingUp size={12} />
-                          ) : (
-                            <TrendingDown size={12} />
-                          )}
-                          {formatPercent(item.yieldPercent)}
+                        {/* 수정 힌트 아이콘 */}
+                        <div className="p-1.5 rounded-full bg-muted/50 text-muted-foreground">
+                          <Pencil size={14} />
                         </div>
                       </div>
                     </div>
