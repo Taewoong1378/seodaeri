@@ -271,6 +271,8 @@ export async function deleteHolding(ticker: string): Promise<SaveHoldingResult> 
 
 /**
  * 보유 종목 목록 조회 (Google Sheet에서)
+ * 시트 구조: C열=국가(수식), D열=종목코드, E열=종목명, F열=수량, G열=평단가(원화), H열=평단가(달러)
+ * C열은 수식이지만 값을 읽어올 수 있음
  */
 export interface HoldingRecord {
   ticker: string;
@@ -313,10 +315,11 @@ export async function getHoldings(): Promise<HoldingRecord[]> {
       return [];
     }
 
+    // C:H 범위로 읽기 (C=국가수식결과, D=종목코드, E=종목명, F=수량, G=평단가원화, H=평단가달러)
     const rows = await fetchSheetData(
       session.accessToken,
       user.spreadsheet_id,
-      "'3. 종목현황'!C:G"
+      "'3. 종목현황'!C:H"
     );
 
     if (!rows || rows.length <= 8) {
@@ -327,15 +330,20 @@ export async function getHoldings(): Promise<HoldingRecord[]> {
 
     for (let i = 8; i < rows.length; i++) { // Row 9부터
       const row = rows[i];
-      if (!row || !Array.isArray(row) || row.length < 5) continue;
+      if (!row || !Array.isArray(row) || row.length < 4) continue;
 
-      const country = String(row[0] || '').trim();
-      const ticker = String(row[1] || '').trim();
-      const name = String(row[2] || '').trim();
-      const quantity = parseFloat(String(row[3] || '0').replace(/,/g, '')) || 0;
-      const avgPrice = parseFloat(String(row[4] || '0').replace(/[₩$,]/g, '')) || 0;
+      const country = String(row[0] || '').trim(); // C열: 국가 (수식 결과)
+      const ticker = String(row[1] || '').trim(); // D열: 종목코드
+      const name = String(row[2] || '').trim(); // E열: 종목명
+      const quantity = parseFloat(String(row[3] || '0').replace(/,/g, '')) || 0; // F열: 수량
+      const avgPriceKRW = parseFloat(String(row[4] || '0').replace(/[₩,]/g, '')) || 0; // G열: 평단가(원화)
+      const avgPriceUSD = parseFloat(String(row[5] || '0').replace(/[$,]/g, '')) || 0; // H열: 평단가(달러)
 
       if (!ticker || quantity <= 0) continue;
+
+      // 국가에 따라 해당 통화의 평단가 사용
+      const isUS = country === '미국';
+      const avgPrice = isUS ? avgPriceUSD : avgPriceKRW;
 
       results.push({
         ticker,
@@ -343,7 +351,7 @@ export async function getHoldings(): Promise<HoldingRecord[]> {
         country: country || '한국',
         quantity,
         avgPrice,
-        currency: country === '미국' ? 'USD' : 'KRW',
+        currency: isUS ? 'USD' : 'KRW',
       });
     }
 
