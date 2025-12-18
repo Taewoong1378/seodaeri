@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@repo/design-system/components/button';
+import { DatePicker } from '@repo/design-system/components/date-picker';
 import {
   Dialog,
   DialogClose,
@@ -309,15 +310,14 @@ export function DividendInputModal() {
             {mode === 'manual' && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="date" className="text-muted-foreground">
+                  <Label className="text-muted-foreground">
                     배당 입금일
                   </Label>
-                  <Input
-                    id="date"
-                    type="date"
+                  <DatePicker
                     value={singleForm.date}
-                    onChange={(e) => updateSingleField('date', e.target.value)}
-                    className="bg-muted/50 border-border text-foreground"
+                    onChange={(date) => updateSingleField('date', date)}
+                    placeholder="날짜 선택"
+                    accentColor="emerald"
                   />
                 </div>
 
@@ -346,7 +346,8 @@ export function DividendInputModal() {
                         value={singleForm.ticker}
                         onChange={(e) => updateSingleField('ticker', e.target.value.toUpperCase())}
                         placeholder="예: AAPL"
-                        className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground h-9 text-sm"
+                        className="h-9 text-sm uppercase"
+                        accentColor="emerald"
                       />
                     </div>
                     <div className="space-y-2">
@@ -358,7 +359,8 @@ export function DividendInputModal() {
                         value={singleForm.name}
                         onChange={(e) => updateSingleField('name', e.target.value)}
                         placeholder="예: Apple"
-                        className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground h-9 text-sm"
+                        className="h-9 text-sm"
+                        accentColor="emerald"
                       />
                     </div>
                   </div>
@@ -377,7 +379,8 @@ export function DividendInputModal() {
                         updateSingleField('amountKRW', Number(e.target.value))
                       }
                       placeholder="0"
-                      className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
+                      className="text-right"
+                      accentColor="emerald"
                     />
                   </div>
                   <div className="space-y-2">
@@ -393,7 +396,8 @@ export function DividendInputModal() {
                         updateSingleField('amountUSD', Number(e.target.value))
                       }
                       placeholder="0.00"
-                      className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
+                      className="text-right"
+                      accentColor="emerald"
                     />
                   </div>
                 </div>

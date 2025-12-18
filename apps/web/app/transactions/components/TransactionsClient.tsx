@@ -13,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Banknote,
   Calendar,
+  Pencil,
   PiggyBank,
   Trash2,
   TrendingDown,
@@ -27,6 +28,7 @@ import {
 import { deleteDeposit } from "../../actions/deposit";
 import { deleteDividend } from "../../actions/dividend";
 import { AlertDialog, ConfirmDialog } from "./ConfirmDialog";
+import { type EditType, EditTransactionModal } from "./EditTransactionModal";
 
 export type TabType = "balance" | "dividend" | "deposit";
 
@@ -115,6 +117,12 @@ export function TransactionsClient({
     variant: "default",
   });
 
+  // 수정 모달 상태
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editType, setEditType] = useState<EditType>("balance");
+  const [editBalanceTarget, setEditBalanceTarget] = useState<AccountBalanceRecord | null>(null);
+  const [editTransactionTarget, setEditTransactionTarget] = useState<Transaction | null>(null);
+
   const getTypeText = (type: Transaction["type"]) => {
     switch (type) {
       case "BUY":
@@ -142,6 +150,25 @@ export function TransactionsClient({
     setDeleteBalanceTarget(balance);
     setDeleteTarget(null);
     setIsConfirmOpen(true);
+  };
+
+  // 수정 핸들러
+  const handleEditClick = (tx: Transaction) => {
+    if (tx.type === "DIVIDEND") {
+      setEditType("dividend");
+    } else {
+      setEditType("deposit");
+    }
+    setEditTransactionTarget(tx);
+    setEditBalanceTarget(null);
+    setIsEditModalOpen(true);
+  };
+
+  const handleBalanceEditClick = (balance: AccountBalanceRecord) => {
+    setEditType("balance");
+    setEditBalanceTarget(balance);
+    setEditTransactionTarget(null);
+    setIsEditModalOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
@@ -302,7 +329,7 @@ export function TransactionsClient({
   return (
     <TooltipProvider>
       <div className="space-y-4">
-        {/* Tabs - 3 tabs */}
+        {/* Tabs - 3 tabs (반응형: 좁은 화면에서 아이콘/숫자 숨김) */}
         <div className="flex items-center bg-muted p-1 rounded-full border border-border">
           <button
             type="button"
@@ -314,11 +341,11 @@ export function TransactionsClient({
                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
             )}
           >
-            <PiggyBank size={14} />
+            <PiggyBank size={14} className="hidden sm:block" />
             계좌총액
             <span
               className={cn(
-                "text-xs px-1.5 py-0.5 rounded-full",
+                "text-xs px-1.5 py-0.5 rounded-full hidden sm:inline",
                 activeTab === "balance"
                   ? "bg-white/20"
                   : "bg-muted-foreground/20"
@@ -337,11 +364,11 @@ export function TransactionsClient({
                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
             )}
           >
-            <Banknote size={14} />
+            <Banknote size={14} className="hidden sm:block" />
             배당
             <span
               className={cn(
-                "text-xs px-1.5 py-0.5 rounded-full",
+                "text-xs px-1.5 py-0.5 rounded-full hidden sm:inline",
                 activeTab === "dividend"
                   ? "bg-white/20"
                   : "bg-muted-foreground/20"
@@ -360,11 +387,11 @@ export function TransactionsClient({
                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
             )}
           >
-            <Wallet size={14} />
+            <Wallet size={14} className="hidden sm:block" />
             입출금
             <span
               className={cn(
-                "text-xs px-1.5 py-0.5 rounded-full",
+                "text-xs px-1.5 py-0.5 rounded-full hidden sm:inline",
                 activeTab === "deposit"
                   ? "bg-white/20"
                   : "bg-muted-foreground/20"
@@ -479,32 +506,23 @@ export function TransactionsClient({
                     key={balance.id}
                     className="bg-card border-border shadow-sm rounded-[24px] overflow-hidden"
                   >
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3 min-w-0 flex-1">
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-emerald-500/10 text-emerald-600">
-                            <Calendar className="w-5 h-5" />
-                          </div>
-                          <div className="flex flex-col gap-1 flex-1 min-w-0 overflow-hidden">
-                            <span className="text-sm font-bold text-foreground leading-tight">
-                              {balance.displayDate}
-                            </span>
-                            <span className="text-[11px] text-muted-foreground">
-                              월말 기준 총 평가금액
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-1.5 shrink-0">
-                          <div className="text-right flex flex-col items-end gap-1">
-                            <div className="text-base font-bold tracking-tight text-emerald-600">
-                              {formatCurrency(balance.balance)}원
-                            </div>
-                          </div>
+                    <CardContent className="p-4 sm:p-5">
+                      <div className="relative">
+                        {/* 우측 상단 버튼 */}
+                        <div className="absolute top-0 right-0 flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleBalanceEditClick(balance)}
+                            className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-600 transition-colors"
+                            aria-label="수정"
+                          >
+                            <Pencil size={16} />
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleBalanceDeleteClick(balance)}
                             disabled={deletingId === balance.id}
-                            className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50 shrink-0"
+                            className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
                             aria-label="삭제"
                           >
                             <Trash2
@@ -514,6 +532,26 @@ export function TransactionsClient({
                               }
                             />
                           </button>
+                        </div>
+                        {/* 상단: 아이콘 + 날짜 + 설명 */}
+                        <div className="flex items-start gap-3 pr-16">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-emerald-500/10 text-emerald-600">
+                            <Calendar className="w-5 h-5" />
+                          </div>
+                          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                            <span className="text-sm font-bold text-foreground leading-tight">
+                              {balance.displayDate}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground">
+                              월말 기준 총 평가금액
+                            </span>
+                          </div>
+                        </div>
+                        {/* 하단: 금액 */}
+                        <div className="mt-2 pl-[52px]">
+                          <div className="text-lg font-bold tracking-tight text-emerald-600">
+                            {formatCurrency(balance.balance)}원
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -551,11 +589,41 @@ export function TransactionsClient({
                     key={tx.id}
                     className="bg-card border-border shadow-sm rounded-[24px] overflow-hidden"
                   >
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <CardContent className="p-4 sm:p-5">
+                      <div className="relative">
+                        {/* 우측 상단 버튼 */}
+                        <div className="absolute top-0 right-0 flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleEditClick(tx)}
+                            className={`p-1.5 rounded-lg text-muted-foreground transition-colors ${
+                              tx.type === "DIVIDEND"
+                                ? "hover:bg-blue-500/10 hover:text-blue-600"
+                                : "hover:bg-purple-500/10 hover:text-purple-600"
+                            }`}
+                            aria-label="수정"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteClick(tx)}
+                            disabled={deletingId === tx.id}
+                            className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                            aria-label="삭제"
+                          >
+                            <Trash2
+                              size={16}
+                              className={
+                                deletingId === tx.id ? "animate-pulse" : ""
+                              }
+                            />
+                          </button>
+                        </div>
+                        {/* 상단: 아이콘 + 종목명 + 날짜 */}
+                        <div className="flex items-start gap-3 pr-16">
                           <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                            className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
                               tx.type === "DIVIDEND"
                                 ? "bg-blue-500/10 text-blue-600"
                                 : tx.type === "DEPOSIT"
@@ -575,7 +643,7 @@ export function TransactionsClient({
                               <Wallet className="w-5 h-5" />
                             )}
                           </div>
-                          <div className="flex flex-col gap-1 flex-1 min-w-0 overflow-hidden">
+                          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                             <div className="text-foreground">
                               <ClickableTooltip
                                 text={
@@ -587,13 +655,13 @@ export function TransactionsClient({
                                 }
                               />
                             </div>
-                            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate">
+                            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground flex-wrap">
                               {tx.ticker && (
                                 <>
-                                  <span className="font-medium text-muted-foreground truncate">
+                                  <span className="font-medium text-muted-foreground">
                                     {tx.ticker}
                                   </span>
-                                  <span className="text-muted-foreground/50 shrink-0">
+                                  <span className="text-muted-foreground/50">
                                     ·
                                   </span>
                                 </>
@@ -603,51 +671,36 @@ export function TransactionsClient({
                                 tx.type === "WITHDRAW") &&
                                 tx.name && (
                                   <>
-                                    <span className="font-medium text-muted-foreground truncate max-w-[80px]">
+                                    <span className="font-medium text-muted-foreground truncate max-w-[100px]">
                                       {tx.name}
                                     </span>
-                                    <span className="text-muted-foreground/50 shrink-0">
+                                    <span className="text-muted-foreground/50">
                                       ·
                                     </span>
                                   </>
                                 )}
-                              <span className="whitespace-nowrap shrink-0">
+                              <span className="whitespace-nowrap">
                                 {formatDate(tx.trade_date)}
                               </span>
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-start gap-1.5 shrink-0">
-                          <div className="text-right flex flex-col items-end gap-1">
-                            <div
-                              className={`text-base font-bold tracking-tight ${
-                                tx.type === "DIVIDEND"
-                                  ? "text-blue-600"
-                                  : tx.type === "DEPOSIT"
-                                  ? "text-purple-500"
-                                  : tx.type === "WITHDRAW"
-                                  ? "text-orange-500"
-                                  : "text-foreground"
-                              }`}
-                            >
-                              {tx.type === "WITHDRAW" ? "-" : "+"}
-                              {formatCurrency(tx.total_amount)}원
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteClick(tx)}
-                            disabled={deletingId === tx.id}
-                            className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50 shrink-0"
-                            aria-label="삭제"
+                        {/* 하단: 금액 */}
+                        <div className="mt-2 pl-[52px]">
+                          <div
+                            className={`text-lg font-bold tracking-tight ${
+                              tx.type === "DIVIDEND"
+                                ? "text-blue-600"
+                                : tx.type === "DEPOSIT"
+                                ? "text-purple-500"
+                                : tx.type === "WITHDRAW"
+                                ? "text-orange-500"
+                                : "text-foreground"
+                            }`}
                           >
-                            <Trash2
-                              size={16}
-                              className={
-                                deletingId === tx.id ? "animate-pulse" : ""
-                              }
-                            />
-                          </button>
+                            {tx.type === "WITHDRAW" ? "-" : "+"}
+                            {formatCurrency(tx.total_amount)}원
+                          </div>
                         </div>
                       </div>
                       {!tx.sheet_synced && (
@@ -701,6 +754,19 @@ export function TransactionsClient({
         title={alertState.title}
         description={alertState.description}
         variant={alertState.variant}
+      />
+
+      {/* 수정 모달 */}
+      <EditTransactionModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditBalanceTarget(null);
+          setEditTransactionTarget(null);
+        }}
+        editType={editType}
+        balanceData={editBalanceTarget || undefined}
+        transactionData={editTransactionTarget || undefined}
       />
     </TooltipProvider>
   );

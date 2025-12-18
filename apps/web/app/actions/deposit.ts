@@ -3,7 +3,7 @@
 import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
 import { revalidatePath } from 'next/cache';
-import { appendSheetData, deleteSheetRow, extractAccountsFromDeposits, fetchSheetData } from '../../lib/google-sheets';
+import { appendSheetData, deleteSheetRow, extractAccountsFromDeposits, fetchSheetData, insertRowInDateOrder } from '../../lib/google-sheets';
 
 export interface DepositInput {
   date: string; // YYYY-MM-DD
@@ -78,11 +78,16 @@ export async function saveDeposit(input: DepositInput): Promise<SaveDepositResul
       input.memo || '', // H: 비고
     ];
 
-    await appendSheetData(
+    // 날짜 순서에 맞는 위치에 삽입
+    await insertRowInDateOrder(
       session.accessToken,
       user.spreadsheet_id,
+      '6. 입금내역',
       "'6. 입금내역'!A:H",
-      [rowData]
+      0, // A열(0)에 날짜가 있음
+      input.date,
+      rowData,
+      1 // 헤더 1행
     );
 
     revalidatePath('/dashboard');
@@ -254,6 +259,19 @@ export interface DeleteDepositInput {
   date: string;      // YYYY-MM-DD
   type: 'DEPOSIT' | 'WITHDRAW';
   amount: number;
+}
+
+export interface UpdateDepositInput {
+  // 원래 값 (매칭용)
+  originalDate: string;
+  originalType: 'DEPOSIT' | 'WITHDRAW';
+  originalAmount: number;
+  // 새 값
+  newDate: string;
+  newType: 'DEPOSIT' | 'WITHDRAW';
+  newAmount: number;
+  newAccount: string;
+  newMemo: string;
 }
 
 // 날짜 파싱 헬퍼 (시리얼 넘버 및 다양한 형식 지원)
@@ -466,5 +484,166 @@ export async function deleteDeposit(input: DeleteDepositInput): Promise<SaveDepo
     console.error('[deleteDeposit] Error:', error);
     const errorMessage = error?.message || '알 수 없는 오류';
     return { success: false, error: `삭제 실패: ${errorMessage}` };
+  }
+}
+
+/**
+ * 입출금내역 수정 (Supabase + Google Sheet)
+ */
+export async function updateDeposit(input: UpdateDepositInput): Promise<SaveDepositResult> {
+  console.log('[updateDeposit] Called with input:', JSON.stringify(input));
+
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: '로그인이 필요합니다.' };
+  }
+
+  if (!session.accessToken) {
+    return { success: false, error: 'Google 인증이 필요합니다.' };
+  }
+
+  const supabase = createServiceClient();
+
+  try {
+    // 사용자의 spreadsheet_id 조회
+    let { data: user } = await supabase
+      .from('users')
+      .select('id, spreadsheet_id')
+      .eq('id', session.user.id)
+      .single();
+
+    if (!user && session.user.email) {
+      const { data: userByEmail } = await supabase
+        .from('users')
+        .select('id, spreadsheet_id')
+        .eq('email', session.user.email)
+        .single();
+
+      if (userByEmail) {
+        user = userByEmail;
+      }
+    }
+
+    if (!user?.spreadsheet_id) {
+      return { success: false, error: '연동된 스프레드시트가 없습니다.' };
+    }
+
+    const userId = user.id as string;
+
+    // 1. Google Sheet에서 해당 행 찾아서 수정
+    const sheetName = '6. 입금내역';
+    const rows = await fetchSheetData(
+      session.accessToken,
+      user.spreadsheet_id,
+      `'${sheetName}'!A:H`
+    );
+
+    if (rows && rows.length > 1) {
+      // 컬럼 인덱스 (기본값)
+      let dateCol = 1; // B열
+      let amountCol = 7; // H열
+
+      // 매칭되는 행 찾기
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || !Array.isArray(row)) continue;
+
+        // 날짜 찾기
+        let rowDate: string | null = null;
+        for (let col = 0; col < Math.min(row.length, 5); col++) {
+          rowDate = parseSheetDate(row[col]);
+          if (rowDate) break;
+        }
+
+        if (!rowDate) continue;
+
+        const rowAmountStr = String(row[amountCol] || '0');
+        const rowAmountRaw = parseSheetNumber(row[amountCol]);
+        const rowAmount = Math.abs(rowAmountRaw);
+
+        // 타입 매칭
+        const isDeposit = !rowAmountStr.includes('-') && rowAmountRaw >= 0;
+        const matchType = (input.originalType === 'DEPOSIT' && isDeposit) ||
+                         (input.originalType === 'WITHDRAW' && !isDeposit);
+
+        if (
+          rowDate === input.originalDate &&
+          matchType &&
+          Math.abs(rowAmount - input.originalAmount) < 1
+        ) {
+          console.log(`[updateDeposit] Match found at row ${i}, updating...`);
+
+          // 새 날짜 파싱
+          const dateParts = input.newDate.split('-');
+          const year = dateParts[0] || '';
+          const month = dateParts[1] || '';
+          const day = dateParts[2] || '';
+
+          // 시트에 업데이트할 데이터
+          const newRowData = [
+            input.newDate,
+            year,
+            `${month}월`,
+            `${day}일`,
+            input.newType === 'DEPOSIT' ? '입금' : '출금',
+            input.newAccount || '일반계좌1',
+            input.newType === 'DEPOSIT' ? `₩${input.newAmount.toLocaleString()}` : `-₩${input.newAmount.toLocaleString()}`,
+            input.newMemo || '',
+          ];
+
+          // Google Sheets API로 행 업데이트
+          const response = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${user.spreadsheet_id}/values/'${sheetName}'!A${i + 1}:H${i + 1}?valueInputOption=USER_ENTERED`,
+            {
+              method: 'PUT',
+              headers: {
+                'Authorization': `Bearer ${session.accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ values: [newRowData] }),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`Sheet update failed: ${response.status}`);
+          }
+
+          break;
+        }
+      }
+    }
+
+    // 2. Supabase 업데이트
+    // 기존 레코드 삭제 후 새로 생성 (unique constraint 때문)
+    await supabase
+      .from('deposits')
+      .delete()
+      .eq('user_id', userId)
+      .eq('type', input.originalType)
+      .eq('amount', input.originalAmount)
+      .eq('deposit_date', input.originalDate);
+
+    await supabase
+      .from('deposits')
+      .insert({
+        user_id: userId,
+        type: input.newType,
+        amount: input.newAmount,
+        currency: 'KRW',
+        deposit_date: input.newDate,
+        memo: input.newMemo,
+        sheet_synced: true,
+      });
+
+    revalidatePath('/dashboard');
+    revalidatePath('/transactions');
+
+    console.log('[updateDeposit] Success');
+    return { success: true };
+  } catch (error: any) {
+    console.error('[updateDeposit] Error:', error);
+    const errorMessage = error?.message || '알 수 없는 오류';
+    return { success: false, error: `수정 실패: ${errorMessage}` };
   }
 }

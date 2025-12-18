@@ -21,6 +21,11 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
     const refreshedTokens = await response.json()
 
     if (!response.ok) {
+      console.error('Token refresh failed:', {
+        status: response.status,
+        error: refreshedTokens.error,
+        error_description: refreshedTokens.error_description,
+      })
       throw refreshedTokens
     }
 

@@ -248,12 +248,26 @@ export function HoldingInputModal({
               국가
             </label>
             <Select value={country} onValueChange={setCountry}>
-              <SelectTrigger className="bg-muted/50 border-border text-foreground">
+              <SelectTrigger className="bg-muted/50 border-border text-foreground h-12 rounded-xl">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-popover border-border">
-                <SelectItem value="한국">한국</SelectItem>
-                <SelectItem value="미국">미국</SelectItem>
+              <SelectContent 
+                className="bg-popover border-none shadow-xl rounded-xl p-1 min-w-(--radix-select-trigger-width)"
+                position="popper"
+                sideOffset={4}
+              >
+                <SelectItem 
+                  value="한국"
+                  className="rounded-lg focus:bg-emerald-50 focus:text-emerald-600 data-[state=checked]:bg-emerald-50 data-[state=checked]:text-emerald-600 data-[state=checked]:font-medium cursor-pointer py-2.5 px-3 mb-1"
+                >
+                  한국
+                </SelectItem>
+                <SelectItem 
+                  value="미국"
+                  className="rounded-lg focus:bg-blue-50 focus:text-blue-600 data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-600 data-[state=checked]:font-medium cursor-pointer py-2.5 px-3"
+                >
+                  미국
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -276,7 +290,8 @@ export function HoldingInputModal({
               placeholder={
                 country === "미국" ? "AAPL, NVDA, SPY..." : "005930, 360750..."
               }
-              className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground uppercase disabled:opacity-60"
+              className="uppercase disabled:opacity-60"
+              accentColor="emerald"
               disabled={isEditMode}
             />
             {isEditMode && (
@@ -304,7 +319,7 @@ export function HoldingInputModal({
               placeholder={
                 country === "미국" ? "Apple Inc." : "TIGER 미국S&P500"
               }
-              className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
+              accentColor="emerald"
             />
           </div>
 
@@ -323,7 +338,8 @@ export function HoldingInputModal({
                 value={quantity}
                 onChange={handleQuantityChange}
                 placeholder="0"
-                className="text-right bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
+                className="text-right"
+                accentColor="emerald"
               />
             </div>
             <div className="space-y-2">
@@ -339,7 +355,8 @@ export function HoldingInputModal({
                 value={avgPrice}
                 onChange={handleAvgPriceChange}
                 placeholder="0"
-                className="text-right bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
+                className="text-right"
+                accentColor="emerald"
               />
             </div>
           </div>

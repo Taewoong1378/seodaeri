@@ -90,38 +90,70 @@ export async function saveAccountBalance(
       "'5. 계좌내역(누적)'!B:H"
     );
 
-    // B:H 범위에서 실제 데이터가 있는 마지막 행 찾기
-    // (빈 행이나 #REF! 오류 행은 제외)
-    let lastDataRow = 0;
-    if (existingData && existingData.length > 0) {
-      for (let i = existingData.length - 1; i >= 0; i--) {
+    // 중복 연월 체크 - 같은 연도/월의 데이터가 이미 존재하는지 확인
+    if (existingData && existingData.length > 1) {
+      for (let i = 1; i < existingData.length; i++) {
         const row = existingData[i];
-        if (row && Array.isArray(row) && row.length >= 7) {
-          // B열(0)에 숫자가 있고, H열(6)에 유효한 계좌총액이 있는지 확인
-          const bVal = row[0];
-          const hVal = row[6];
-          const isValidRow =
-            typeof bVal === "number" &&
-            bVal > 0 &&
-            typeof hVal === "number" &&
-            hVal > 0;
-          if (isValidRow) {
-            lastDataRow = i + 1; // 1-based row number
-            break;
-          }
+        if (!row || !Array.isArray(row) || row.length < 7) continue;
+
+        const rowYear = String(row[3] || "").trim(); // E열 = 전체연도
+        const rowMonth = typeof row[1] === "number" ? row[1] : 0; // C열 = 월숫자
+        const rowBalance = parseSheetNumber(row[6]); // H열 = 계좌총액
+
+        // #REF! 오류 행이나 빈 행 건너뛰기
+        if (String(row[0]).includes("#REF") || String(row[6]).includes("#REF")) continue;
+        if (rowBalance === 0) continue;
+
+        // 같은 연도와 월이면 중복
+        if (rowYear === year && rowMonth === monthNum) {
+          console.log("[saveAccountBalance] Duplicate yearMonth found:", input.yearMonth);
+          return {
+            success: false,
+            error: `${year}년 ${monthNum}월 데이터가 이미 존재합니다. 기존 데이터를 수정해주세요.`,
+          };
         }
       }
     }
 
-    // 마지막 유효 데이터 행이 없으면 44행부터 시작 (Row 45가 첫 데이터)
-    const nextRow = lastDataRow > 0 ? lastDataRow + 1 : 45;
+    // 기존 데이터에서 마지막 유효 행 찾기 (가장 간단하고 안전한 방식)
+    // 새 데이터는 항상 마지막에 추가 (시트 데이터는 사용자가 직접 정렬 관리)
+    const newYearMonthKey = Number(yearMonthKey); // 예: 20258
+    
+    let lastValidRowIndex = -1; // existingData에서의 마지막 유효 행 인덱스
+    
+    if (existingData && existingData.length > 0) {
+      for (let i = existingData.length - 1; i >= 0; i--) {
+        const row = existingData[i];
+        if (!row || !Array.isArray(row) || row.length < 7) continue;
 
-    console.log(
-      "[saveAccountBalance] Last valid data row:",
-      lastDataRow,
-      "Writing to row:",
-      nextRow
-    );
+        // B열(0)에 숫자가 있고, H열(6)에 유효한 계좌총액이 있는지 확인
+        const bVal = row[0];
+        const hVal = row[6];
+        const isValidRow =
+          typeof bVal === "number" &&
+          bVal > 0 &&
+          typeof hVal === "number" &&
+          hVal > 0 &&
+          !String(row[0]).includes("#REF") &&
+          !String(row[6]).includes("#REF");
+
+        if (isValidRow) {
+          lastValidRowIndex = i;
+          break;
+        }
+      }
+    }
+
+    // 마지막 유효 행 다음에 추가 (없으면 row 45부터 시작)
+    // existingData 인덱스 + 1 = 시트 행 번호 (1-based)
+    const targetRow = lastValidRowIndex >= 0 ? lastValidRowIndex + 2 : 45;
+
+    console.log("[saveAccountBalance] Last valid row index:", lastValidRowIndex);
+    console.log("[saveAccountBalance] Target row (1-based):", targetRow);
+    console.log("[saveAccountBalance] New yearMonthKey:", newYearMonthKey);
+
+    const sheetName = "5. 계좌내역(누적)";
+
     console.log(
       "[saveAccountBalance] Data: yearShort=",
       yearShort,
@@ -145,11 +177,11 @@ export async function saveAccountBalance(
       user.spreadsheet_id,
       [
         {
-          range: `'5. 계좌내역(누적)'!B${nextRow}:F${nextRow}`,
-          values: [[Number(yearShort), monthNum, yearMonthKey, year, monthStr]], // B~F
+          range: `'${sheetName}'!B${targetRow}:F${targetRow}`,
+          values: [[Number(yearShort), monthNum, Number(yearMonthKey), year, monthStr]], // B~F
         },
         {
-          range: `'5. 계좌내역(누적)'!H${nextRow}`,
+          range: `'${sheetName}'!H${targetRow}`,
           values: [[input.balance]], // H: 계좌총액만 저장 (I, J 등은 시트 수식이 자동 계산)
         },
       ]
@@ -197,6 +229,13 @@ function parseSheetNumber(val: any): number {
 export interface DeleteAccountBalanceInput {
   yearMonth: string; // YYYY-MM
   balance: number;
+}
+
+export interface UpdateAccountBalanceInput {
+  originalYearMonth: string; // 원래 연월 (수정 전)
+  originalBalance: number; // 원래 금액 (수정 전)
+  newYearMonth: string; // 새 연월
+  newBalance: number; // 새 금액
 }
 
 /**
@@ -352,6 +391,185 @@ export async function deleteAccountBalance(
     console.error("[deleteAccountBalance] Error:", error);
     const errorMessage = error?.message || "알 수 없는 오류";
     return { success: false, error: `삭제 실패: ${errorMessage}` };
+  }
+}
+
+/**
+ * 계좌총액 수정 (Google Sheet + Supabase)
+ */
+export async function updateAccountBalance(
+  input: UpdateAccountBalanceInput
+): Promise<SaveAccountBalanceResult> {
+  console.log("[updateAccountBalance] Called with input:", JSON.stringify(input));
+
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { success: false, error: "로그인이 필요합니다." };
+  }
+
+  if (!session.accessToken) {
+    return { success: false, error: "Google 인증이 필요합니다." };
+  }
+
+  const supabase = createServiceClient();
+
+  try {
+    // 사용자의 spreadsheet_id 조회
+    let { data: user } = await supabase
+      .from("users")
+      .select("id, spreadsheet_id")
+      .eq("id", session.user.id)
+      .single();
+
+    if (!user && session.user.email) {
+      const { data: userByEmail } = await supabase
+        .from("users")
+        .select("id, spreadsheet_id")
+        .eq("email", session.user.email)
+        .single();
+
+      if (userByEmail) {
+        user = userByEmail;
+      }
+    }
+
+    if (!user?.spreadsheet_id) {
+      return { success: false, error: "연동된 스프레드시트가 없습니다." };
+    }
+
+    const userId = user.id as string;
+
+    // Google Sheet에서 해당 행 찾아서 수정
+    const sheetName = "5. 계좌내역(누적)";
+    const rows = await fetchSheetData(
+      session.accessToken,
+      user.spreadsheet_id,
+      `'${sheetName}'!B:H`
+    );
+
+    // 입력된 연월 파싱
+    const [origYear, origMonth] = input.originalYearMonth.split("-");
+    const origMonthNum = Number.parseInt(origMonth || "0", 10);
+    const [newYear, newMonth] = input.newYearMonth.split("-");
+    const newMonthNum = Number.parseInt(newMonth || "1", 10);
+
+    // 연월이 바뀌는 경우, 새 연월이 이미 존재하는지 확인
+    if (input.originalYearMonth !== input.newYearMonth && rows && rows.length > 1) {
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || !Array.isArray(row) || row.length < 7) continue;
+
+        const rowYear = String(row[3] || "").trim();
+        const cVal = row[1];
+        const rowMonth = typeof cVal === "number" ? cVal : 0;
+        const rowBalance = parseSheetNumber(row[6]);
+
+        if (String(row[0]).includes("#REF") || String(row[6]).includes("#REF")) continue;
+        if (rowBalance === 0) continue;
+
+        // 새 연월과 같은 데이터가 이미 존재하면 에러
+        if (rowYear === newYear && rowMonth === newMonthNum) {
+          return {
+            success: false,
+            error: `${newYear}년 ${newMonthNum}월 데이터가 이미 존재합니다. 다른 연월을 선택해주세요.`,
+          };
+        }
+      }
+    }
+
+    if (rows && rows.length > 1) {
+
+      // 매칭되는 행 찾기
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || !Array.isArray(row) || row.length < 7) continue;
+
+        const rowYear = String(row[3] || "").trim();
+        const cVal = row[1];
+        const rowMonth = typeof cVal === "number" ? cVal : 0;
+        const rowBalance = parseSheetNumber(row[6]);
+
+        if (String(row[0]).includes("#REF") || String(row[6]).includes("#REF"))
+          continue;
+
+        if (
+          rowYear === origYear &&
+          rowMonth === origMonthNum &&
+          Math.abs(rowBalance - input.originalBalance) < 1
+        ) {
+          console.log(`[updateAccountBalance] Match found at row ${i}, updating...`);
+
+          // 새 연월 파싱 (이미 위에서 파싱됨)
+          const yearShort = (newYear || "").slice(-2);
+          const yearMonthKey = `${newYear}${newMonthNum}`;
+          const monthStr = `${newMonthNum}월`;
+
+          // 시트 업데이트 (연월이 바뀌면 B~F도 업데이트, 금액만 바뀌면 H만 업데이트)
+          if (input.originalYearMonth !== input.newYearMonth) {
+            await batchUpdateSheet(session.accessToken, user.spreadsheet_id, [
+              {
+                range: `'${sheetName}'!B${i + 1}:F${i + 1}`,
+                values: [[Number(yearShort), newMonthNum, yearMonthKey, newYear, monthStr]],
+              },
+              {
+                range: `'${sheetName}'!H${i + 1}`,
+                values: [[input.newBalance]],
+              },
+            ]);
+          } else {
+            await batchUpdateSheet(session.accessToken, user.spreadsheet_id, [
+              {
+                range: `'${sheetName}'!H${i + 1}`,
+                values: [[input.newBalance]],
+              },
+            ]);
+          }
+          break;
+        }
+      }
+    }
+
+    // Supabase 업데이트
+    if (input.originalYearMonth !== input.newYearMonth) {
+      // 연월이 바뀌면 기존 삭제 후 새로 생성
+      await (supabase as any)
+        .from("account_balances")
+        .delete()
+        .eq("user_id", userId)
+        .eq("year_month", input.originalYearMonth);
+
+      await (supabase as any)
+        .from("account_balances")
+        .upsert(
+          {
+            user_id: userId,
+            year_month: input.newYearMonth,
+            balance: input.newBalance,
+            sheet_synced: true,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,year_month" }
+        );
+    } else {
+      // 금액만 바뀌면 업데이트
+      await (supabase as any)
+        .from("account_balances")
+        .update({
+          balance: input.newBalance,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId)
+        .eq("year_month", input.originalYearMonth);
+    }
+
+    revalidatePath("/dashboard");
+    revalidatePath("/transactions");
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("[updateAccountBalance] Error:", error);
+    return { success: false, error: `수정 실패: ${error?.message || "알 수 없는 오류"}` };
   }
 }
 

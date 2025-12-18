@@ -1,26 +1,20 @@
-'use client';
+"use client";
 
-import { Button } from '@repo/design-system/components/button';
+import { Button } from "@repo/design-system/components/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@repo/design-system/components/dialog';
-import { Input } from '@repo/design-system/components/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@repo/design-system/components/select';
-import { useQueryClient } from '@tanstack/react-query';
-import { Calendar, Loader2, PiggyBank, X } from 'lucide-react';
-import type { JSX } from 'react';
-import { useCallback, useState } from 'react';
-import { queryKeys } from '../../../lib/query-client';
-import { saveAccountBalance } from '../../actions/account-balance';
+} from "@repo/design-system/components/dialog";
+import { Input } from "@repo/design-system/components/input";
+import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, PiggyBank, X } from "lucide-react";
+import type { JSX } from "react";
+import { useCallback, useState } from "react";
+import { queryKeys } from "../../../lib/query-client";
+import { saveAccountBalance } from "../../actions/account-balance";
+import { YearMonthPicker } from "./WheelPicker";
 
 interface AccountBalanceInputModalProps {
   isOpen: boolean;
@@ -28,12 +22,12 @@ interface AccountBalanceInputModalProps {
 }
 
 function formatNumber(value: string): string {
-  const numbers = value.replace(/[^\d]/g, '');
-  return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const numbers = value.replace(/[^\d]/g, "");
+  return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 function parseFormattedNumber(value: string): number {
-  return parseInt(value.replace(/,/g, ''), 10) || 0;
+  return Number.parseInt(value.replace(/,/g, ""), 10) || 0;
 }
 
 export function AccountBalanceInputModal({
@@ -49,26 +43,23 @@ export function AccountBalanceInputModal({
 
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [selectedMonth, setSelectedMonth] = useState<number>(currentMonth);
-  const [balance, setBalance] = useState<string>('');
+  const [balance, setBalance] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 연도 옵션 (최근 5년)
-  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i);
-
-  // 월 옵션
-  const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
-
-  const handleBalanceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatNumber(e.target.value);
-    setBalance(formatted);
-    setError(null);
-  }, []);
+  const handleBalanceChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const formatted = formatNumber(e.target.value);
+      setBalance(formatted);
+      setError(null);
+    },
+    []
+  );
 
   const resetForm = useCallback(() => {
     setSelectedYear(currentYear);
     setSelectedMonth(currentMonth);
-    setBalance('');
+    setBalance("");
     setError(null);
   }, [currentYear, currentMonth]);
 
@@ -81,7 +72,7 @@ export function AccountBalanceInputModal({
     const balanceNum = parseFormattedNumber(balance);
 
     if (balanceNum <= 0) {
-      setError('계좌총액을 입력해주세요.');
+      setError("계좌총액을 입력해주세요.");
       return;
     }
 
@@ -89,7 +80,10 @@ export function AccountBalanceInputModal({
     setError(null);
 
     try {
-      const yearMonth = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+      const yearMonth = `${selectedYear}-${String(selectedMonth).padStart(
+        2,
+        "0"
+      )}`;
 
       const result = await saveAccountBalance({
         yearMonth,
@@ -102,10 +96,10 @@ export function AccountBalanceInputModal({
         queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
         handleClose();
       } else {
-        setError(result.error || '저장에 실패했습니다.');
+        setError(result.error || "저장에 실패했습니다.");
       }
     } catch (err) {
-      setError('저장 중 오류가 발생했습니다.');
+      setError("저장 중 오류가 발생했습니다.");
     } finally {
       setIsSubmitting(false);
     }
@@ -116,10 +110,10 @@ export function AccountBalanceInputModal({
       <DialogContent
         className="sm:max-w-[380px] bg-popover border-border rounded-[24px] p-0 gap-0 overflow-hidden"
         style={{
-          left: '50%',
-          top: '50%',
-          transform: 'translate(-50%, -50%)',
-          maxWidth: 'min(380px, calc(100vw - 2rem))',
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          maxWidth: "min(380px, calc(100vw - 2rem))",
         }}
       >
         {/* Header */}
@@ -141,49 +135,30 @@ export function AccountBalanceInputModal({
 
         {/* Body */}
         <div className="p-5 space-y-5">
-          {/* 연월 선택 */}
+          {/* 연월 선택 - Wheel Picker */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-              <Calendar size={14} />
-              연월
+            <label
+              className="text-sm font-medium text-muted-foreground"
+              htmlFor="year-month-picker"
+            >
+              연월 선택
             </label>
-            <div className="flex gap-2">
-              <Select
-                value={String(selectedYear)}
-                onValueChange={(val) => setSelectedYear(parseInt(val, 10))}
-              >
-                <SelectTrigger className="flex-1 bg-muted/50 border-border text-foreground">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border-border">
-                  {yearOptions.map((year) => (
-                    <SelectItem key={year} value={String(year)}>
-                      {year}년
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={String(selectedMonth)}
-                onValueChange={(val) => setSelectedMonth(parseInt(val, 10))}
-              >
-                <SelectTrigger className="flex-1 bg-muted/50 border-border text-foreground">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border-border">
-                  {monthOptions.map((month) => (
-                    <SelectItem key={month} value={String(month)}>
-                      {month}월
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <YearMonthPicker
+              year={selectedYear}
+              month={selectedMonth}
+              onYearChange={setSelectedYear}
+              onMonthChange={setSelectedMonth}
+              startYear={currentYear - 20}
+              endYear={currentYear + 1}
+            />
           </div>
 
           {/* 계좌총액 입력 */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">
+            <label
+              className="text-sm font-medium text-muted-foreground"
+              htmlFor="balance"
+            >
               계좌총액
             </label>
             <div className="relative">
@@ -193,9 +168,10 @@ export function AccountBalanceInputModal({
                 value={balance}
                 onChange={handleBalanceChange}
                 placeholder="0"
-                className="text-right pr-8 text-lg font-bold bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
+                className="text-right pr-10 text-lg font-bold"
+                accentColor="emerald"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
                 원
               </span>
             </div>
@@ -230,7 +206,7 @@ export function AccountBalanceInputModal({
             {isSubmitting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              '저장'
+              "저장"
             )}
           </Button>
         </div>

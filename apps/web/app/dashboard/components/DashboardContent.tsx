@@ -29,16 +29,124 @@ function formatCurrency(amount: number): string {
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-6 animate-pulse">
-      {/* Hero Skeleton */}
-      <div className="h-40 bg-white/5 rounded-[24px]" />
-      {/* Tabs Skeleton */}
-      <div className="h-12 bg-white/5 rounded-full" />
-      {/* Content Skeleton */}
-      <div className="space-y-4">
-        <div className="h-64 bg-white/5 rounded-[24px]" />
-        <div className="h-48 bg-white/5 rounded-[24px]" />
-      </div>
+    <div className="space-y-8">
+      {/* Hero Section Skeleton */}
+      <section>
+        <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-primary/20 to-primary/5 border border-border p-6 md:p-8 animate-pulse">
+          <div className="flex flex-col gap-1 mb-6">
+            <div className="h-4 w-20 bg-muted rounded" />
+            <div className="h-10 w-48 bg-muted rounded mt-1" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="h-3 w-16 bg-muted rounded mb-2" />
+              <div className="h-6 w-24 bg-muted rounded" />
+            </div>
+            <div>
+              <div className="h-3 w-16 bg-muted rounded mb-2" />
+              <div className="h-6 w-24 bg-muted rounded" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Account Trend Chart Skeleton */}
+      <section>
+        <Card className="border-border bg-card shadow-none rounded-[24px] overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-6 animate-pulse">
+              <div className="space-y-1">
+                <div className="h-4 w-32 bg-muted rounded" />
+                <div className="h-3 w-24 bg-muted rounded" />
+              </div>
+            </div>
+            <div className="h-[200px] w-full bg-muted rounded-xl animate-pulse" />
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Performance Comparison Chart Skeleton */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between px-1 animate-pulse">
+          <div className="h-5 w-24 bg-muted rounded" />
+          <div className="h-4 w-16 bg-muted rounded" />
+        </div>
+        <Card className="border-border bg-card shadow-none rounded-[24px] overflow-hidden">
+          <CardContent className="p-6">
+            <div className="h-[200px] w-full bg-muted rounded-xl animate-pulse" />
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Portfolio Charts Skeleton */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between px-1 animate-pulse">
+          <div className="h-5 w-24 bg-muted rounded" />
+          <div className="h-4 w-16 bg-muted rounded" />
+        </div>
+
+        {/* Donut Chart Skeleton */}
+        <Card className="border-border bg-card shadow-none rounded-[24px] overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-center py-4 animate-pulse">
+              <div className="h-48 w-48 rounded-full bg-muted" />
+            </div>
+            <div className="grid grid-cols-2 gap-4 mt-4 animate-pulse">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-muted" />
+                  <div className="h-3 w-20 bg-muted rounded" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Holdings Chart Skeleton */}
+        <Card className="border-border bg-card shadow-none rounded-[24px] overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4 animate-pulse">
+              <div className="h-4 w-24 bg-muted rounded" />
+              <div className="h-3 w-12 bg-muted rounded" />
+            </div>
+            <div className="space-y-3 animate-pulse">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-muted" />
+                    <div className="space-y-1">
+                      <div className="h-3 w-20 bg-muted rounded" />
+                      <div className="h-2 w-12 bg-muted rounded" />
+                    </div>
+                  </div>
+                  <div className="h-4 w-24 bg-muted rounded" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Quick Stats Summary Skeleton */}
+      <section>
+        <div className="grid grid-cols-2 gap-4 animate-pulse">
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-card border border-border rounded-[20px] p-5 backdrop-blur-sm">
+              <div className="h-3 w-20 bg-muted rounded mb-2" />
+              <div className="h-6 w-32 bg-muted rounded" />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Dividend Chart Skeleton */}
+      <section>
+        <Card className="border-border bg-card shadow-none rounded-[24px] overflow-hidden">
+          <CardContent className="pt-6 pb-6 px-6">
+            <div className="h-[200px] w-full bg-muted rounded-xl animate-pulse" />
+          </CardContent>
+        </Card>
+      </section>
     </div>
   );
 }

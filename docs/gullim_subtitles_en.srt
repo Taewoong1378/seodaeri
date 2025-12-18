@@ -1,0 +1,48 @@
+1
+00:00:00,000 --> 00:00:04,000
+Welcome to Gullim — "Investment records become lifelong assets." Click "Start" and select "Continue with Google" to sign in.
+
+2
+00:00:05,000 --> 00:00:14,000
+Select your Google account. A warning appears because the app is pending verification. Click "Advanced" then "Go to gulim.co.kr" to proceed.
+
+3
+00:00:15,000 --> 00:00:22,000
+Gullim requests access to Google Drive and Google Sheets. These permissions allow the app to read and write your investment data. Check the boxes and click "Continue" to grant access.
+
+4
+00:00:23,000 --> 00:00:32,000
+Welcome screen appears. Click "Select from Google Drive" to connect your spreadsheet. Use the file picker to search and select your investment record sheet.
+
+5
+00:00:33,000 --> 00:00:40,000
+Dashboard loads with data pulled directly from your Google Sheet. View total assets (33.7M KRW), profit/loss, and daily balance trend graph.
+
+6
+00:00:41,000 --> 00:00:47,000
+Navigate to the "History" tab. View monthly transaction summaries including dividends, deposits, and withdrawals — all synced from your spreadsheet.
+
+7
+00:00:48,000 --> 00:00:55,000
+Add a new record manually. Click the pencil icon, select "Manual Input," enter date (2025.12.15), stock name, and dividend amount (100,000 KRW).
+
+8
+00:00:56,000 --> 00:01:00,000
+Save the entry. "Dividend history saved" confirms success. This data is written directly to your Google Spreadsheet in real-time.
+
+9
+00:01:01,000 --> 00:01:06,000
+Switch to the "Portfolio" tab. View your holdings, current valuations, return rates, and portfolio weights — all fetched from your spreadsheet.
+
+10
+00:01:07,000 --> 00:01:10,000
+Go to "Settings" and select "Sheet Connection Management" to change the linked spreadsheet.
+
+11
+00:01:11,000 --> 00:01:14,000
+Select "Change to another sheet," paste a new Google Sheet URL, and click "Change." You control which file Gullim can access.
+
+12
+00:01:15,000 --> 00:01:18,000
+Dashboard reloads with the new sheet data. Total assets now show 60.9M KRW with +128.2% return. All your data stays in YOUR Google Drive.
+

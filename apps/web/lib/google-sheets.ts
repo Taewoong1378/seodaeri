@@ -193,6 +193,158 @@ export async function batchUpdateSheet(
 }
 
 /**
+ * 시트의 마지막 유효 행 다음에 데이터 추가
+ * (복잡한 삽입 로직 대신 안전하게 마지막에 추가)
+ * @param sheetName 시트 탭 이름 (예: "7. 배당내역")
+ * @param dateColumn 날짜가 있는 열 (0-based, 보통 A열이면 0)
+ * @param newDate 새 데이터의 날짜 (YYYY-MM-DD 형식) - 로깅용
+ * @param rowData 삽입할 데이터 배열
+ * @param headerRows 헤더 행 수 (기본값 1)
+ * @returns 성공 여부
+ */
+export async function insertRowInDateOrder(
+  accessToken: string,
+  spreadsheetId: string,
+  sheetName: string,
+  range: string,
+  dateColumn: number,
+  newDate: string,
+  rowData: any[],
+  headerRows = 1
+): Promise<boolean> {
+  console.log('[insertRowInDateOrder] Starting:', { sheetName, newDate });
+
+  const auth = new google.auth.OAuth2();
+  auth.setCredentials({ access_token: accessToken });
+
+  const sheets = google.sheets({ version: 'v4', auth });
+
+  try {
+    // 1. 기존 데이터 읽기
+    const existingData = await fetchSheetData(accessToken, spreadsheetId, range);
+    
+    // 2. 마지막 유효 데이터 행 찾기 (가장 안전한 방식)
+    let lastValidRowIndex = headerRows - 1; // 헤더 행 직전 (0-based)
+    
+    if (existingData && existingData.length > headerRows) {
+      for (let i = existingData.length - 1; i >= headerRows; i--) {
+        const row = existingData[i];
+        if (!row || !Array.isArray(row)) continue;
+        
+        const dateVal = row[dateColumn];
+        if (dateVal) {
+          lastValidRowIndex = i;
+          break;
+        }
+      }
+    }
+    
+    // 마지막 유효 행 다음에 추가
+    // existingData 인덱스 + 1 = 시트 행 번호 (1-based)
+    const targetRow = lastValidRowIndex + 2;
+    
+    console.log('[insertRowInDateOrder] Last valid row index:', lastValidRowIndex);
+    console.log('[insertRowInDateOrder] Target row (1-based):', targetRow);
+    
+    // 3. 데이터 쓰기
+    // range에서 열 범위 추출
+    const rangeMatch = range.match(/'([^']+)'!([A-Z]):([A-Z])/);
+    if (!rangeMatch) {
+      throw new Error(`Invalid range format: ${range}`);
+    }
+    const startCol = rangeMatch[2];
+    const endCol = rangeMatch[3];
+    
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `'${sheetName}'!${startCol}${targetRow}:${endCol}${targetRow}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [rowData],
+      },
+    });
+    
+    console.log('[insertRowInDateOrder] Success');
+    return true;
+  } catch (error) {
+    console.error('[insertRowInDateOrder] Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * 시트에 특정 위치에 행 삽입
+ * @param sheetName 시트 탭 이름 (예: "5. 계좌내역(누적)")
+ * @param rowIndex 삽입할 행 인덱스 (0-based, 이 위치에 새 행이 삽입되고 기존 행은 아래로 밀림)
+ */
+export async function insertSheetRow(
+  accessToken: string,
+  spreadsheetId: string,
+  sheetName: string,
+  rowIndex: number
+) {
+  console.log('[insertSheetRow] Inserting row at:', { spreadsheetId, sheetName, rowIndex });
+
+  const auth = new google.auth.OAuth2();
+  auth.setCredentials({ access_token: accessToken });
+
+  const sheets = google.sheets({ version: 'v4', auth });
+
+  try {
+    // 먼저 시트 ID를 가져와야 함 (시트 이름 → 시트 ID)
+    const spreadsheet = await sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: 'sheets(properties(sheetId,title))',
+    });
+
+    // 시트 이름에서 모든 종류의 공백 제거하여 비교
+    const normalizeSheetName = (name: string | null | undefined) =>
+      name?.replace(/[\s\u00A0\u3000\u200B\uFEFF]/g, '') || '';
+    const normalizedSearchName = normalizeSheetName(sheetName);
+
+    const sheet = spreadsheet.data.sheets?.find(
+      (s) => normalizeSheetName(s.properties?.title) === normalizedSearchName
+    );
+
+    if (!sheet) {
+      console.error('[insertSheetRow] Sheet not found:', sheetName);
+      throw new Error(`시트 "${sheetName}"를 찾을 수 없습니다.`);
+    }
+
+    const sheetId = sheet.properties?.sheetId;
+    if (sheetId === undefined || sheetId === null) {
+      throw new Error(`시트 "${sheetName}"의 ID를 찾을 수 없습니다.`);
+    }
+
+    // 행 삽입 요청
+    const response = await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            insertDimension: {
+              range: {
+                sheetId,
+                dimension: 'ROWS',
+                startIndex: rowIndex,
+                endIndex: rowIndex + 1,
+              },
+              inheritFromBefore: true, // 위 행의 서식 상속
+            },
+          },
+        ],
+      },
+    });
+
+    console.log('[insertSheetRow] Success');
+    return response.data;
+  } catch (error) {
+    console.error('Error inserting sheet row:', error);
+    throw error;
+  }
+}
+
+/**
  * 시트에서 특정 행 삭제
  * @param sheetName 시트 탭 이름 (예: "7. 배당내역")
  * @param rowIndex 삭제할 행 인덱스 (0-based, 헤더 포함)
