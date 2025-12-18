@@ -28,7 +28,7 @@ import {
 import { deleteDeposit } from "../../actions/deposit";
 import { deleteDividend } from "../../actions/dividend";
 import { AlertDialog, ConfirmDialog } from "./ConfirmDialog";
-import { type EditType, EditTransactionModal } from "./EditTransactionModal";
+import { EditTransactionModal, type EditType } from "./EditTransactionModal";
 
 export type TabType = "balance" | "dividend" | "deposit";
 
@@ -120,8 +120,10 @@ export function TransactionsClient({
   // 수정 모달 상태
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editType, setEditType] = useState<EditType>("balance");
-  const [editBalanceTarget, setEditBalanceTarget] = useState<AccountBalanceRecord | null>(null);
-  const [editTransactionTarget, setEditTransactionTarget] = useState<Transaction | null>(null);
+  const [editBalanceTarget, setEditBalanceTarget] =
+    useState<AccountBalanceRecord | null>(null);
+  const [editTransactionTarget, setEditTransactionTarget] =
+    useState<Transaction | null>(null);
 
   const getTypeText = (type: Transaction["type"]) => {
     switch (type) {

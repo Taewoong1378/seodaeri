@@ -21,31 +21,23 @@ interface DatePickerProps {
 
 const accentColors = {
   blue: {
-    selected: "bg-blue-500 text-white hover:bg-blue-600 hover:text-white focus:bg-blue-500 focus:text-white",
     icon: "text-blue-500",
     ring: "focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-500",
-    cssVar: "#3b82f6",
     todayBtn: "text-blue-600 hover:bg-blue-50",
   },
   emerald: {
-    selected: "bg-emerald-500 text-white hover:bg-emerald-600 hover:text-white focus:bg-emerald-500 focus:text-white",
     icon: "text-emerald-500",
     ring: "focus-visible:ring-2 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500",
-    cssVar: "#10b981",
     todayBtn: "text-emerald-600 hover:bg-emerald-50",
   },
   purple: {
-    selected: "bg-purple-500 text-white hover:bg-purple-600 hover:text-white focus:bg-purple-500 focus:text-white",
     icon: "text-purple-500",
     ring: "focus-visible:ring-2 focus-visible:ring-purple-500/30 focus-visible:border-purple-500",
-    cssVar: "#a855f7",
     todayBtn: "text-purple-600 hover:bg-purple-50",
   },
   orange: {
-    selected: "bg-orange-500 text-white hover:bg-orange-600 hover:text-white focus:bg-orange-500 focus:text-white",
     icon: "text-orange-500",
     ring: "focus-visible:ring-2 focus-visible:ring-orange-500/30 focus-visible:border-orange-500",
-    cssVar: "#f97316",
     todayBtn: "text-orange-600 hover:bg-orange-50",
   },
 };
@@ -101,16 +93,14 @@ function DatePicker({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 border-none" align="start">
-        <div 
-          className="bg-popover rounded-xl shadow-2xl border border-border overflow-hidden"
-          style={{ "--rdp-accent-background-color": colors.cssVar } as React.CSSProperties}
-        >
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+        <div className="bg-popover rounded-xl shadow-xl border border-border overflow-hidden">
           <Calendar
             mode="single"
             selected={date}
             onSelect={handleSelect}
             autoFocus
+            className="p-3"
           />
           <div className="flex items-center justify-between px-3 py-2 border-t border-border">
             <Button
