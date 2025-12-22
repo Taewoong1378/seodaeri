@@ -3,7 +3,7 @@
 import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
 import { revalidatePath } from 'next/cache';
-import { copyMasterTemplate, findSeodaeriSheet } from '../../lib/google-sheets';
+import { copyMasterTemplate } from '../../lib/google-sheets';
 
 export interface OnboardingResult {
   success: boolean;
@@ -57,78 +57,6 @@ export async function checkSheetConnection(): Promise<{ connected: boolean; shee
     connected: !!user?.spreadsheet_id,
     sheetId: user?.spreadsheet_id || undefined,
   };
-}
-
-/**
- * 기존 서대리 시트 검색 및 연동
- */
-export async function searchAndConnectSheet(): Promise<OnboardingResult> {
-  const session = await auth();
-  if (!session?.user?.id || !session?.user?.email || !session.accessToken) {
-    return { success: false, error: '로그인이 필요합니다.' };
-  }
-
-  try {
-    // 1. Google Drive에서 서대리 시트 검색
-    const existingSheet = await findSeodaeriSheet(session.accessToken);
-
-    if (!existingSheet) {
-      return { success: false, error: '서대리 시트를 찾을 수 없습니다.' };
-    }
-
-    // 2. DB에 spreadsheet_id 저장 (이메일로 기존 사용자 찾기)
-    const supabase = createServiceClient();
-
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', session.user.email)
-      .single();
-
-    if (existingUser) {
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({
-          spreadsheet_id: existingSheet.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', existingUser.id);
-
-      if (updateError) {
-        console.error('Failed to update spreadsheet_id:', updateError);
-        return { success: false, error: '시트 연동에 실패했습니다.' };
-      }
-    } else {
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert({
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.name,
-          image: session.user.image,
-          spreadsheet_id: existingSheet.id,
-          updated_at: new Date().toISOString(),
-        });
-
-      if (insertError) {
-        console.error('Failed to insert user:', insertError);
-        return { success: false, error: '시트 연동에 실패했습니다.' };
-      }
-    }
-
-    revalidatePath('/dashboard');
-    revalidatePath('/onboarding');
-
-    return {
-      success: true,
-      sheetId: existingSheet.id,
-      sheetName: existingSheet.name,
-      isNewSheet: false,
-    };
-  } catch (error) {
-    console.error('searchAndConnectSheet error:', error);
-    return { success: false, error: '시트 검색 중 오류가 발생했습니다.' };
-  }
 }
 
 /**
