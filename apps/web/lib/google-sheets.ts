@@ -9,6 +9,39 @@ const MASTER_TEMPLATE_ID = process.env.SEODAERI_TEMPLATE_SHEET_ID
 console.log('[google-sheets] MASTER_TEMPLATE_ID:', MASTER_TEMPLATE_ID ? `${MASTER_TEMPLATE_ID.substring(0, 10)}...` : 'NOT SET');
 
 /**
+ * Google Drive에서 "서대리" 관련 스프레드시트 검색
+ */
+export async function findSeodaeriSheet(accessToken: string): Promise<{ id: string; name: string } | null> {
+  const auth = new google.auth.OAuth2();
+  auth.setCredentials({ access_token: accessToken });
+
+  const drive = google.drive({ version: 'v3', auth });
+
+  try {
+    // "서대리" 이름이 포함된 스프레드시트 검색
+    const response = await drive.files.list({
+      q: "mimeType='application/vnd.google-apps.spreadsheet' and name contains '서대리' and trashed=false",
+      fields: 'files(id, name)',
+      orderBy: 'modifiedTime desc',
+      pageSize: 1,
+    });
+
+    const files = response.data.files;
+    if (files && files.length > 0) {
+      return {
+        id: files[0]?.id!,
+        name: files[0]?.name!,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error searching for sheet:', error);
+    throw error;
+  }
+}
+
+/**
  * 마스터 템플릿을 복사하여 새 스프레드시트 생성
  */
 export async function copyMasterTemplate(accessToken: string, userName?: string): Promise<{ id: string; name: string }> {
