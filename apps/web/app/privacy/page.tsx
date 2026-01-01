@@ -44,6 +44,21 @@ export default function PrivacyPolicyPage() {
               <li>이름 (프로필 이름)</li>
               <li>프로필 사진 URL</li>
               <li>Google 계정 고유 식별자</li>
+              <li>연동된 Google 스프레드시트 ID</li>
+            </ul>
+            <p className="mt-4">
+              또한, 서비스 이용 과정에서 다음의 투자 관련 데이터가 수집 및
+              저장됩니다:
+            </p>
+            <ul className="list-disc list-inside mt-3 space-y-1 text-slate-400">
+              <li>
+                매매 거래 내역 (종목코드, 종목명, 매수/매도, 가격, 수량, 날짜)
+              </li>
+              <li>배당 내역 (종목, 배당금, 날짜)</li>
+              <li>입출금 내역 (금액, 날짜, 계좌 정보)</li>
+              <li>보유 종목 현황</li>
+              <li>계좌 총액 (월별 자산 현황)</li>
+              <li>포트폴리오 스냅샷 (자산 추이 분석용)</li>
             </ul>
           </section>
 
@@ -117,9 +132,10 @@ export default function PrivacyPolicyPage() {
               </li>
               <li>
                 <strong className="text-slate-300">데이터 저장:</strong> 투자
-                기록 데이터는 사용자 본인의 Google Drive/Sheets에만 저장되며,
-                서비스 서버에는 최소한의 사용자 식별 정보(이메일, 이름, 연동된
-                시트 ID)만 저장됩니다.
+                기록 데이터는 사용자 본인의 Google Sheets와 서비스
+                서버(Supabase)에 이중으로 저장됩니다. 이는 앱의 빠른 로딩,
+                오프라인 지원, 데이터 분석 기능을 위한 것이며, 저장된 데이터는
+                해당 사용자 본인만 접근할 수 있습니다.
               </li>
               <li>
                 <strong className="text-slate-300">접근 제어:</strong> Google
@@ -194,7 +210,7 @@ export default function PrivacyPolicyPage() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-white/10 text-center text-slate-500 text-xs">
-          <p>최종 수정일: 2025년 12월 18일</p>
+          <p>최종 수정일: 2025년 12월 31일</p>
         </div>
       </div>
     </div>
