@@ -90,9 +90,11 @@ export async function saveDividend(
 
     // 시트에 추가할 데이터
     // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산
+    // 날짜 형식: YYYY/MM/DD (기존 시트 양식과 일치)
+    const formattedDate = input.date.replace(/-/g, "/");
     const rowData = [
       "", // A: 빈 칸
-      input.date, // B: 일자
+      formattedDate, // B: 일자 (YYYY/MM/DD 형식)
       year, // C: 연도
       `${month}월`, // D: 월
       `${day}일`, // E: 일
@@ -210,9 +212,12 @@ export async function saveDividends(
         input.amountUSD > 0 ? Math.round(input.amountUSD * exchangeRate) : 0;
       const totalKRW = input.amountKRW + convertedKRW;
 
+      // 날짜 형식: YYYY/MM/DD (기존 시트 양식과 일치)
+      const formattedDate = input.date.replace(/-/g, "/");
+
       return [
         "", // A: 빈 칸
-        input.date, // B: 일자
+        formattedDate, // B: 일자 (YYYY/MM/DD 형식)
         year, // C: 연도
         `${month}월`, // D: 월
         `${day}일`, // E: 일
@@ -639,9 +644,11 @@ export async function updateDividend(
 
           // 시트 업데이트
           // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산
+          // 날짜 형식: YYYY/MM/DD (기존 시트 양식과 일치)
+          const formattedNewDate = input.newDate.replace(/-/g, "/");
           const newRowData = [
             "", // A: 빈 칸
-            input.newDate, // B: 날짜
+            formattedNewDate, // B: 날짜 (YYYY/MM/DD 형식)
             year, // C: 연도
             `${month}월`, // D: 월
             `${day}일`, // E: 일
