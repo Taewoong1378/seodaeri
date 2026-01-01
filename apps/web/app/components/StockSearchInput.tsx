@@ -62,14 +62,21 @@ export function StockSearchInput({
   }, [resetKey, reset]);
 
   // Accent color styles (Focus within container) - Subtle ring for modern look
-  const focusStyles = {
-    default: "focus-within:border-gray-300 focus-within:ring-2 focus-within:ring-gray-200/50",
-    brand: "focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-500/20",
-    blue: "focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20",
-    emerald: "focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-500/20",
-    purple: "focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-500/20",
-    orange: "focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-500/20",
-  }[accentColor] || "focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20";
+  const focusStyles =
+    {
+      default:
+        "focus-within:border-gray-300 focus-within:ring-2 focus-within:ring-gray-200/50",
+      brand:
+        "focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-500/20",
+      blue: "focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20",
+      emerald:
+        "focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-500/20",
+      purple:
+        "focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-500/20",
+      orange:
+        "focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-500/20",
+    }[accentColor] ||
+    "focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20";
 
   // 이미 선택된 종목이 있으면 표시
   if (selectedCode) {
@@ -138,11 +145,12 @@ export function StockSearchInput({
         {label}
       </label>
       <div className="relative group">
-        <div 
+        <div
           className={`relative flex items-center w-full h-12 rounded-xl border transition-all duration-200 ease-in-out
-            ${darkTheme 
-              ? "bg-white/5 border-white/10 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-400/20" 
-              : `bg-white border-gray-200 shadow-sm hover:border-gray-300 ${focusStyles}`
+            ${
+              darkTheme
+                ? "bg-white/5 border-white/10 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-400/20"
+                : `bg-white border-gray-200 shadow-sm hover:border-gray-300 ${focusStyles}`
             }
           `}
           onClick={() => inputRef.current?.focus()}
@@ -150,8 +158,8 @@ export function StockSearchInput({
           <Search
             size={18}
             className={`ml-4 mr-3 flex-shrink-0 transition-colors duration-200 ${
-              darkTheme 
-                ? "text-slate-500 group-focus-within:text-blue-400" 
+              darkTheme
+                ? "text-slate-500 group-focus-within:text-blue-400"
                 : "text-gray-400 group-focus-within:text-blue-500"
             }`}
           />
@@ -162,9 +170,10 @@ export function StockSearchInput({
             onFocus={() => query && setShowResults(true)}
             placeholder={placeholder}
             className={`flex-1 h-full bg-transparent border-none outline-none text-base font-medium
-              ${darkTheme
-                ? "text-white placeholder:text-slate-500"
-                : "text-gray-900 placeholder:text-gray-400 placeholder:font-normal"
+              ${
+                darkTheme
+                  ? "text-white placeholder:text-slate-500"
+                  : "text-gray-900 placeholder:text-gray-400 placeholder:font-normal"
               }
             `}
             autoComplete="off"
@@ -197,18 +206,26 @@ export function StockSearchInput({
                 type="button"
                 onClick={() => handleSelect(stock)}
                 className={`w-full px-4 py-3 text-left transition-colors flex items-center justify-between group/item border-b border-gray-50 last:border-0 ${
-                  darkTheme ? "hover:bg-white/10 border-white/5" : "hover:bg-blue-50/50"
+                  darkTheme
+                    ? "hover:bg-white/10 border-white/5"
+                    : "hover:bg-blue-50/50"
                 }`}
               >
                 <div className="min-w-0 flex-1 mr-3">
-                  <div className={`font-medium truncate ${
-                    darkTheme ? "text-white" : "text-gray-900 group-hover/item:text-blue-700"
-                  }`}>
+                  <div
+                    className={`font-medium truncate ${
+                      darkTheme
+                        ? "text-white"
+                        : "text-gray-900 group-hover/item:text-blue-700"
+                    }`}
+                  >
                     {stock.name}
                   </div>
-                  <div className={`text-xs mt-0.5 ${
-                    darkTheme ? "text-slate-400" : "text-gray-500"
-                  }`}>
+                  <div
+                    className={`text-xs mt-0.5 ${
+                      darkTheme ? "text-slate-400" : "text-gray-500"
+                    }`}
+                  >
                     {stock.code}
                   </div>
                 </div>
