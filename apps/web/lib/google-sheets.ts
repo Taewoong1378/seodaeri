@@ -613,6 +613,7 @@ export interface DividendRecord {
   name: string;
   amountKRW: number;
   amountUSD: number;
+  totalKRW: number; // J열 원화환산 (시트 수식으로 계산된 값)
 }
 
 export function parseDividendData(rows: any[]): DividendRecord[] {
@@ -685,8 +686,9 @@ export function parseDividendData(rows: any[]): DividendRecord[] {
   if (nameCol === -1) nameCol = 6; // G열 (종목명)
   if (amountKRWCol === -1) amountKRWCol = 7; // H열 (원화 배당금)
   if (amountUSDCol === -1) amountUSDCol = 8; // I열 (외화 배당금)
+  const totalKRWCol = 9; // J열 (원화환산 - 시트 수식으로 계산됨)
 
-  console.log('[parseDividendData] Column indices:', { dateCol, tickerCol, nameCol, amountKRWCol, amountUSDCol });
+  console.log('[parseDividendData] Column indices:', { dateCol, tickerCol, nameCol, amountKRWCol, amountUSDCol, totalKRWCol });
 
   const results: DividendRecord[] = [];
 
@@ -724,14 +726,20 @@ export function parseDividendData(rows: any[]): DividendRecord[] {
       }
     }
 
+    // J열 원화환산 값 파싱 (시트 수식으로 계산된 값)
+    const totalKRWRaw = parseNumber(row[totalKRWCol]);
+
     // 배당금이 하나라도 있으면 기록
-    if (amountKRW > 0 || amountUSD > 0) {
+    if (amountKRW > 0 || amountUSD > 0 || totalKRWRaw > 0) {
+      // 소수점 반올림하여 정수로 저장
+      const totalKRW = totalKRWRaw > 0 ? Math.round(totalKRWRaw) : Math.round(amountKRW);
       results.push({
         date,
         ticker: String(row[tickerCol] || ''),
         name: String(row[nameCol] || ''),
-        amountKRW,
+        amountKRW: Math.round(amountKRW),
         amountUSD,
+        totalKRW,
       });
     }
   }
@@ -755,7 +763,6 @@ export interface MonthlyDividend {
 
 export function aggregateMonthlyDividends(dividends: DividendRecord[]): MonthlyDividend[] {
   const monthlyMap = new Map<string, { year: number; month: number; amount: number }>();
-  const exchangeRate = 1400; // USD to KRW (시트에서 읽어오는 것이 이상적)
 
   for (const d of dividends) {
     const date = new Date(d.date);
@@ -765,12 +772,12 @@ export function aggregateMonthlyDividends(dividends: DividendRecord[]): MonthlyD
     const month = date.getMonth() + 1;
     const key = `${year}-${month.toString().padStart(2, '0')}`;
 
-    const amountKRW = d.amountKRW + (d.amountUSD * exchangeRate);
+    // 시트에서 계산된 totalKRW 사용
     const existing = monthlyMap.get(key);
     if (existing) {
-      existing.amount += amountKRW;
+      existing.amount += d.totalKRW;
     } else {
-      monthlyMap.set(key, { year, month, amount: amountKRW });
+      monthlyMap.set(key, { year, month, amount: d.totalKRW });
     }
   }
 
@@ -823,8 +830,6 @@ export interface RollingAverageDividendData {
 export function calculateRollingAverageDividend(dividends: DividendRecord[]): RollingAverageDividendData | null {
   if (!dividends || dividends.length === 0) return null;
 
-  const exchangeRate = 1400; // USD to KRW
-
   // 월별 배당금 집계
   const monthlyMap = new Map<string, number>();
 
@@ -836,9 +841,9 @@ export function calculateRollingAverageDividend(dividends: DividendRecord[]): Ro
     const month = date.getMonth() + 1;
     const key = `${year}-${String(month).padStart(2, '0')}`;
 
-    const amountKRW = d.amountKRW + (d.amountUSD * exchangeRate);
+    // 시트에서 계산된 totalKRW 사용
     const existing = monthlyMap.get(key) || 0;
-    monthlyMap.set(key, existing + amountKRW);
+    monthlyMap.set(key, existing + d.totalKRW);
   }
 
   // 월별 데이터를 정렬
@@ -916,8 +921,6 @@ export interface CumulativeDividendData {
 export function calculateCumulativeDividend(dividends: DividendRecord[]): CumulativeDividendData | null {
   if (!dividends || dividends.length === 0) return null;
 
-  const exchangeRate = 1400; // USD to KRW
-
   // 월별 배당금 집계
   const monthlyMap = new Map<string, number>();
 
@@ -929,9 +932,9 @@ export function calculateCumulativeDividend(dividends: DividendRecord[]): Cumula
     const month = date.getMonth() + 1;
     const key = `${year}-${String(month).padStart(2, '0')}`;
 
-    const amountKRW = d.amountKRW + (d.amountUSD * exchangeRate);
+    // 시트에서 계산된 totalKRW 사용
     const existing = monthlyMap.get(key) || 0;
-    monthlyMap.set(key, existing + amountKRW);
+    monthlyMap.set(key, existing + d.totalKRW);
   }
 
   // 월별 데이터를 정렬
@@ -980,8 +983,6 @@ export function calculateCumulativeDividend(dividends: DividendRecord[]): Cumula
 export function aggregateYearlyDividends(dividends: DividendRecord[]): YearlyDividendSummaryData | null {
   if (!dividends || dividends.length === 0) return null;
 
-  const exchangeRate = 1400; // USD to KRW
-
   // 연도별 집계
   const yearMap = new Map<number, number>();
 
@@ -990,9 +991,9 @@ export function aggregateYearlyDividends(dividends: DividendRecord[]): YearlyDiv
     if (Number.isNaN(date.getTime())) continue;
 
     const year = date.getFullYear();
-    const amountKRW = d.amountKRW + (d.amountUSD * exchangeRate);
+    // 시트에서 계산된 totalKRW 사용
     const existing = yearMap.get(year) || 0;
-    yearMap.set(year, existing + amountKRW);
+    yearMap.set(year, existing + d.totalKRW);
   }
 
   // 배당금이 있는 연도만 필터링하고 정렬
@@ -1015,8 +1016,6 @@ export function aggregateYearlyDividends(dividends: DividendRecord[]): YearlyDiv
 export function aggregateDividendsByYear(dividends: DividendRecord[]): DividendByYearData | null {
   if (!dividends || dividends.length === 0) return null;
 
-  const exchangeRate = 1400; // USD to KRW
-
   // 연도-월별 집계
   const yearMonthMap = new Map<string, number>();
   const yearsSet = new Set<number>();
@@ -1031,9 +1030,9 @@ export function aggregateDividendsByYear(dividends: DividendRecord[]): DividendB
 
     yearsSet.add(year);
 
-    const amountKRW = d.amountKRW + (d.amountUSD * exchangeRate);
+    // 시트에서 계산된 totalKRW 사용
     const existing = yearMonthMap.get(key) || 0;
-    yearMonthMap.set(key, existing + amountKRW);
+    yearMonthMap.set(key, existing + d.totalKRW);
   }
 
   const years = Array.from(yearsSet).sort((a, b) => a - b);

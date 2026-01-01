@@ -145,18 +145,17 @@ export async function getTransactions(): Promise<TransactionsResult> {
         if (dividendRows) {
           console.log('[Sheet] 배당내역 행 수:', dividendRows.length);
           const dividends = parseDividendData(dividendRows);
-          const exchangeRate = 1400;
           const dividendTransactions: Transaction[] = dividends.map(
             (d: DividendRecord, index: number) => {
-              const totalKRW = d.amountKRW + d.amountUSD * exchangeRate;
+              // 시트에서 계산된 totalKRW 사용 (실시간 환율 적용됨)
               return {
                 id: `dividend-${d.date}-${d.ticker}-${index}`,
                 ticker: d.ticker,
                 name: d.name || d.ticker,
                 type: 'DIVIDEND' as const,
-                price: totalKRW,
+                price: d.totalKRW,
                 quantity: 1,
-                total_amount: totalKRW,
+                total_amount: d.totalKRW,
                 trade_date: d.date,
                 sheet_synced: true,
                 created_at: d.date,

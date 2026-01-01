@@ -82,14 +82,8 @@ export async function saveDividend(
     const month = dateParts[1] || "";
     const day = dateParts[2] || "";
 
-    // 원화환산 계산 (외화가 있으면 환율 적용)
-    const exchangeRate = 1400; // USD to KRW
-    const convertedKRW =
-      input.amountUSD > 0 ? Math.round(input.amountUSD * exchangeRate) : 0;
-    const totalKRW = input.amountKRW + convertedKRW;
-
     // 시트에 추가할 데이터
-    // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산
+    // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산(수식)
     // 날짜 형식: YYYY/MM/DD (기존 시트 양식과 일치)
     const formattedDate = input.date.replace(/-/g, "/");
     const rowData = [
@@ -101,8 +95,8 @@ export async function saveDividend(
       input.ticker, // F: 종목코드
       input.name || input.ticker, // G: 종목명
       input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : "", // H: 원화 배당금
-      input.amountUSD > 0 ? input.amountUSD : "", // I: 외화 배당금
-      totalKRW > 0 ? `₩${totalKRW.toLocaleString()}` : "", // J: 원화환산
+      input.amountUSD > 0 ? input.amountUSD : "", // I: 외화 배당금 (숫자만)
+      '=INDIRECT("H"&ROW())+INDIRECT("I"&ROW())*GOOGLEFINANCE("usdkrw")', // J: 원화환산 (수식)
     ];
 
     // 날짜 순서에 맞는 위치에 삽입
@@ -198,19 +192,13 @@ export async function saveDividends(
       return { success: false, error: "연동된 스프레드시트가 없습니다." };
     }
 
-    const exchangeRate = 1400; // USD to KRW
-
     // 모든 배당내역을 행 데이터로 변환
-    // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산
+    // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산(수식)
     const rows = inputs.map((input) => {
       const dateParts = input.date.split("-");
       const year = dateParts[0] || "";
       const month = dateParts[1] || "";
       const day = dateParts[2] || "";
-
-      const convertedKRW =
-        input.amountUSD > 0 ? Math.round(input.amountUSD * exchangeRate) : 0;
-      const totalKRW = input.amountKRW + convertedKRW;
 
       // 날짜 형식: YYYY/MM/DD (기존 시트 양식과 일치)
       const formattedDate = input.date.replace(/-/g, "/");
@@ -224,8 +212,8 @@ export async function saveDividends(
         input.ticker, // F: 종목코드
         input.name || input.ticker, // G: 종목명
         input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : "", // H: 원화 배당금
-        input.amountUSD > 0 ? input.amountUSD : "", // I: 외화 배당금
-        totalKRW > 0 ? `₩${totalKRW.toLocaleString()}` : "", // J: 원화환산
+        input.amountUSD > 0 ? input.amountUSD : "", // I: 외화 배당금 (숫자만)
+        '=INDIRECT("H"&ROW())+INDIRECT("I"&ROW())*GOOGLEFINANCE("usdkrw")', // J: 원화환산 (수식)
       ];
     });
 
@@ -634,16 +622,8 @@ export async function updateDividend(
           const month = dateParts[1] || "";
           const day = dateParts[2] || "";
 
-          // 원화환산 계산
-          const exchangeRate = 1400;
-          const convertedKRW =
-            input.newAmountUSD > 0
-              ? Math.round(input.newAmountUSD * exchangeRate)
-              : 0;
-          const totalKRW = input.newAmountKRW + convertedKRW;
-
           // 시트 업데이트
-          // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산
+          // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산(수식)
           // 날짜 형식: YYYY/MM/DD (기존 시트 양식과 일치)
           const formattedNewDate = input.newDate.replace(/-/g, "/");
           const newRowData = [
@@ -657,8 +637,8 @@ export async function updateDividend(
             input.newAmountKRW > 0
               ? `₩${input.newAmountKRW.toLocaleString()}`
               : "", // H: 원화 배당금
-            input.newAmountUSD > 0 ? input.newAmountUSD : "", // I: 외화 배당금
-            totalKRW > 0 ? `₩${totalKRW.toLocaleString()}` : "", // J: 원화환산
+            input.newAmountUSD > 0 ? input.newAmountUSD : "", // I: 외화 배당금 (숫자만)
+            '=INDIRECT("H"&ROW())+INDIRECT("I"&ROW())*GOOGLEFINANCE("usdkrw")', // J: 원화환산 (수식)
           ];
 
           // Google Sheets API로 행 업데이트

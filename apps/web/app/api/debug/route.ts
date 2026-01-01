@@ -34,8 +34,7 @@ export async function GET() {
 
           const dividends = parseDividendData(dividendRows || []);
 
-          // 월별 배당금 집계
-          const exchangeRate = 1400;
+          // 월별 배당금 집계 (시트에서 계산된 totalKRW 사용)
           const monthlyMap = new Map<string, number>();
 
           for (const d of dividends) {
@@ -46,9 +45,9 @@ export async function GET() {
             const month = date.getMonth() + 1;
             const key = `${year}-${String(month).padStart(2, '0')}`;
 
-            const amountKRW = d.amountKRW + (d.amountUSD * exchangeRate);
+            // 시트에서 계산된 totalKRW 사용 (실시간 환율 적용됨)
             const existing = monthlyMap.get(key) || 0;
-            monthlyMap.set(key, existing + amountKRW);
+            monthlyMap.set(key, existing + d.totalKRW);
           }
 
           // 월별 배당금 (정렬)
