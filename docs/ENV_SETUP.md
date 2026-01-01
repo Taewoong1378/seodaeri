@@ -43,16 +43,16 @@ AUTH_SECRET=생성된_값_붙여넣기
 
 프로젝트 생성 후 **Settings > API** 메뉴에서 확인:
 
-| 환경 변수 | 위치 |
-|-----------|------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project API keys > `anon` `public` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Project API keys > `service_role` (비밀 유지!) |
+| 환경 변수                       | 위치                                           |
+| ------------------------------- | ---------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Project URL                                    |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project API keys > `anon` `public`             |
+| `SUPABASE_SERVICE_ROLE_KEY`     | Project API keys > `service_role` (비밀 유지!) |
 
 **Settings > General**에서:
 
-| 환경 변수 | 위치 |
-|-----------|------|
+| 환경 변수             | 위치         |
+| --------------------- | ------------ |
 | `SUPABASE_PROJECT_ID` | Reference ID |
 
 ### 예시
@@ -160,7 +160,80 @@ NEXT_PUBLIC_ADMIN_URL=http://localhost:3001
 
 ---
 
-## 6. 서대리 마스터 템플릿 (선택)
+## 6. KRX API 설정 (한국 주식 검색)
+
+한국 주식 종목 데이터베이스 구축에 필요합니다.
+
+### 6.1 API 키 발급
+
+1. [KRX 정보데이터시스템](https://data.krx.co.kr/) 접속
+2. 회원가입 후 로그인
+3. 상단 메뉴에서 **Open API** 클릭
+4. **API 인증키 신청** 메뉴 이동
+5. 사용 목적 입력 후 신청 (보통 1-2일 내 승인)
+6. 승인 후 **나의 인증키** 메뉴에서 키 확인
+
+### 6.2 환경 변수 설정
+
+```
+KRX_API_KEY=발급받은_API_키
+```
+
+### 참고사항
+
+- KRX API는 무료입니다
+- **장 운영일에만 데이터 제공** (휴장일/장 마감 전에는 빈 데이터 반환)
+- 장 마감 후 오후 6시 이후 동기화 권장
+
+---
+
+## 7. Financial Modeling Prep API 설정 (미국 주식 검색)
+
+미국 주식 (NASDAQ, NYSE) 종목 데이터베이스 구축에 필요합니다.
+
+### 7.1 API 키 발급
+
+1. [Financial Modeling Prep](https://financialmodelingprep.com/) 접속
+2. 우측 상단 **Get my API KEY** 또는 [등록 페이지](https://site.financialmodelingprep.com/register) 클릭
+3. 이메일로 회원가입 (Google/GitHub 로그인 가능)
+4. 가입 완료 후 **Dashboard**에서 API 키 확인
+
+### 7.2 환경 변수 설정
+
+```
+FMP_API_KEY=발급받은_API_키
+```
+
+### 참고사항
+
+- **무료 티어**: 하루 250 요청 (종목 동기화에 충분)
+- 전체 미국 종목 목록 조회 가능 (약 8,000개)
+- 실시간 데이터가 아닌 종목 목록만 사용하므로 무료 티어로 충분
+
+### 7.3 유료 플랜 (선택)
+
+더 많은 요청이 필요한 경우:
+
+- Starter: $14/월 - 300 요청/분
+- Professional: $49/월 - 750 요청/분
+
+---
+
+## 8. 관리자 설정 (선택)
+
+종목 DB 동기화 등 관리자 기능 사용에 필요합니다.
+
+### 8.1 환경 변수 설정
+
+```
+ADMIN_EMAILS=admin1@gmail.com,admin2@gmail.com
+```
+
+콤마로 구분하여 여러 이메일 등록 가능합니다.
+
+---
+
+## 9. 서대리 마스터 템플릿 (선택)
 
 신규 사용자가 로그인했을 때 자동으로 복사할 마스터 템플릿 시트 ID입니다.
 
@@ -177,6 +250,7 @@ NEXT_PUBLIC_ADMIN_URL=http://localhost:3001
 ### 6.2 시트 ID 찾기
 
 URL에서 ID 추출:
+
 ```
 https://docs.google.com/spreadsheets/d/여기가_시트_ID/edit
 ```
@@ -210,6 +284,13 @@ GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxxxxxxx
 
 # OpenAI (for OCR)
 OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Stock APIs (종목 검색용)
+KRX_API_KEY=한국거래소_API_키
+FMP_API_KEY=Financial_Modeling_Prep_API_키
+
+# Admin
+ADMIN_EMAILS=your-email@gmail.com
 
 # App URLs
 NEXT_PUBLIC_APP_URL=http://localhost:3000
