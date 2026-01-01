@@ -97,31 +97,31 @@ export function WheelPicker({
       className={cn("relative overflow-hidden", className)}
       style={{ height: containerHeight }}
     >
-      {/* 선택 영역 하이라이트 */}
+      {/* 선택 영역 하이라이트 - 회색 배경으로 변경하여 가시성 확보 */}
       <div
-        className="absolute left-0 right-0 bg-muted/50 rounded-lg pointer-events-none z-10"
+        className="absolute left-0 right-0 bg-gray-100/80 rounded-xl pointer-events-none z-10"
         style={{
           top: paddingHeight,
           height: itemHeight,
         }}
       />
 
-      {/* 상단 그라데이션 */}
+      {/* 상단 그라데이션 - 흰색 배경과 자연스럽게 연결 */}
       <div
-        className="absolute top-0 left-0 right-0 bg-gradient-to-b from-popover to-transparent pointer-events-none z-20"
+        className="absolute top-0 left-0 right-0 bg-gradient-to-b from-white via-white/90 to-transparent pointer-events-none z-20"
         style={{ height: paddingHeight }}
       />
 
       {/* 하단 그라데이션 */}
       <div
-        className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-popover to-transparent pointer-events-none z-20"
+        className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/90 to-transparent pointer-events-none z-20"
         style={{ height: paddingHeight }}
       />
 
       {/* 스크롤 컨테이너 */}
       <div
         ref={containerRef}
-        className="h-full overflow-y-auto scrollbar-hide"
+        className="h-full overflow-y-auto scrollbar-hide relative z-30 bg-gray-50"
         onScroll={handleScroll}
         style={{
           scrollSnapType: "y mandatory",
@@ -135,8 +135,8 @@ export function WheelPicker({
         {items.map((item, index) => {
           const isSelected = index === selectedIndex;
           const distance = Math.abs(index - selectedIndex);
-          const opacity = distance === 0 ? 1 : distance === 1 ? 0.5 : 0.3;
-          const scale = distance === 0 ? 1 : distance === 1 ? 0.95 : 0.9;
+          const opacity = distance === 0 ? 1 : distance === 1 ? 0.4 : 0.2;
+          const scale = distance === 0 ? 1.1 : distance === 1 ? 0.9 : 0.8;
 
           return (
             <button
@@ -144,10 +144,10 @@ export function WheelPicker({
               type="button"
               onClick={() => handleItemClick(index)}
               className={cn(
-                "w-full flex items-center justify-center transition-all duration-150",
+                "w-full flex items-center justify-center transition-all duration-200",
                 isSelected
-                  ? "font-bold text-foreground"
-                  : "text-muted-foreground"
+                  ? "font-bold text-gray-900"
+                  : "text-gray-400 font-medium"
               )}
               style={{
                 height: itemHeight,
@@ -198,7 +198,7 @@ export function YearMonthPicker({
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-4 px-2">
       <WheelPicker
         items={yearItems}
         value={year}

@@ -27,6 +27,7 @@ import {
 } from "../../actions/account-balance";
 import { updateDeposit } from "../../actions/deposit";
 import { updateDividend } from "../../actions/dividend";
+import { StockSearchInput } from "../../components/StockSearchInput";
 import { YearMonthPicker } from "./WheelPicker";
 
 export type EditType = "balance" | "dividend" | "deposit";
@@ -345,30 +346,21 @@ export function EditTransactionModal({
                   accentColor="blue"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
-                  종목코드
-                </label>
-                <Input
-                  type="text"
-                  value={dividendTicker}
-                  onChange={(e) => setDividendTicker(e.target.value)}
-                  placeholder="005930"
-                  accentColor="blue"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
-                  종목명
-                </label>
-                <Input
-                  type="text"
-                  value={dividendName}
-                  onChange={(e) => setDividendName(e.target.value)}
-                  placeholder="삼성전자"
-                  accentColor="blue"
-                />
-              </div>
+              <StockSearchInput
+                selectedCode={dividendTicker}
+                selectedName={dividendName}
+                onSelect={(code, name) => {
+                  setDividendTicker(code);
+                  setDividendName(name);
+                }}
+                onClear={() => {
+                  setDividendTicker("");
+                  setDividendName("");
+                }}
+                label="종목"
+                placeholder="종목명 또는 종목코드 검색"
+                accentColor="blue"
+              />
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">
                   배당금 (원화)
