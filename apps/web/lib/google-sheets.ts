@@ -679,11 +679,12 @@ export function parseDividendData(rows: any[]): DividendRecord[] {
   }
 
   // 헤더를 찾지 못한 경우 기본값 사용
-  if (dateCol === -1) dateCol = 1; // B열
-  if (tickerCol === -1) tickerCol = 5; // F열
-  if (nameCol === -1) nameCol = 6; // G열
-  if (amountKRWCol === -1) amountKRWCol = 7; // H열
-  if (amountUSDCol === -1) amountUSDCol = 8; // I열
+  // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산
+  if (dateCol === -1) dateCol = 1; // B열 (날짜)
+  if (tickerCol === -1) tickerCol = 5; // F열 (종목코드)
+  if (nameCol === -1) nameCol = 6; // G열 (종목명)
+  if (amountKRWCol === -1) amountKRWCol = 7; // H열 (원화 배당금)
+  if (amountUSDCol === -1) amountUSDCol = 8; // I열 (외화 배당금)
 
   console.log('[parseDividendData] Column indices:', { dateCol, tickerCol, nameCol, amountKRWCol, amountUSDCol });
 

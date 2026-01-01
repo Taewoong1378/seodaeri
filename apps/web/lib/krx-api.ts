@@ -79,32 +79,44 @@ function getBaseDateString(date?: Date): string {
 }
 
 /**
- * 가장 최근 영업일 계산
+ * 최근 영업일 후보 목록 생성 (최대 10일)
  * - 주말 제외
- * - 오전 9시 이전이면 전일 (장 시작 전)
- * - 오후 6시 이전이면 전일 (KRX 데이터는 장 마감 후 업데이트되므로)
+ * - 공휴일은 API 호출로 확인 (데이터 없으면 다음 날짜 시도)
  */
-function getLastBusinessDate(): Date {
+function getRecentBusinessDates(): Date[] {
   const now = new Date();
+  const dates: Date[] = [];
   const date = new Date(now);
   const hour = now.getHours();
 
-  // 오전 9시 이전 또는 오후 6시(18시) 이전이면 전일 데이터 사용
-  // KRX API는 당일 데이터를 장 마감 후 몇 시간 뒤에 업데이트함
+  // 오후 6시(18시) 이전이면 전일부터 시작
   if (hour < 18) {
     date.setDate(date.getDate() - 1);
   }
 
-  const day = date.getDay();
-
-  // 일요일(0)이면 2일 전, 토요일(6)이면 1일 전
-  if (day === 0) {
-    date.setDate(date.getDate() - 2);
-  } else if (day === 6) {
+  // 최대 10일간의 영업일 후보 생성
+  for (let i = 0; i < 10 && dates.length < 5; i++) {
+    const day = date.getDay();
+    
+    // 주말이 아니면 후보에 추가
+    if (day !== 0 && day !== 6) {
+      dates.push(new Date(date));
+    }
+    
     date.setDate(date.getDate() - 1);
   }
 
-  return date;
+  return dates;
+}
+
+/**
+ * 가장 최근 영업일 계산 (단일)
+ * - 주말 제외
+ * - 오후 6시 이전이면 전일
+ */
+function getLastBusinessDate(): Date {
+  const dates = getRecentBusinessDates();
+  return dates[0] || new Date();
 }
 
 /**
@@ -168,13 +180,36 @@ async function fetchKRX<T>(endpoint: string, basDd: string): Promise<T[]> {
  */
 export async function fetchKOSPIStocks(): Promise<KRXStock[]> {
   const basDd = getBaseDateString(getLastBusinessDate());
+  return fetchKOSPIStocksForDate(basDd);
+}
+
+/**
+ * 코스닥(KOSDAQ) 종목 조회
+ */
+export async function fetchKOSDAQStocks(): Promise<KRXStock[]> {
+  const basDd = getBaseDateString(getLastBusinessDate());
+  return fetchKOSDAQStocksForDate(basDd);
+}
+
+/**
+ * ETF 종목 조회
+ */
+export async function fetchETFStocks(): Promise<KRXStock[]> {
+  const basDd = getBaseDateString(getLastBusinessDate());
+  return fetchETFStocksForDate(basDd);
+}
+
+/**
+ * 특정 날짜로 KOSPI 종목 조회
+ */
+async function fetchKOSPIStocksForDate(basDd: string): Promise<KRXStock[]> {
   const data = await fetchKRX<KRXStockResponse>(
     "/sto/stk_isu_base_info",
     basDd
   );
 
   return data
-    .filter((item) => item.ISU_SRT_CD && item.ISU_NM) // 유효한 데이터만
+    .filter((item) => item.ISU_SRT_CD && item.ISU_NM)
     .map((item) => ({
       code: item.ISU_SRT_CD,
       name: item.ISU_ABBRV || item.ISU_NM,
@@ -185,17 +220,16 @@ export async function fetchKOSPIStocks(): Promise<KRXStock[]> {
 }
 
 /**
- * 코스닥(KOSDAQ) 종목 조회
+ * 특정 날짜로 KOSDAQ 종목 조회
  */
-export async function fetchKOSDAQStocks(): Promise<KRXStock[]> {
-  const basDd = getBaseDateString(getLastBusinessDate());
+async function fetchKOSDAQStocksForDate(basDd: string): Promise<KRXStock[]> {
   const data = await fetchKRX<KRXStockResponse>(
     "/sto/ksq_isu_base_info",
     basDd
   );
 
   return data
-    .filter((item) => item.ISU_SRT_CD && item.ISU_NM) // 유효한 데이터만
+    .filter((item) => item.ISU_SRT_CD && item.ISU_NM)
     .map((item) => ({
       code: item.ISU_SRT_CD,
       name: item.ISU_ABBRV || item.ISU_NM,
@@ -206,14 +240,13 @@ export async function fetchKOSDAQStocks(): Promise<KRXStock[]> {
 }
 
 /**
- * ETF 종목 조회
+ * 특정 날짜로 ETF 종목 조회
  */
-export async function fetchETFStocks(): Promise<KRXStock[]> {
-  const basDd = getBaseDateString(getLastBusinessDate());
+async function fetchETFStocksForDate(basDd: string): Promise<KRXStock[]> {
   const data = await fetchKRX<KRXETFResponse>("/etp/etf_bydd_trd", basDd);
 
   return data
-    .filter((item) => item.ISU_CD && item.ISU_NM) // 유효한 데이터만
+    .filter((item) => item.ISU_CD && item.ISU_NM)
     .map((item) => ({
       code: item.ISU_CD,
       name: item.ISU_NM,
@@ -224,30 +257,54 @@ export async function fetchETFStocks(): Promise<KRXStock[]> {
 
 /**
  * 전체 종목 조회 (KOSPI + KOSDAQ + ETF)
- * 일부 API 실패해도 나머지는 반환
+ * - 여러 날짜를 순차적으로 시도 (공휴일 대응)
+ * - 일부 API 실패해도 나머지는 반환
  */
 export async function fetchAllStocks(): Promise<KRXStock[]> {
-  const results = await Promise.allSettled([
-    fetchKOSPIStocks(),
-    fetchKOSDAQStocks(),
-    fetchETFStocks(),
-  ]);
+  const candidateDates = getRecentBusinessDates();
+  
+  console.log(`[KRX API] Trying dates: ${candidateDates.map(d => getBaseDateString(d)).join(', ')}`);
 
-  const stocks: KRXStock[] = [];
+  // 각 날짜를 순차적으로 시도
+  for (const date of candidateDates) {
+    const basDd = getBaseDateString(date);
+    console.log(`[KRX API] Attempting to fetch stocks for date: ${basDd}`);
 
-  results.forEach((result, index) => {
-    const markets = ["KOSPI", "KOSDAQ", "ETF"];
-    if (result.status === "fulfilled") {
-      stocks.push(...result.value);
-    } else {
-      console.error(
-        `[KRX API] Failed to fetch ${markets[index]}:`,
-        result.reason
-      );
+    try {
+      const results = await Promise.allSettled([
+        fetchKOSPIStocksForDate(basDd),
+        fetchKOSDAQStocksForDate(basDd),
+        fetchETFStocksForDate(basDd),
+      ]);
+
+      const stocks: KRXStock[] = [];
+      let hasData = false;
+
+      results.forEach((result, index) => {
+        const markets = ["KOSPI", "KOSDAQ", "ETF"];
+        if (result.status === "fulfilled" && result.value.length > 0) {
+          stocks.push(...result.value);
+          hasData = true;
+          console.log(`[KRX API] ${markets[index]}: ${result.value.length} stocks`);
+        } else if (result.status === "rejected") {
+          console.error(`[KRX API] Failed to fetch ${markets[index]}:`, result.reason);
+        }
+      });
+
+      // 데이터가 있으면 반환
+      if (hasData && stocks.length > 0) {
+        console.log(`[KRX API] Successfully fetched ${stocks.length} stocks for date ${basDd}`);
+        return stocks;
+      }
+
+      console.log(`[KRX API] No data for date ${basDd}, trying previous date...`);
+    } catch (error) {
+      console.error(`[KRX API] Error fetching for date ${basDd}:`, error);
     }
-  });
+  }
 
-  return stocks;
+  console.error('[KRX API] Failed to fetch stocks for all candidate dates');
+  return [];
 }
 
 /**
