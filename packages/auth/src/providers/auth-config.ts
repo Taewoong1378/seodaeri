@@ -53,7 +53,8 @@ export const authConfig: NextAuthConfig = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope: 'openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets',
+          // drive.file 스코프만 사용 - Picker로 선택한 파일에 대해 Sheets API 접근 가능
+          scope: 'openid email profile https://www.googleapis.com/auth/drive.file',
           access_type: 'offline',
           prompt: 'consent',
         },
