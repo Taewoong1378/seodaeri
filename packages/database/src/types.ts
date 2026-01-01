@@ -297,6 +297,57 @@ export interface Database {
           },
         ]
       }
+      stocks: {
+        Row: {
+          code: string
+          name: string
+          full_code: string | null
+          market: string
+          eng_name: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          name: string
+          full_code?: string | null
+          market: string
+          eng_name?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          name?: string
+          full_code?: string | null
+          market?: string
+          eng_name?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sync_metadata: {
+        Row: {
+          key: string
+          value: Json | null
+          updated_at: string
+        }
+        Insert: {
+          key: string
+          value?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          key?: string
+          value?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

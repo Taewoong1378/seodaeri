@@ -113,6 +113,25 @@ CREATE TABLE IF NOT EXISTS public.account_balances (
     UNIQUE(user_id, year_month)         -- 유저당 월별 1개
 );
 
+-- 9. Stocks (종목 마스터 데이터 - KRX API 동기화)
+CREATE TABLE IF NOT EXISTS public.stocks (
+    code TEXT NOT NULL PRIMARY KEY,      -- 종목코드 (단축코드, 예: 005930)
+    name TEXT NOT NULL,                  -- 종목명 (예: 삼성전자)
+    full_code TEXT,                      -- 표준코드 (ISIN)
+    market TEXT NOT NULL,                -- 시장구분 (KOSPI, KOSDAQ, ETF)
+    eng_name TEXT,                       -- 영문 종목명
+    is_active BOOLEAN DEFAULT TRUE,      -- 활성 종목 여부 (상장폐지 시 false)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- 10. Sync Metadata (동기화 메타데이터)
+CREATE TABLE IF NOT EXISTS public.sync_metadata (
+    key TEXT NOT NULL PRIMARY KEY,
+    value JSONB,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
 -- RLS Policies
 -- NextAuth 사용 시 service_role key로 접근하므로 RLS는 비활성화하거나
 -- 서버 사이드에서 user_id 필터링으로 보안 처리
@@ -126,6 +145,8 @@ ALTER TABLE public.deposits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio_snapshots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.holdings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.account_balances ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.stocks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sync_metadata ENABLE ROW LEVEL SECURITY;
 
 -- Service role은 RLS 우회 가능, 일반 anon key는 접근 불가
 CREATE POLICY "Service role full access" ON public.users FOR ALL USING (true);
@@ -136,6 +157,11 @@ CREATE POLICY "Service role full access" ON public.deposits FOR ALL USING (true)
 CREATE POLICY "Service role full access" ON public.portfolio_snapshots FOR ALL USING (true);
 CREATE POLICY "Service role full access" ON public.holdings FOR ALL USING (true);
 CREATE POLICY "Service role full access" ON public.account_balances FOR ALL USING (true);
+CREATE POLICY "Service role full access" ON public.stocks FOR ALL USING (true);
+CREATE POLICY "Service role full access" ON public.sync_metadata FOR ALL USING (true);
+
+-- 종목 테이블은 모든 사용자가 읽기 가능
+CREATE POLICY "Public read access" ON public.stocks FOR SELECT USING (true);
 
 -- Indexes for faster queries
 CREATE INDEX IF NOT EXISTS idx_dividends_user_date ON public.dividends(user_id, dividend_date);
@@ -143,3 +169,5 @@ CREATE INDEX IF NOT EXISTS idx_deposits_user_date ON public.deposits(user_id, de
 CREATE INDEX IF NOT EXISTS idx_portfolio_snapshots_user_date ON public.portfolio_snapshots(user_id, snapshot_date);
 CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON public.transactions(user_id, trade_date);
 CREATE INDEX IF NOT EXISTS idx_account_balances_user_yearmonth ON public.account_balances(user_id, year_month);
+CREATE INDEX IF NOT EXISTS idx_stocks_name ON public.stocks(name);
+CREATE INDEX IF NOT EXISTS idx_stocks_market ON public.stocks(market);

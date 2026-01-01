@@ -22,22 +22,22 @@ interface DatePickerProps {
 const accentColors = {
   blue: {
     icon: "text-blue-500",
-    ring: "focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-500",
+    ring: "focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:border-blue-400",
     todayBtn: "text-blue-600 hover:bg-blue-50",
   },
   emerald: {
     icon: "text-emerald-500",
-    ring: "focus-visible:ring-2 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500",
+    ring: "focus-visible:ring-2 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-400",
     todayBtn: "text-emerald-600 hover:bg-emerald-50",
   },
   purple: {
     icon: "text-purple-500",
-    ring: "focus-visible:ring-2 focus-visible:ring-purple-500/30 focus-visible:border-purple-500",
+    ring: "focus-visible:ring-2 focus-visible:ring-purple-500/20 focus-visible:border-purple-400",
     todayBtn: "text-purple-600 hover:bg-purple-50",
   },
   orange: {
     icon: "text-orange-500",
-    ring: "focus-visible:ring-2 focus-visible:ring-orange-500/30 focus-visible:border-orange-500",
+    ring: "focus-visible:ring-2 focus-visible:ring-orange-500/20 focus-visible:border-orange-400",
     todayBtn: "text-orange-600 hover:bg-orange-50",
   },
 };
@@ -77,15 +77,15 @@ function DatePicker({
           variant="outline"
           disabled={disabled}
           className={cn(
-            "w-full justify-start text-left font-normal h-12 rounded-xl bg-muted/50 border-border hover:bg-muted",
+            "w-full justify-start text-left font-normal h-12 rounded-xl bg-white border-gray-200 hover:bg-white hover:border-gray-300 shadow-sm transition-all",
             colors.ring,
-            !date && "text-muted-foreground",
+            !date && "text-gray-400",
             className
           )}
         >
           <CalendarIcon className={cn("mr-2 h-4 w-4", colors.icon)} />
           {date ? (
-            <span className="text-foreground">
+            <span className="text-gray-900">
               {format(date, "yyyy년 M월 d일", { locale: ko })}
             </span>
           ) : (
@@ -93,37 +93,37 @@ function DatePicker({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
-        <div className="bg-popover rounded-xl shadow-xl border border-border overflow-hidden">
+      <PopoverContent className="w-auto p-0" align="start">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
           <Calendar
             mode="single"
             selected={date}
             onSelect={handleSelect}
             autoFocus
-            className="p-3"
+            className="p-4"
           />
-          <div className="flex items-center justify-between px-3 py-2 border-t border-border">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50">
             <Button
               variant="ghost"
               size="sm"
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="text-gray-400 hover:text-red-500 hover:bg-red-50 h-8 text-xs font-medium"
               onClick={() => {
                 if (onChange) onChange("");
                 setOpen(false);
               }}
             >
-              삭제
+              선택 해제
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className={colors.todayBtn}
+              className={cn("h-8 text-xs font-bold", colors.todayBtn)}
               onClick={() => {
                 if (onChange) onChange(format(new Date(), "yyyy-MM-dd"));
                 setOpen(false);
               }}
             >
-              오늘
+              오늘 날짜 선택
             </Button>
           </div>
         </div>
@@ -133,4 +133,3 @@ function DatePicker({
 }
 
 export { DatePicker };
-
