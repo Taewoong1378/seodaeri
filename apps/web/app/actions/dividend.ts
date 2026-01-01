@@ -199,6 +199,7 @@ export async function saveDividends(
     const exchangeRate = 1400; // USD to KRW
 
     // 모든 배당내역을 행 데이터로 변환
+    // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산
     const rows = inputs.map((input) => {
       const dateParts = input.date.split("-");
       const year = dateParts[0] || "";
@@ -210,15 +211,16 @@ export async function saveDividends(
       const totalKRW = input.amountKRW + convertedKRW;
 
       return [
-        input.date, // A: 일자
-        year, // B: 연도
-        `${month}월`, // C: 월
-        `${day}일`, // D: 일
-        input.ticker, // E: 종목코드
-        input.name || input.ticker, // F: 종목명
-        input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : "", // G: 원화 배당금
-        input.amountUSD > 0 ? input.amountUSD : "", // H: 외화 배당금
-        totalKRW > 0 ? `₩${totalKRW.toLocaleString()}` : "", // I: 원화환산
+        "", // A: 빈 칸
+        input.date, // B: 일자
+        year, // C: 연도
+        `${month}월`, // D: 월
+        `${day}일`, // E: 일
+        input.ticker, // F: 종목코드
+        input.name || input.ticker, // G: 종목명
+        input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : "", // H: 원화 배당금
+        input.amountUSD > 0 ? input.amountUSD : "", // I: 외화 배당금
+        totalKRW > 0 ? `₩${totalKRW.toLocaleString()}` : "", // J: 원화환산
       ];
     });
 
@@ -226,7 +228,7 @@ export async function saveDividends(
     await appendSheetData(
       session.accessToken,
       user.spreadsheet_id,
-      "'7. 배당내역'!A:I",
+      "'7. 배당내역'!A:J",
       rows
     );
 
