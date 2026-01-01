@@ -636,25 +636,27 @@ export async function updateDividend(
           const totalKRW = input.newAmountKRW + convertedKRW;
 
           // 시트 업데이트
+          // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산
           const newRowData = [
-            input.newDate,
-            year,
-            `${month}월`,
-            `${day}일`,
-            input.newTicker,
-            input.newName || input.newTicker,
+            "", // A: 빈 칸
+            input.newDate, // B: 날짜
+            year, // C: 연도
+            `${month}월`, // D: 월
+            `${day}일`, // E: 일
+            input.newTicker, // F: 종목코드
+            input.newName || input.newTicker, // G: 종목명
             input.newAmountKRW > 0
               ? `₩${input.newAmountKRW.toLocaleString()}`
-              : "",
-            input.newAmountUSD > 0 ? input.newAmountUSD : "",
-            totalKRW > 0 ? `₩${totalKRW.toLocaleString()}` : "",
+              : "", // H: 원화 배당금
+            input.newAmountUSD > 0 ? input.newAmountUSD : "", // I: 외화 배당금
+            totalKRW > 0 ? `₩${totalKRW.toLocaleString()}` : "", // J: 원화환산
           ];
 
           // Google Sheets API로 행 업데이트
           const response = await fetch(
             `https://sheets.googleapis.com/v4/spreadsheets/${
               user.spreadsheet_id
-            }/values/'${sheetName}'!A${i + 1}:I${
+            }/values/'${sheetName}'!A${i + 1}:J${
               i + 1
             }?valueInputOption=USER_ENTERED`,
             {
