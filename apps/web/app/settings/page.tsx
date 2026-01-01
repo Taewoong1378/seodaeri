@@ -1,25 +1,38 @@
-import { auth, signOut } from '@repo/auth/server';
-import { Button } from '@repo/design-system/components/button';
-import { Card, CardContent } from '@repo/design-system/components/card';
-import { ChevronRight, ExternalLink, LogOut, Shield, User } from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { BottomNav } from '../dashboard/components/BottomNav';
-import { DeleteAccountButton } from './DeleteAccountButton';
+import { auth, signOut } from "@repo/auth/server";
+import { Button } from "@repo/design-system/components/button";
+import { Card, CardContent } from "@repo/design-system/components/card";
+import { ChevronRight, ExternalLink, LogOut, Shield, User } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { BottomNav } from "../dashboard/components/BottomNav";
+import { DeleteAccountButton } from "./DeleteAccountButton";
+import { StockSyncButton } from "./StockSyncButton";
 
 export default async function SettingsPage() {
   const session = await auth();
 
   if (!session?.user) {
-    redirect('/login');
+    redirect("/login");
   }
+
+  // 관리자 이메일 체크
+  const adminEmails = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+  const isAdmin =
+    adminEmails.length > 0 &&
+    session.user.email &&
+    adminEmails.includes(session.user.email);
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-24">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-5 h-14 flex items-center">
-        <span className="font-bold text-lg tracking-tight text-foreground">설정</span>
+        <span className="font-bold text-lg tracking-tight text-foreground">
+          설정
+        </span>
       </header>
 
       <main className="p-5 space-y-6">
@@ -30,7 +43,7 @@ export default async function SettingsPage() {
               {session.user.image ? (
                 <Image
                   src={session.user.image}
-                  alt={session.user.name || '프로필'}
+                  alt={session.user.name || "프로필"}
                   width={64}
                   height={64}
                   className="rounded-full border-2 border-border"
@@ -41,8 +54,12 @@ export default async function SettingsPage() {
                 </div>
               )}
               <div>
-                <h2 className="text-lg font-bold text-foreground">{session.user.name}</h2>
-                <p className="text-sm text-muted-foreground">{session.user.email}</p>
+                <h2 className="text-lg font-bold text-foreground">
+                  {session.user.name}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {session.user.email}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -60,8 +77,12 @@ export default async function SettingsPage() {
                   <ExternalLink size={20} className="text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">시트 연동 관리</p>
-                  <p className="text-xs text-muted-foreground">Google 스프레드시트 연결 설정</p>
+                  <p className="text-sm font-medium text-foreground">
+                    시트 연동 관리
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Google 스프레드시트 연결 설정
+                  </p>
                 </div>
               </div>
               <ChevronRight size={20} className="text-muted-foreground" />
@@ -75,8 +96,12 @@ export default async function SettingsPage() {
                   <Shield size={20} className="text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">개인정보처리방침</p>
-                  <p className="text-xs text-muted-foreground">개인정보 수집 및 이용 안내</p>
+                  <p className="text-sm font-medium text-foreground">
+                    개인정보처리방침
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    개인정보 수집 및 이용 안내
+                  </p>
                 </div>
               </div>
               <ChevronRight size={20} className="text-muted-foreground" />
@@ -84,11 +109,21 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Admin Section - Stock Sync (관리자만 표시) */}
+        {isAdmin && (
+          <Card className="border-border bg-card shadow-none rounded-[24px] overflow-hidden">
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground mb-3">관리자 도구</p>
+              <StockSyncButton />
+            </CardContent>
+          </Card>
+        )}
+
         {/* Logout */}
         <form
           action={async () => {
-            'use server';
-            await signOut({ redirectTo: '/login' });
+            "use server";
+            await signOut({ redirectTo: "/login" });
           }}
         >
           <Button
@@ -109,7 +144,9 @@ export default async function SettingsPage() {
         {/* App Info */}
         <div className="text-center pt-4">
           <p className="text-xs text-muted-foreground">굴림(Gulim) v1.0.0</p>
-          <p className="text-xs text-muted-foreground mt-1">Made By Taewoong Kang</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Made By Taewoong Kang
+          </p>
         </div>
       </main>
 
