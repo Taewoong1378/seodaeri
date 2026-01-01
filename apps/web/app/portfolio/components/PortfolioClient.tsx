@@ -145,7 +145,7 @@ export function PortfolioClient({ portfolio }: PortfolioClientProps) {
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-muted-foreground truncate">{item.name}</p>
-                      <p className="text-sm font-bold text-foreground">{item.weight.toFixed(1)}%</p>
+                      <p className="text-sm font-bold text-foreground">{Math.round(item.weight)}%</p>
                     </div>
                   </div>
                 ))}
@@ -210,7 +210,7 @@ export function PortfolioClient({ portfolio }: PortfolioClientProps) {
                     <div className="mt-3 pt-3 border-t border-border">
                       <div className="flex items-center justify-between text-xs mb-1">
                         <span className="text-muted-foreground">포트폴리오 비중</span>
-                        <span className="text-muted-foreground">{item.weight.toFixed(1)}%</span>
+                        <span className="text-muted-foreground">{Math.round(item.weight)}%</span>
                       </div>
                       <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                         <div

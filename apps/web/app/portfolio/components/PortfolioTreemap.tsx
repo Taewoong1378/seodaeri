@@ -49,7 +49,7 @@ const CustomContent = (props: any) => {
             </span>
             {height > 50 && typeof weight === 'number' && (
               <span className="text-white/90 text-[10px] font-medium drop-shadow-md">
-                {weight.toFixed(1)}%
+                {Math.round(weight)}%
               </span>
             )}
           </div>
@@ -68,7 +68,7 @@ const CustomTooltip = ({ active, payload }: any) => {
         <div className="flex items-center gap-2 text-xs">
           <span className="text-muted-foreground">{data.ticker}</span>
           <span className="text-muted-foreground">|</span>
-          <span className="text-emerald-600 font-medium">{data.weight.toFixed(1)}%</span>
+          <span className="text-emerald-600 font-medium">{Math.round(data.weight)}%</span>
         </div>
         <p className="text-popover-foreground text-xs mt-1 font-medium">
           {Math.round(data.totalValue).toLocaleString()}원

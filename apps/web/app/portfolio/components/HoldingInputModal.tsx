@@ -21,6 +21,7 @@ import type { JSX } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { queryKeys } from "../../../lib/query-client";
 import { deleteHolding, saveHolding } from "../../actions/holding";
+import { StockSearchInput } from "../../components/StockSearchInput";
 
 export interface HoldingEditData {
   ticker: string;
@@ -247,7 +248,17 @@ export function HoldingInputModal({
             >
               국가
             </label>
-            <Select value={country} onValueChange={setCountry}>
+            <Select 
+              value={country} 
+              onValueChange={(value) => {
+                setCountry(value);
+                // 국가 변경 시 종목 정보 초기화 (수정 모드가 아닐 때만)
+                if (!isEditMode) {
+                  setTicker("");
+                  setName("");
+                }
+              }}
+            >
               <SelectTrigger className="bg-muted/50 border-border text-foreground h-12 rounded-xl">
                 <SelectValue />
               </SelectTrigger>
@@ -272,56 +283,78 @@ export function HoldingInputModal({
             </Select>
           </div>
 
-          {/* 종목코드 */}
-          <div className="space-y-2">
-            <label
-              htmlFor="ticker"
-              className="text-sm font-medium text-muted-foreground"
-            >
-              종목코드 (티커)
-            </label>
-            <Input
-              type="text"
-              value={ticker}
-              onChange={(e) => {
-                setTicker(e.target.value.toUpperCase());
+          {/* 한국 종목: 검색 / 미국 종목: 직접 입력 */}
+          {country === "한국" && !isEditMode ? (
+            <StockSearchInput
+              selectedCode={ticker}
+              selectedName={name}
+              onSelect={(code, selectedName) => {
+                setTicker(code);
+                setName(selectedName);
                 setError(null);
               }}
-              placeholder={
-                country === "미국" ? "AAPL, NVDA, SPY..." : "005930, 360750..."
-              }
-              className="uppercase disabled:opacity-60"
+              onClear={() => {
+                setTicker("");
+                setName("");
+              }}
+              label="종목"
+              placeholder="종목명 또는 종목코드 검색"
               accentColor="emerald"
-              disabled={isEditMode}
             />
-            {isEditMode && (
-              <p className="text-xs text-muted-foreground">
-                종목코드는 수정할 수 없습니다.
-              </p>
-            )}
-          </div>
+          ) : (
+            <>
+              {/* 종목코드 */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="ticker"
+                  className="text-sm font-medium text-muted-foreground"
+                >
+                  종목코드 (티커)
+                </label>
+                <Input
+                  type="text"
+                  value={ticker}
+                  onChange={(e) => {
+                    setTicker(e.target.value.toUpperCase());
+                    setError(null);
+                  }}
+                  placeholder={
+                    country === "미국" ? "AAPL, NVDA, SPY..." : "005930, 360750..."
+                  }
+                  className="uppercase disabled:opacity-60"
+                  accentColor="emerald"
+                  disabled={isEditMode}
+                />
+                {isEditMode && (
+                  <p className="text-xs text-muted-foreground">
+                    종목코드는 수정할 수 없습니다.
+                  </p>
+                )}
+              </div>
 
-          {/* 종목명 */}
-          <div className="space-y-2">
-            <label
-              htmlFor="name"
-              className="text-sm font-medium text-muted-foreground"
-            >
-              종목명
-            </label>
-            <Input
-              type="text"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                setError(null);
-              }}
-              placeholder={
-                country === "미국" ? "Apple Inc." : "TIGER 미국S&P500"
-              }
-              accentColor="emerald"
-            />
-          </div>
+              {/* 종목명 */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="name"
+                  className="text-sm font-medium text-muted-foreground"
+                >
+                  종목명
+                </label>
+                <Input
+                  type="text"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setError(null);
+                  }}
+                  placeholder={
+                    country === "미국" ? "Apple Inc." : "TIGER 미국S&P500"
+                  }
+                  accentColor="emerald"
+                />
+              </div>
+            </>
+          )}
 
           {/* 수량 & 평단가 */}
           <div className="grid grid-cols-2 gap-3">
