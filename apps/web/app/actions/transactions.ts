@@ -23,6 +23,8 @@ export interface Transaction {
   created_at: string;
   source: 'app' | 'sheet';
   account?: string; // 계좌(증권사) 정보 (입출금 전용)
+  amountKRW?: number; // 배당 전용: 원화 배당금
+  amountUSD?: number; // 배당 전용: 외화 배당금
 }
 
 export interface TransactionsResult {
@@ -146,19 +148,21 @@ export async function getTransactions(): Promise<TransactionsResult> {
           const exchangeRate = 1400;
           const dividendTransactions: Transaction[] = dividends.map(
             (d: DividendRecord, index: number) => {
-              const amountKRW = d.amountKRW + d.amountUSD * exchangeRate;
+              const totalKRW = d.amountKRW + d.amountUSD * exchangeRate;
               return {
                 id: `dividend-${d.date}-${d.ticker}-${index}`,
                 ticker: d.ticker,
                 name: d.name || d.ticker,
                 type: 'DIVIDEND' as const,
-                price: amountKRW,
+                price: totalKRW,
                 quantity: 1,
-                total_amount: amountKRW,
+                total_amount: totalKRW,
                 trade_date: d.date,
                 sheet_synced: true,
                 created_at: d.date,
                 source: 'sheet' as const,
+                amountKRW: d.amountKRW, // 원화 배당금 (삭제 시 사용)
+                amountUSD: d.amountUSD, // 외화 배당금 (삭제 시 사용)
               };
             }
           );

@@ -10,6 +10,7 @@ import {
 import { toPng } from 'html-to-image';
 import { Monitor, Share2, Smartphone } from 'lucide-react';
 import { type RefObject, useState } from 'react';
+import { toast } from '@repo/design-system';
 
 interface ShareChartButtonProps {
   chartRef: RefObject<HTMLDivElement | null>;
@@ -101,7 +102,7 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
       console.error('Share failed:', error);
       // 사용자가 공유를 취소한 경우는 무시
       if ((error as Error).name !== 'AbortError') {
-        alert('공유에 실패했습니다. 다시 시도해주세요.');
+        toast.error('공유에 실패했습니다. 다시 시도해주세요.');
       }
     } finally {
       setIsCapturing(false);

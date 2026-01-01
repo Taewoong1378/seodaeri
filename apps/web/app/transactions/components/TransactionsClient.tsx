@@ -71,6 +71,8 @@ interface Transaction {
   created_at: string;
   source: "app" | "sheet";
   account?: string; // 계좌(증권사) 정보
+  amountKRW?: number; // 배당 전용: 원화 배당금
+  amountUSD?: number; // 배당 전용: 외화 배당금
 }
 
 interface TransactionsClientProps {
@@ -230,8 +232,8 @@ export function TransactionsClient({
         const input = {
           date: tx.trade_date.split("T")[0] || tx.trade_date,
           ticker: tx.ticker,
-          amountKRW: tx.total_amount,
-          amountUSD: 0,
+          amountKRW: tx.amountKRW ?? tx.total_amount, // 원화 배당금 (없으면 total_amount 사용)
+          amountUSD: tx.amountUSD ?? 0, // 외화 배당금
         };
         console.log(
           "[handleDeleteConfirm] Calling deleteDividend with:",

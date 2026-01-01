@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { toast } from "@repo/design-system";
 import { useAccountList, useSaveDeposit } from "../../../hooks";
 import type { DepositInput } from "../../actions/deposit";
 
@@ -103,7 +104,7 @@ export function DepositInputModal() {
 
   const handleSave = () => {
     if (form.amount <= 0) {
-      alert("금액을 입력해주세요.");
+      toast.error("금액을 입력해주세요.");
       return;
     }
 
@@ -115,19 +116,19 @@ export function DepositInputModal() {
       {
         onSuccess: (result) => {
           if (result.success) {
-            alert(
+            toast.success(
               isWithdraw
                 ? "출금내역이 저장되었습니다."
                 : "입금내역이 저장되었습니다."
             );
             handleOpenChange(false);
           } else {
-            alert(result.error || "저장에 실패했습니다.");
+            toast.error(result.error || "저장에 실패했습니다.");
           }
         },
         onError: (error) => {
           console.error("Save error:", error);
-          alert("저장 중 오류가 발생했습니다.");
+          toast.error("저장 중 오류가 발생했습니다.");
         },
       }
     );
@@ -135,7 +136,7 @@ export function DepositInputModal() {
 
   const handleSaveRecurring = () => {
     if (recurringForm.amount <= 0) {
-      alert("금액을 입력해주세요.");
+      toast.error("금액을 입력해주세요.");
       return;
     }
 
@@ -160,22 +161,22 @@ export function DepositInputModal() {
         {
           onSuccess: (result) => {
             if (result.success) {
-              alert(
+              toast.success(
                 "입금내역이 저장되었습니다. 매월 자동 입금을 사용하시려면 설정에서 추가로 설정해주세요."
               );
               handleOpenChange(false);
             } else {
-              alert(result.error || "저장에 실패했습니다.");
+              toast.error(result.error || "저장에 실패했습니다.");
             }
           },
           onError: (error) => {
             console.error("Save error:", error);
-            alert("저장 중 오류가 발생했습니다.");
+            toast.error("저장 중 오류가 발생했습니다.");
           },
         }
       );
     } else {
-      alert("선택한 날짜가 아직 도래하지 않았습니다.");
+      toast.error("선택한 날짜가 아직 도래하지 않았습니다.");
     }
   };
 

@@ -16,3 +16,6 @@ export * from './components/tooltip'
 
 // Utilities
 export * from './lib/utils'
+
+// Toast function from sonner
+export { toast } from 'sonner'

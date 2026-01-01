@@ -13,6 +13,7 @@ import { Label } from '@repo/design-system/components/label';
 import { Camera, Check, Loader2, Pen, Trash2, TrendingDown, TrendingUp, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { toast } from '@repo/design-system';
 import { useSaveTradeTransactions } from '../../../hooks';
 import { analyzeTradeImages } from '../../actions/trade';
 import { StockSearchInput } from '../../components/StockSearchInput';
@@ -97,7 +98,7 @@ export function TradeInputModal() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('이미지 파일만 선택해주세요.');
+      toast.error('이미지 파일만 선택해주세요.');
       return;
     }
 
@@ -108,7 +109,7 @@ export function TradeInputModal() {
       setMode('photo-preview');
     };
     reader.onerror = () => {
-      alert('이미지를 불러오는데 실패했습니다.');
+      toast.error('이미지를 불러오는데 실패했습니다.');
     };
     reader.readAsDataURL(file);
     event.target.value = '';
@@ -132,11 +133,11 @@ export function TradeInputModal() {
         setSelectedItems(new Set(results.map((_, idx) => idx)));
         setMode('photo-verify');
       } else {
-        alert('거래내역을 찾을 수 없습니다. 다시 시도해주세요.');
+        toast.error('거래내역을 찾을 수 없습니다. 다시 시도해주세요.');
       }
     } catch (error) {
       console.error('Analysis error:', error);
-      alert('오류가 발생했습니다.');
+      toast.error('오류가 발생했습니다.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -144,26 +145,26 @@ export function TradeInputModal() {
 
   const handleSaveSingle = () => {
     if (!singleForm.ticker) {
-      alert('종목을 선택하거나 종목코드를 입력해주세요.');
+      toast.error('종목을 선택하거나 종목코드를 입력해주세요.');
       return;
     }
     if (singleForm.price === 0 || singleForm.quantity === 0) {
-      alert('가격과 수량을 입력해주세요.');
+      toast.error('가격과 수량을 입력해주세요.');
       return;
     }
 
     saveTradeTransactions([singleForm], {
       onSuccess: (result) => {
         if (result.success) {
-          alert('거래내역이 저장되었습니다.');
+          toast.success('거래내역이 저장되었습니다.');
           handleOpenChange(false);
         } else {
-          alert(result.error || '저장에 실패했습니다.');
+          toast.error(result.error || '저장에 실패했습니다.');
         }
       },
       onError: (error) => {
         console.error('Save error:', error);
-        alert('저장 중 오류가 발생했습니다.');
+        toast.error('저장 중 오류가 발생했습니다.');
       },
     });
   };
@@ -172,22 +173,22 @@ export function TradeInputModal() {
     const itemsToSave = multipleItems.filter((_, idx) => selectedItems.has(idx));
 
     if (itemsToSave.length === 0) {
-      alert('저장할 항목을 선택해주세요.');
+      toast.error('저장할 항목을 선택해주세요.');
       return;
     }
 
     saveTradeTransactions(itemsToSave, {
       onSuccess: (result) => {
         if (result.success) {
-          alert(`${itemsToSave.length}건의 거래내역이 저장되었습니다.`);
+          toast.success(`${itemsToSave.length}건의 거래내역이 저장되었습니다.`);
           handleOpenChange(false);
         } else {
-          alert(result.error || '저장에 실패했습니다.');
+          toast.error(result.error || '저장에 실패했습니다.');
         }
       },
       onError: (error) => {
         console.error('Save error:', error);
-        alert('저장 중 오류가 발생했습니다.');
+        toast.error('저장 중 오류가 발생했습니다.');
       },
     });
   };

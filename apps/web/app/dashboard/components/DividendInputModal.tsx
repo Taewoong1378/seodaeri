@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@repo/design-system";
 import { Button } from "@repo/design-system/components/button";
 import { DatePicker } from "@repo/design-system/components/date-picker";
 import {
@@ -95,7 +96,7 @@ export function DividendInputModal() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      alert("이미지 파일만 선택해주세요.");
+      toast.error("이미지 파일만 선택해주세요.");
       return;
     }
 
@@ -106,7 +107,7 @@ export function DividendInputModal() {
       setMode("photo-preview");
     };
     reader.onerror = () => {
-      alert("이미지를 불러오는데 실패했습니다.");
+      toast.error("이미지를 불러오는데 실패했습니다.");
     };
     reader.readAsDataURL(file);
     event.target.value = "";
@@ -124,11 +125,11 @@ export function DividendInputModal() {
         setSelectedItems(new Set(results.map((_, idx) => idx)));
         setMode("photo-verify");
       } else {
-        alert("배당내역을 찾을 수 없습니다. 다시 시도해주세요.");
+        toast.error("배당내역을 찾을 수 없습니다. 다시 시도해주세요.");
       }
     } catch (error) {
       console.error("Analysis error:", error);
-      alert("오류가 발생했습니다.");
+      toast.error("오류가 발생했습니다.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -136,26 +137,26 @@ export function DividendInputModal() {
 
   const handleSaveSingle = () => {
     if (!singleForm.ticker) {
-      alert("종목코드를 입력해주세요.");
+      toast.error("종목코드를 입력해주세요.");
       return;
     }
     if (singleForm.amountKRW === 0 && singleForm.amountUSD === 0) {
-      alert("배당금을 입력해주세요.");
+      toast.error("배당금을 입력해주세요.");
       return;
     }
 
     saveDividend(singleForm, {
       onSuccess: (result) => {
         if (result.success) {
-          alert("배당내역이 저장되었습니다.");
+          toast.success("배당내역이 저장되었습니다.");
           handleOpenChange(false);
         } else {
-          alert(result.error || "저장에 실패했습니다.");
+          toast.error(result.error || "저장에 실패했습니다.");
         }
       },
       onError: (error) => {
         console.error("Save error:", error);
-        alert("저장 중 오류가 발생했습니다.");
+        toast.error("저장 중 오류가 발생했습니다.");
       },
     });
   };
@@ -166,22 +167,22 @@ export function DividendInputModal() {
     );
 
     if (itemsToSave.length === 0) {
-      alert("저장할 항목을 선택해주세요.");
+      toast.error("저장할 항목을 선택해주세요.");
       return;
     }
 
     saveDividends(itemsToSave, {
       onSuccess: (result) => {
         if (result.success) {
-          alert(`${itemsToSave.length}건의 배당내역이 저장되었습니다.`);
+          toast.success(`${itemsToSave.length}건의 배당내역이 저장되었습니다.`);
           handleOpenChange(false);
         } else {
-          alert(result.error || "저장에 실패했습니다.");
+          toast.error(result.error || "저장에 실패했습니다.");
         }
       },
       onError: (error) => {
         console.error("Save error:", error);
-        alert("저장 중 오류가 발생했습니다.");
+        toast.error("저장 중 오류가 발생했습니다.");
       },
     });
   };
