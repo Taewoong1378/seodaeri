@@ -2,7 +2,6 @@
 
 import { Button } from '@repo/design-system/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/design-system/components/card';
-import { Input } from '@repo/design-system/components/input';
 import { FileSpreadsheet, FolderOpen, Loader2, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
@@ -25,23 +24,21 @@ declare global {
   }
 }
 
-// URL에서 스프레드시트 ID 추출
-function extractSheetId(input: string): string {
-  if (!input.includes('/')) {
-    return input.trim();
-  }
-  const match = input.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  return match?.[1] || input.trim();
-}
-
 // 환경변수
 const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || '';
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+
+// Google Client ID에서 App ID 추출 (숫자 부분)
+// 형식: 123456789012-xxxxxxxx.apps.googleusercontent.com → 123456789012
+function extractAppId(clientId: string): string {
+  const match = clientId.match(/^(\d+)-/);
+  return match?.[1] || '';
+}
 
 export function OnboardingClient({ userName, accessToken }: OnboardingClientProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState<'manual' | 'picker' | 'create' | null>(null);
+  const [loading, setLoading] = useState<'picker' | 'create' | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sheetInput, setSheetInput] = useState('');
   const [pickerReady, setPickerReady] = useState(false);
 
   // Google Picker API 로드
@@ -91,6 +88,18 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
       return;
     }
 
+    const appId = extractAppId(GOOGLE_CLIENT_ID);
+    console.log('[Picker] Opening with config:', {
+      hasAccessToken: !!accessToken,
+      hasApiKey: !!GOOGLE_API_KEY,
+      hasClientId: !!GOOGLE_CLIENT_ID,
+      appId: appId || 'NOT_SET',
+    });
+
+    if (!appId) {
+      console.warn('[Picker] AppId not found. GOOGLE_CLIENT_ID:', GOOGLE_CLIENT_ID);
+    }
+
     setLoading('picker');
     setError(null);
 
@@ -101,33 +110,58 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
         .setSelectFolderEnabled(false)
         .setMode(window.google.picker.DocsViewMode.LIST);
 
-      // Picker 빌더
-      const picker = new window.google.picker.PickerBuilder()
+      // Picker 빌더 - setAppId() 추가! (drive.file 스코프에 필수)
+      const pickerBuilder = new window.google.picker.PickerBuilder()
         .addView(view)
         .setOAuthToken(accessToken)
         .setDeveloperKey(GOOGLE_API_KEY)
         .setTitle('스프레드시트 선택')
         .setCallback(async (data: any) => {
+          console.log('[Picker] Callback:', { action: data.action, docs: data.docs });
+          
           if (data.action === window.google.picker.Action.PICKED) {
             const doc = data.docs[0];
             if (doc) {
+              console.log('[Picker] Selected document:', {
+                id: doc.id,
+                name: doc.name,
+                mimeType: doc.mimeType,
+                url: doc.url,
+              });
               try {
                 const result = await connectSheetById(doc.id);
+                console.log('[Picker] connectSheetById result:', result);
                 handleResult(result);
-              } catch (err) {
+              } catch (err: any) {
+                console.error('[Picker] connectSheetById error:', {
+                  message: err?.message,
+                  stack: err?.stack,
+                });
                 setError('시트 연동 중 오류가 발생했습니다.');
                 setLoading(null);
               }
             }
           } else if (data.action === window.google.picker.Action.CANCEL) {
+            console.log('[Picker] Cancelled');
             setLoading(null);
           }
-        })
-        .build();
+        });
 
+      // AppId가 있으면 설정 (drive.file 스코프 권한 부여에 필수!)
+      if (appId) {
+        pickerBuilder.setAppId(appId);
+        console.log('[Picker] setAppId:', appId);
+      }
+
+      const picker = pickerBuilder.build();
       picker.setVisible(true);
-    } catch (err) {
-      console.error('Picker error:', err);
+      console.log('[Picker] Picker opened');
+    } catch (err: any) {
+      console.error('[Picker] Error:', {
+        message: err?.message,
+        stack: err?.stack,
+        err,
+      });
       setError('Google Picker를 열 수 없습니다. 다시 시도해주세요.');
       setLoading(null);
     }
@@ -142,26 +176,6 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
       }, 500);
     } else {
       setError(result.error || '오류가 발생했습니다.');
-      setLoading(null);
-    }
-  };
-
-  const handleManualConnect = async () => {
-    const sheetId = extractSheetId(sheetInput);
-
-    if (!sheetId) {
-      setError('스프레드시트 URL 또는 ID를 입력해주세요.');
-      return;
-    }
-
-    setLoading('manual');
-    setError(null);
-    try {
-      const result = await connectSheetById(sheetId);
-      handleResult(result);
-    } catch (err) {
-      setError('시트 연동 중 오류가 발생했습니다.');
-    } finally {
       setLoading(null);
     }
   };
@@ -220,35 +234,6 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
             )}
           </Button>
 
-          {/* 또는 직접 입력 */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="flex-1 h-px bg-border" />
-              <span>또는 URL 직접 입력</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-            <div className="flex gap-2">
-              <Input
-                placeholder="스프레드시트 URL 또는 ID"
-                value={sheetInput}
-                onChange={(e) => setSheetInput(e.target.value)}
-                className="flex-1 h-10 px-3 bg-background border-input text-foreground placeholder:text-muted-foreground text-sm"
-              />
-              <Button
-                onClick={handleManualConnect}
-                disabled={loading !== null || !sheetInput.trim()}
-                size="sm"
-                variant="outline"
-                className="h-10 px-4 text-foreground hover:bg-muted disabled:opacity-50"
-              >
-                {loading === 'manual' ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  '연동'
-                )}
-              </Button>
-            </div>
-          </div>
         </CardContent>
       </Card>
 

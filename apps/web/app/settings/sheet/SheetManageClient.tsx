@@ -2,7 +2,6 @@
 
 import { Button } from '@repo/design-system/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/design-system/components/card';
-import { Input } from '@repo/design-system/components/input';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Check, ExternalLink, FileSpreadsheet, FolderOpen, Loader2, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
@@ -24,24 +23,21 @@ declare global {
   }
 }
 
-// URL에서 스프레드시트 ID 추출
-function extractSheetId(input: string): string {
-  if (!input.includes('/')) {
-    return input.trim();
-  }
-  const match = input.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  return match?.[1] || input.trim();
-}
-
 const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || '';
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
+
+// Google Client ID에서 App ID 추출 (숫자 부분)
+function extractAppId(clientId: string): string {
+  const match = clientId.match(/^(\d+)-/);
+  return match?.[1] || '';
+}
 
 export function SheetManageClient({ connected, currentSheetId, accessToken }: SheetManageClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [loading, setLoading] = useState<'manual' | 'picker' | null>(null);
+  const [loading, setLoading] = useState<'picker' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [sheetInput, setSheetInput] = useState('');
   const [pickerReady, setPickerReady] = useState(false);
 
   // Google Picker API 로드
@@ -86,6 +82,14 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
       return;
     }
 
+    const appId = extractAppId(GOOGLE_CLIENT_ID);
+    console.log('[Picker:Settings] Opening with config:', {
+      hasAccessToken: !!accessToken,
+      hasApiKey: !!GOOGLE_API_KEY,
+      hasClientId: !!GOOGLE_CLIENT_ID,
+      appId: appId || 'NOT_SET',
+    });
+
     setLoading('picker');
     setError(null);
     setSuccess(null);
@@ -96,26 +100,38 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
         .setSelectFolderEnabled(false)
         .setMode(window.google.picker.DocsViewMode.LIST);
 
-      const picker = new window.google.picker.PickerBuilder()
+      const pickerBuilder = new window.google.picker.PickerBuilder()
         .addView(view)
         .setOAuthToken(accessToken)
         .setDeveloperKey(GOOGLE_API_KEY)
         .setTitle('스프레드시트 선택')
         .setCallback(async (data: any) => {
+          console.log('[Picker:Settings] Callback:', { action: data.action, docs: data.docs });
+          
           if (data.action === window.google.picker.Action.PICKED) {
             const doc = data.docs[0];
             if (doc) {
+              console.log('[Picker:Settings] Selected:', { id: doc.id, name: doc.name });
               await handleConnect(doc.id, doc.name);
             }
           } else if (data.action === window.google.picker.Action.CANCEL) {
             setLoading(null);
           }
-        })
-        .build();
+        });
 
+      // AppId 설정 (drive.file 스코프 권한 부여에 필수!)
+      if (appId) {
+        pickerBuilder.setAppId(appId);
+        console.log('[Picker:Settings] setAppId:', appId);
+      }
+
+      const picker = pickerBuilder.build();
       picker.setVisible(true);
-    } catch (err) {
-      console.error('Picker error:', err);
+    } catch (err: any) {
+      console.error('[Picker:Settings] Error:', {
+        message: err?.message,
+        stack: err?.stack,
+      });
       setError('Google Picker를 열 수 없습니다.');
       setLoading(null);
     }
@@ -126,7 +142,6 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
       const result = await connectSheetById(sheetId);
       if (result.success) {
         setSuccess(`"${sheetName || '시트'}" 연동 완료!`);
-        setSheetInput('');
 
         // 시트 변경 시 모든 캐시 무효화 (새 시트 데이터로 갱신)
         queryClient.clear();
@@ -142,21 +157,6 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
     } finally {
       setLoading(null);
     }
-  };
-
-  const handleManualConnect = async () => {
-    const sheetId = extractSheetId(sheetInput);
-
-    if (!sheetId) {
-      setError('스프레드시트 URL 또는 ID를 입력해주세요.');
-      return;
-    }
-
-    setLoading('manual');
-    setError(null);
-    setSuccess(null);
-
-    await handleConnect(sheetId);
   };
 
   const sheetUrl = currentSheetId
@@ -249,34 +249,6 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
             )}
           </Button>
 
-          {/* 또는 직접 입력 */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="flex-1 h-px bg-border" />
-              <span>또는 URL 직접 입력</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-            <div className="flex gap-2">
-              <Input
-                placeholder="스프레드시트 URL 또는 ID"
-                value={sheetInput}
-                onChange={(e) => setSheetInput(e.target.value)}
-                className="flex-1 h-10 px-3 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground text-sm"
-              />
-              <Button
-                onClick={handleManualConnect}
-                disabled={loading !== null || !sheetInput.trim()}
-                size="sm"
-                className="h-10 px-4 bg-muted hover:bg-muted/80 text-foreground disabled:opacity-50"
-              >
-                {loading === 'manual' ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  '변경'
-                )}
-              </Button>
-            </div>
-          </div>
         </CardContent>
       </Card>
 

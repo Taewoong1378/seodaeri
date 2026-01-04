@@ -1,0 +1,41 @@
+1
+00:00:00,000 --> 00:00:05,000
+Welcome to Gulim. Click "Start" and proceed with Google Sign-In to authenticate.
+
+2
+00:00:05,000 --> 00:00:10,000
+Select the Google account. This account's spreadsheet will be used as the database.
+
+3
+00:00:10,000 --> 00:00:17,000
+Since the app is currently unverified, click "Advanced" and "Go to gulim.co.kr" to bypass the warning.
+
+4
+00:00:17,000 --> 00:00:26,000
+[Crucial] The app requests spreadsheets scope. This is required to read/write specific cell data using the Google Sheets API.
+
+5
+00:00:26,000 --> 00:00:34,000
+On the welcome screen, use the Google Drive Picker to select the specific investment spreadsheet to link.
+
+6
+00:00:34,000 --> 00:00:46,000
+[Read Operation] The dashboard uses sheets.values.get to read specific cell ranges (assets, returns) from the user's sheet.
+
+7
+00:00:46,000 --> 00:00:52,000
+[Write Operation] Moving to the History tab to demonstrate writing data. We will add a new dividend record.
+
+8
+00:00:52,000 --> 00:01:01,000
+Enter stock info and amount. When "Save" is clicked, the app prepares a sheets.values.append request.
+
+9
+00:01:01,000 --> 00:01:19,000
+[Verification] The new row is successfully appended to the specific sheet. This granular cell-level update requires the spreadsheets scope.
+
+10
+00:01:19,000 --> 00:01:30,000
+In Settings, users can change the linked file ID. The app only accesses the specific spreadsheet selected here.
+
+

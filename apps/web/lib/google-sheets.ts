@@ -12,6 +12,8 @@ console.log('[google-sheets] MASTER_TEMPLATE_ID:', MASTER_TEMPLATE_ID ? `${MASTE
  * Google Drive에서 "서대리" 관련 스프레드시트 검색
  */
 export async function findSeodaeriSheet(accessToken: string): Promise<{ id: string; name: string } | null> {
+  console.log('[findSeodaeriSheet] Searching for 서대리 sheet...');
+  
   const auth = new google.auth.OAuth2();
   auth.setCredentials({ access_token: accessToken });
 
@@ -27,7 +29,10 @@ export async function findSeodaeriSheet(accessToken: string): Promise<{ id: stri
     });
 
     const files = response.data.files;
+    console.log('[findSeodaeriSheet] Found files:', files?.length || 0);
+    
     if (files && files.length > 0) {
+      console.log('[findSeodaeriSheet] Selected:', { id: files[0]?.id, name: files[0]?.name });
       return {
         id: files[0]?.id!,
         name: files[0]?.name!,
@@ -35,8 +40,14 @@ export async function findSeodaeriSheet(accessToken: string): Promise<{ id: stri
     }
 
     return null;
-  } catch (error) {
-    console.error('Error searching for sheet:', error);
+  } catch (error: any) {
+    console.error('[findSeodaeriSheet] Error:', {
+      code: error?.code,
+      status: error?.response?.status,
+      message: error?.message,
+      errors: error?.response?.data?.error,
+      fullError: JSON.stringify(error?.response?.data || error, null, 2),
+    });
     throw error;
   }
 }
@@ -45,6 +56,8 @@ export async function findSeodaeriSheet(accessToken: string): Promise<{ id: stri
  * 마스터 템플릿을 복사하여 새 스프레드시트 생성
  */
 export async function copyMasterTemplate(accessToken: string, userName?: string): Promise<{ id: string; name: string }> {
+  console.log('[copyMasterTemplate] Copying template:', { templateId: MASTER_TEMPLATE_ID, userName });
+  
   const auth = new google.auth.OAuth2();
   auth.setCredentials({ access_token: accessToken });
 
@@ -64,12 +77,20 @@ export async function copyMasterTemplate(accessToken: string, userName?: string)
       },
     });
 
+    console.log('[copyMasterTemplate] Success:', { id: response.data.id, name: response.data.name });
     return {
       id: response.data.id!,
       name: response.data.name!,
     };
-  } catch (error) {
-    console.error('Error copying template:', error);
+  } catch (error: any) {
+    console.error('[copyMasterTemplate] Error:', {
+      templateId: MASTER_TEMPLATE_ID,
+      code: error?.code,
+      status: error?.response?.status,
+      message: error?.message,
+      errors: error?.response?.data?.error,
+      fullError: JSON.stringify(error?.response?.data || error, null, 2),
+    });
     throw error;
   }
 }
@@ -78,6 +99,8 @@ export async function copyMasterTemplate(accessToken: string, userName?: string)
  * 스프레드시트 데이터 읽기
  */
 export async function fetchSheetData(accessToken: string, spreadsheetId: string, range: string) {
+  console.log('[fetchSheetData] Request:', { spreadsheetId, range, hasToken: !!accessToken });
+  
   const auth = new google.auth.OAuth2();
   auth.setCredentials({ access_token: accessToken });
 
@@ -89,9 +112,23 @@ export async function fetchSheetData(accessToken: string, spreadsheetId: string,
       range,
       valueRenderOption: 'UNFORMATTED_VALUE', // 소수점 등 원본 값 그대로 반환
     });
+    console.log('[fetchSheetData] Success:', { 
+      rowCount: response.data.values?.length || 0,
+      range: response.data.range,
+    });
     return response.data.values;
-  } catch (error) {
-    console.error('Error fetching sheet data:', error);
+  } catch (error: any) {
+    console.error('[fetchSheetData] Error:', {
+      spreadsheetId,
+      range,
+      code: error?.code,
+      status: error?.response?.status,
+      statusText: error?.response?.statusText,
+      message: error?.message,
+      errors: error?.response?.data?.error,
+      // 전체 에러 객체 (디버깅용)
+      fullError: JSON.stringify(error?.response?.data || error, null, 2),
+    });
     throw error;
   }
 }
@@ -143,6 +180,8 @@ export async function updateSheetCell(
   range: string,
   value: string | number
 ) {
+  console.log('[updateSheetCell] Request:', { spreadsheetId, range, value });
+  
   const auth = new google.auth.OAuth2();
   auth.setCredentials({ access_token: accessToken });
 
@@ -157,9 +196,18 @@ export async function updateSheetCell(
         values: [[value]],
       },
     });
+    console.log('[updateSheetCell] Success:', response.data.updatedCells);
     return response.data;
-  } catch (error) {
-    console.error('Error updating sheet cell:', error);
+  } catch (error: any) {
+    console.error('[updateSheetCell] Error:', {
+      spreadsheetId,
+      range,
+      code: error?.code,
+      status: error?.response?.status,
+      message: error?.message,
+      errors: error?.response?.data?.error,
+      fullError: JSON.stringify(error?.response?.data || error, null, 2),
+    });
     throw error;
   }
 }
@@ -172,6 +220,8 @@ export async function batchUpdateSheet(
   spreadsheetId: string,
   data: { range: string; values: any[][] }[]
 ) {
+  console.log('[batchUpdateSheet] Request:', { spreadsheetId, dataCount: data.length });
+  
   const auth = new google.auth.OAuth2();
   auth.setCredentials({ access_token: accessToken });
 
@@ -185,9 +235,17 @@ export async function batchUpdateSheet(
         data,
       },
     });
+    console.log('[batchUpdateSheet] Success:', response.data.totalUpdatedCells);
     return response.data;
-  } catch (error) {
-    console.error('Error batch updating sheet:', error);
+  } catch (error: any) {
+    console.error('[batchUpdateSheet] Error:', {
+      spreadsheetId,
+      code: error?.code,
+      status: error?.response?.status,
+      message: error?.message,
+      errors: error?.response?.data?.error,
+      fullError: JSON.stringify(error?.response?.data || error, null, 2),
+    });
     throw error;
   }
 }

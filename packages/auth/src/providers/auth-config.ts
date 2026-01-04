@@ -53,8 +53,10 @@ export const authConfig: NextAuthConfig = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
+          // drive.file 스코프만 사용 (Google Picker + setAppId로 권한 부여)
+          // spreadsheets 스코프 제거 - OAuth 인증 심사 불필요
           scope:
-            "openid email profile https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets",
+            "openid email profile https://www.googleapis.com/auth/drive.file",
           access_type: "offline",
           prompt: "consent",
         },
