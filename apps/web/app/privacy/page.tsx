@@ -183,9 +183,57 @@ export default function PrivacyPolicyPage() {
             </ul>
           </section>
 
+          <section id="data-deletion">
+            <h2 className="text-lg font-semibold text-white mb-3">
+              9. 데이터 삭제 요청
+            </h2>
+            <p>
+              사용자는 계정을 삭제하지 않고도 본인의 데이터 일부 또는 전체의 삭제를
+              요청할 수 있습니다.
+            </p>
+            <div className="mt-4 p-4 bg-white/5 rounded-lg space-y-3">
+              <p className="text-white font-medium">데이터 삭제 요청 방법:</p>
+              <ol className="list-decimal list-inside space-y-2 text-slate-400">
+                <li>
+                  아래 이메일로 &quot;데이터 삭제 요청&quot; 제목으로 연락
+                </li>
+                <li>가입 시 사용한 이메일 주소 기재</li>
+                <li>삭제를 원하는 데이터 유형 명시 (전체 또는 일부)</li>
+              </ol>
+              <p className="text-slate-400 mt-3">
+                <strong className="text-slate-300">연락처:</strong>{" "}
+                <a
+                  href="mailto:ktw2378@naver.com?subject=데이터 삭제 요청"
+                  className="text-blue-400 hover:underline"
+                >
+                  ktw2378@naver.com
+                </a>
+              </p>
+            </div>
+            <div className="mt-4 space-y-2 text-slate-400">
+              <p>
+                <strong className="text-slate-300">삭제 가능한 데이터:</strong>
+              </p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>계정 정보 (이메일, 이름, 프로필)</li>
+                <li>연동된 스프레드시트 정보</li>
+                <li>서버에 저장된 투자 기록 데이터</li>
+                <li>배당금, 매매내역, 입출금 내역</li>
+              </ul>
+              <p className="mt-3">
+                <strong className="text-slate-300">처리 기간:</strong> 요청일로부터
+                영업일 기준 7일 이내에 처리되며, 완료 시 이메일로 통보됩니다.
+              </p>
+              <p className="mt-2 text-sm text-slate-500">
+                * Google Sheets에 저장된 데이터는 사용자 본인이 직접 관리하며,
+                서비스에서는 연동 해제만 진행됩니다.
+              </p>
+            </div>
+          </section>
+
           <section>
             <h2 className="text-lg font-semibold text-white mb-3">
-              9. 개인정보 보호책임자
+              10. 개인정보 보호책임자
             </h2>
             <p>
               서비스는 개인정보 처리에 관한 업무를 총괄해서 책임지고, 개인정보
@@ -199,7 +247,7 @@ export default function PrivacyPolicyPage() {
 
           <section>
             <h2 className="text-lg font-semibold text-white mb-3">
-              10. 개인정보처리방침 변경
+              11. 개인정보처리방침 변경
             </h2>
             <p>
               이 개인정보처리방침은 2024년 1월 1일부터 적용됩니다. 법령 및
@@ -210,7 +258,7 @@ export default function PrivacyPolicyPage() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-white/10 text-center text-slate-500 text-xs">
-          <p>최종 수정일: 2025년 12월 31일</p>
+          <p>최종 수정일: 2026년 1월 5일</p>
         </div>
       </div>
     </div>
