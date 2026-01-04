@@ -71,6 +71,20 @@ export const authConfig: NextAuthConfig = {
     async signIn({ user, account, profile }) {
       if (!user.email || !user.id) return false;
 
+      // Google 로그인 시 drive.file 스코프 필수 체크
+      if (account?.provider === "google") {
+        const grantedScopes = account.scope?.split(" ") || [];
+        const hasDriveScope = grantedScopes.some(
+          (scope) => scope === "https://www.googleapis.com/auth/drive.file"
+        );
+
+        if (!hasDriveScope) {
+          console.error("Required scope 'drive.file' was not granted by user");
+          // 에러 페이지로 리다이렉트 (scope_denied 에러)
+          return "/login?error=scope_denied";
+        }
+      }
+
       try {
         // Supabase에 유저 정보 저장/업데이트
         const { createServiceClient } = await import("@repo/database/server");

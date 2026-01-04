@@ -99,7 +99,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className="overscroll-none">
+      <body className="overscroll-none bg-[#F5F5F5]" style={{ backgroundColor: '#F5F5F5' }}>
         <SessionProvider>
           <QueryProvider>
             {children}
