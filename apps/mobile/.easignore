@@ -1,0 +1,21 @@
+# Other apps (not needed for mobile build)
+apps/web
+apps/admin
+
+# Unused packages
+packages/auth
+packages/database
+packages/design-system
+packages/shared-utils
+
+# Docs
+docs
+
+# Local files
+node_modules
+.expo
+dist
+build
+*.log
+.DS_Store
+package-lock.json

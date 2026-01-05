@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "31dd2235-495d-4098-8043-553bb6913717"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.taewoong.gulim",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}

@@ -281,6 +281,8 @@ AUTH_SECRET=K7gNxR3mP9qW2sT5vY8zA1cE4fH6jL0oU3iB7dX9wM0=
 # Google OAuth
 GOOGLE_CLIENT_ID=123456789-abcdefghijklmnop.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxxxxxxx
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=123456789-abcdefghijklmnop.apps.googleusercontent.com  # Picker용 (GOOGLE_CLIENT_ID와 동일)
+NEXT_PUBLIC_GOOGLE_API_KEY=AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # OpenAI (for OCR)
 OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -298,7 +300,41 @@ NEXT_PUBLIC_ADMIN_URL=http://localhost:3001
 
 # 서대리 마스터 템플릿 (선택)
 SEODAERI_TEMPLATE_SHEET_ID=1234567890abcdefghijklmnop
+
+# 모바일 앱 - Apple 로그인 활성화 (네이티브 앱 전용)
+NEXT_PUBLIC_ENABLE_APPLE_LOGIN=true
 ```
+
+---
+
+## 7. 모바일 앱 배포 설정 (Apple Login)
+
+네이티브 앱에서 Apple Sign In을 활성화하려면 아래 환경변수만 설정하면 됩니다.
+
+### 7.1 환경변수
+
+```env
+NEXT_PUBLIC_ENABLE_APPLE_LOGIN=true
+```
+
+### 7.2 작동 방식
+
+현재 구현은 **네이티브 Apple Sign In** 방식입니다:
+- iOS 앱에서 `expo-apple-authentication`이 Apple 로그인 처리
+- 서버는 네이티브에서 받은 `identityToken`만 검증
+- **별도의 Apple Client ID/Secret이 필요 없음**
+
+### 7.3 Apple 로그인 비활성화
+
+심사 통과 후 Google 로그인만 사용하고 싶다면:
+
+```env
+NEXT_PUBLIC_ENABLE_APPLE_LOGIN=false
+```
+
+웹 재배포만 하면 앱에서 Apple 로그인 버튼이 자동으로 숨겨집니다.
+
+> **참고**: 자세한 앱스토어 배포 설정은 [STORE_SETUP.md](./STORE_SETUP.md)를 참조하세요.
 
 ---
 

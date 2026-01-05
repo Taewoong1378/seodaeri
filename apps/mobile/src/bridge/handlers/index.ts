@@ -1,5 +1,5 @@
 import { Platform, Share } from 'react-native'
-import type { BridgePayloads } from '@repo/shared-utils'
+import type { BridgePayloads } from '../shared-types'
 
 export async function handleShare(payload: BridgePayloads['UI.Share']) {
   try {

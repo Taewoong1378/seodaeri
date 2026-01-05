@@ -1,0 +1,48 @@
+# Other apps (not needed for mobile build)
+apps/web
+apps/admin
+
+# Unused packages for mobile
+packages/auth
+packages/database
+packages/design-system
+packages/shared-utils
+packages/typescript-config
+
+# Docs
+docs
+
+# All node_modules (will be reinstalled during build)
+**/node_modules
+
+# Local/Cache files
+.expo
+.turbo
+.next
+dist
+build
+.cache
+*.log
+.DS_Store
+
+# Git
+.git
+
+# Lock files except pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Test/Coverage
+coverage
+__tests__
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# IDE
+.vscode
+.idea
+
+# Data files
+*.csv

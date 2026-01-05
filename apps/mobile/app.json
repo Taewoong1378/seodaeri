@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.seodaeri.app",
+      "bundleIdentifier": "com.taewoong.gulim",
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSAppTransportSecurity": {
@@ -28,7 +28,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.seodaeri.app",
+      "package": "com.taewoong.gulim",
       "edgeToEdgeEnabled": true
     },
     "plugins": [
@@ -45,6 +45,11 @@
         {
           "ios": {
             "deploymentTarget": "15.1"
+          },
+          "android": {
+            "kotlinVersion": "1.9.25",
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35
           }
         }
       ],
@@ -52,8 +57,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
+        "projectId": "3d93fed7-6edb-4817-9a2b-5a56ba506ccf"
       }
-    }
+    },
+    "owner": "taewoong"
   }
 }

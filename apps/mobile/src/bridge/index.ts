@@ -3,7 +3,7 @@ import type {
   BridgeMessage,
   BridgeMessageType,
   BridgePayloads,
-} from '@repo/shared-utils'
+} from './shared-types'
 import type { WebViewRef } from './handlers/types'
 import { handleShare } from './handlers'
 import {
