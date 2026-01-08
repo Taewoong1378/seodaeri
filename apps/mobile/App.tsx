@@ -1,162 +1,167 @@
-import { StatusBar } from 'expo-status-bar'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { StatusBar } from "expo-status-bar";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   AppState,
   BackHandler,
   Platform,
   StyleSheet,
+  Text,
   View,
-} from 'react-native'
+} from "react-native";
 import {
   SafeAreaProvider,
   SafeAreaView,
   useSafeAreaInsets,
-} from 'react-native-safe-area-context'
-import { WebView } from 'react-native-webview'
-import { createMessageHandler } from './src/bridge'
-import { flushCookies } from './src/utils/cookieManager'
+} from "react-native-safe-area-context";
+import { WebView } from "react-native-webview";
 
-const LOCAL_URL = 'http://localhost:3000'
-const PROD_URL = 'https://gulim.co.kr'
-const WEB_URL = __DEV__ ? LOCAL_URL : PROD_URL
+console.log("[App] Module loaded");
+
+// 동적 import
+let SplashScreen: typeof import("expo-splash-screen") | null = null;
+try {
+  SplashScreen = require("expo-splash-screen");
+  SplashScreen?.preventAutoHideAsync().catch(() => {});
+} catch (e) {}
+
+let createMessageHandler:
+  | ((ref: React.RefObject<WebView>) => (event: any) => void)
+  | null = null;
+try {
+  createMessageHandler = require("./src/bridge").createMessageHandler;
+} catch (e) {}
+
+let flushCookies: (() => Promise<void>) | null = null;
+try {
+  flushCookies = require("./src/utils/cookieManager").flushCookies;
+} catch (e) {}
+
+const WEB_URL = "https://gulim.co.kr";
+// const WEB_URL = "https://localhost:3000";
 
 function AppContent() {
-  const webViewRef = useRef<WebView>(null)
-  const [_loading, setLoading] = useState(true)
-  const [canGoBack, setCanGoBack] = useState(false)
-  const insets = useSafeAreaInsets()
+  const webViewRef = useRef<WebView>(null);
+  const [canGoBack, setCanGoBack] = useState(false);
+  const [showWebView, setShowWebView] = useState(false);
+  const insets = useSafeAreaInsets();
 
-  const handleMessage = useMemo(() => createMessageHandler(webViewRef), [])
+  const handleMessage = useMemo(
+    () =>
+      createMessageHandler?.(webViewRef as React.RefObject<WebView>) ??
+      (() => {}),
+    []
+  );
 
-  // Android 쿠키 영구 저장: 앱 백그라운드 전환 시 flush
-  useEffect(() => {
-    if (Platform.OS !== 'android') return
-
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'background' || nextAppState === 'inactive') {
-        flushCookies()
-      }
-    })
-
-    return () => subscription.remove()
-  }, [])
-
-  // Android 하드웨어 뒤로가기 버튼 처리
-  useEffect(() => {
-    if (Platform.OS !== 'android') return
-
-    const handleBackPress = () => {
-      if (canGoBack) {
-        webViewRef.current?.goBack()
-        return true // 이벤트 소비, 뒤로가기 실행
-      }
-      // 루트 페이지에서는 앱 종료 방지
-      return true
-    }
-
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      handleBackPress
-    )
-
-    return () => backHandler.remove()
-  }, [canGoBack])
-
-  // 루트 페이지인지 확인 (뒤로가기 비활성화)
-  const isRootRoute = (url: string) => {
+  const hideSplash = useCallback(async () => {
     try {
-      const urlObj = new URL(url)
-      const rootPaths = ['/', '/dashboard', '/login', '/onboarding']
-      return rootPaths.includes(urlObj.pathname)
-    } catch {
-      return false
-    }
-  }
+      await SplashScreen?.hideAsync();
+    } catch {}
+  }, []);
 
-  const handleNavigationStateChange = (navState: { url: string; canGoBack: boolean }) => {
-    const isRoot = isRootRoute(navState.url)
-    setCanGoBack(!isRoot && navState.canGoBack)
+  // 마운트 후 WebView 표시
+  useEffect(() => {
+    console.log("[AppContent] Mounted");
+    hideSplash();
+    // 약간의 지연 후 WebView 표시
+    const timer = setTimeout(() => {
+      console.log("[AppContent] Showing WebView");
+      setShowWebView(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [hideSplash]);
+
+  useEffect(() => {
+    if (Platform.OS !== "android" || !flushCookies) return;
+    const sub = AppState.addEventListener("change", (s) => {
+      if (s === "background" || s === "inactive") flushCookies?.();
+    });
+    return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const handler = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (canGoBack) {
+        webViewRef.current?.goBack();
+        return true;
+      }
+      return true;
+    });
+    return () => handler.remove();
+  }, [canGoBack]);
+
+  const onNav = (s: { url: string; canGoBack: boolean }) => {
+    try {
+      const root = ["/", "/dashboard", "/login", "/onboarding"].includes(
+        new URL(s.url).pathname
+      );
+      setCanGoBack(!root && s.canGoBack);
+    } catch {}
+  };
+
+  if (!showWebView) {
+    return (
+      <View style={styles.loading}>
+        <Text>Loading...</Text>
+      </View>
+    );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <StatusBar style="dark" />
       <WebView
         ref={webViewRef}
         source={{ uri: WEB_URL }}
         style={styles.webView}
-        onNavigationStateChange={handleNavigationStateChange}
+        onNavigationStateChange={onNav}
         onMessage={handleMessage}
-        onLoadStart={() => setLoading(true)}
-        onLoadEnd={() => setLoading(false)}
+        onLoadEnd={hideSplash}
+        onError={(e) =>
+          console.log("[WebView] Error:", e.nativeEvent.description)
+        }
         allowsBackForwardNavigationGestures={canGoBack}
         javaScriptEnabled
         domStorageEnabled
-        sharedCookiesEnabled={Platform.OS === 'android'}
-        thirdPartyCookiesEnabled={Platform.OS === 'android'}
+        sharedCookiesEnabled={Platform.OS === "android"}
+        thirdPartyCookiesEnabled={Platform.OS === "android"}
         startInLoadingState
-        scalesPageToFit
-        allowsFullscreenVideo
         mixedContentMode="compatibility"
-        allowFileAccess
-        allowFileAccessFromFileURLs
-        allowUniversalAccessFromFileURLs
-        originWhitelist={['*']}
-        userAgent={`GulimApp/${Platform.OS}`}
-        showsHorizontalScrollIndicator={false}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={true}
+        originWhitelist={["*"]}
+        userAgent={
+          Platform.OS === "android"
+            ? "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 GulimApp"
+            : undefined
+        }
         bounces={false}
         overScrollMode="never"
-        contentInsetAdjustmentBehavior="never"
-        automaticallyAdjustContentInsets={false}
         injectedJavaScriptBeforeContentLoaded={`
-          window.safeAreaInsets = {
-            top: ${insets.top},
-            bottom: ${insets.bottom},
-            left: ${insets.left},
-            right: ${insets.right}
-          };
-          document.documentElement.style.setProperty('--safe-area-top', '${insets.top}px');
-          document.documentElement.style.setProperty('--safe-area-bottom', '${insets.bottom}px');
+          window.safeAreaInsets = {top:${insets.top},bottom:${insets.bottom},left:${insets.left},right:${insets.right}};
           true;
         `}
-        renderLoading={() => (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#000" />
-          </View>
-        )}
       />
     </SafeAreaView>
-  )
+  );
 }
 
-export default function App() {
+function App() {
+  console.log("[App] Rendering");
   return (
     <SafeAreaProvider>
       <AppContent />
     </SafeAreaProvider>
-  )
+  );
 }
 
+export default App;
+
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1, backgroundColor: "#fff" },
+  webView: { flex: 1, width: "100%" },
+  loading: {
     flex: 1,
-    backgroundColor: '#fff',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
   },
-  webView: {
-    flex: 1,
-    width: '100%',
-  },
-  loadingContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-})
+});

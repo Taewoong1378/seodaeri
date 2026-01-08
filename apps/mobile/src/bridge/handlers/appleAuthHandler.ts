@@ -1,17 +1,29 @@
-import * as AppleAuthentication from 'expo-apple-authentication'
 import * as Crypto from 'expo-crypto'
 import { Platform } from 'react-native'
 import type { WebViewRef } from './types'
+
+// 동적 import로 Expo Go에서도 안전하게 처리
+let AppleAuthentication: typeof import('expo-apple-authentication') | null = null
+
+try {
+  AppleAuthentication = require('expo-apple-authentication')
+} catch {
+  console.log('[AppleAuth] Module not available (Expo Go)')
+}
 
 /**
  * Apple Sign In 가능 여부 확인
  * iOS 13+ 디바이스에서만 가능
  */
 export async function isAppleAuthAvailable(): Promise<boolean> {
-  if (Platform.OS !== 'ios') {
+  if (Platform.OS !== 'ios' || !AppleAuthentication) {
     return false
   }
-  return await AppleAuthentication.isAvailableAsync()
+  try {
+    return await AppleAuthentication.isAvailableAsync()
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -22,6 +34,10 @@ export async function handleAppleLogin(
   webViewRef: WebViewRef
 ) {
   try {
+    if (!AppleAuthentication) {
+      throw new Error('NOT_AVAILABLE')
+    }
+
     // 가용성 확인
     const isAvailable = await AppleAuthentication.isAvailableAsync()
     if (!isAvailable) {

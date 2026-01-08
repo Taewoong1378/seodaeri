@@ -19,14 +19,20 @@
     },
     "production": {
       "extends": "base",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": {
+        "credentialsSource": "local"
+      }
     }
   },
   "submit": {
     "production": {
       "ios": {
         "appleId": "ktw2378@naver.com",
-        "ascAppId": "6757363621"
+        "ascAppId": "6757363621",
+        "ascApiKeyPath": "./AuthKey_T9JRCYQ5UG.p8",
+        "ascApiKeyIssuerId": "b5f83fcf-9cff-4546-8a6e-073893625c3c",
+        "ascApiKeyId": "T9JRCYQ5UG"
       },
       "android": {
         "serviceAccountKeyPath": "./google-play-service-account.json"

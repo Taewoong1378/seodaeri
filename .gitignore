@@ -41,7 +41,11 @@ coverage
 *.key
 *.mobileprovision
 *.orig.*
+*.ipa
+*.apk
+*.aab
 web-build/
+credentials.json
 
 # Expo
 .expo/
