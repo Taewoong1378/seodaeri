@@ -1,50 +1,58 @@
-'use server';
+'use server'
 
-import { auth } from '@repo/auth/server';
-import { createServiceClient } from '@repo/database/server';
-import { revalidatePath } from 'next/cache';
-import OpenAI from 'openai';
+import { auth } from '@repo/auth/server'
+import { createServiceClient } from '@repo/database/server'
+import { revalidatePath } from 'next/cache'
+import OpenAI from 'openai'
 import {
   appendSheetData,
   batchUpdateSheet,
   calculateNewAvgPrice,
   fetchSheetData,
   parsePortfolioData,
-} from '../../lib/google-sheets';
+} from '../../lib/google-sheets'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
+})
 
 export interface OCRResult {
-  date: string;
-  ticker: string;
-  name?: string;
-  price: number;
-  quantity: number;
-  type: 'BUY' | 'SELL' | 'DIVIDEND';
+  date: string
+  ticker: string
+  name?: string
+  price: number
+  quantity: number
+  type: 'BUY' | 'SELL' | 'DIVIDEND'
 }
 
 export interface DividendOCRItem {
-  date: string;
-  ticker: string;
-  name: string;
-  amountKRW: number;
-  amountUSD: number;
+  date: string
+  ticker: string
+  name: string
+  amountKRW: number
+  amountUSD: number
 }
 
 export interface SaveTransactionResult {
-  success: boolean;
-  transactionId?: string;
-  error?: string;
+  success: boolean
+  transactionId?: string
+  error?: string
 }
 
-export async function analyzeTradeImage(imageBase64: string, mode: 'trade' | 'dividend' = 'trade'): Promise<OCRResult | null> {
-  console.log('[analyzeTradeImage] Called with mode:', mode, 'imageBase64 length:', imageBase64?.length);
+export async function analyzeTradeImage(
+  imageBase64: string,
+  mode: 'trade' | 'dividend' = 'trade',
+): Promise<OCRResult | null> {
+  console.log(
+    '[analyzeTradeImage] Called with mode:',
+    mode,
+    'imageBase64 length:',
+    imageBase64?.length,
+  )
 
   if (!process.env.OPENAI_API_KEY) {
-    console.error('[analyzeTradeImage] OPENAI_API_KEY is not set');
-    return null;
+    console.error('[analyzeTradeImage] OPENAI_API_KEY is not set')
+    return null
   }
 
   const tradePrompt = `You are a financial data extraction assistant.
@@ -60,7 +68,7 @@ Extract the following details:
 Return ONLY a valid JSON object with keys: "date", "ticker", "name", "price", "quantity", "type".
 If you cannot find a value, use null.
 Ensure price and quantity are numbers (remove commas and currency symbols).
-For Korean stocks, ticker should be the 6-digit code.`;
+For Korean stocks, ticker should be the 6-digit code.`
 
   const dividendPrompt = `You are a financial data extraction assistant.
 Analyze the provided image of a dividend payment notification (likely from a Korean brokerage app).
@@ -73,23 +81,29 @@ Extract the following details:
 Return ONLY a valid JSON object with keys: "date", "ticker", "name", "price".
 If you cannot find a value, use null.
 Ensure price is a number (remove commas and currency symbols).
-For Korean stocks, ticker should be the 6-digit code.`;
+For Korean stocks, ticker should be the 6-digit code.`
 
   try {
-    console.log('[analyzeTradeImage] Sending request to OpenAI...');
+    console.log('[analyzeTradeImage] Sending request to OpenAI...')
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: 'gpt-4o',
       messages: [
         {
-          role: "system",
-          content: mode === 'dividend' ? dividendPrompt : tradePrompt
+          role: 'system',
+          content: mode === 'dividend' ? dividendPrompt : tradePrompt,
         },
         {
-          role: "user",
+          role: 'user',
           content: [
-            { type: "text", text: mode === 'dividend' ? "Extract dividend details from this image." : "Extract trade details from this image." },
             {
-              type: "image_url",
+              type: 'text',
+              text:
+                mode === 'dividend'
+                  ? 'Extract dividend details from this image.'
+                  : 'Extract trade details from this image.',
+            },
+            {
+              type: 'image_url',
               image_url: {
                 url: imageBase64,
               },
@@ -97,34 +111,34 @@ For Korean stocks, ticker should be the 6-digit code.`;
           ],
         },
       ],
-      response_format: { type: "json_object" },
-    });
+      response_format: { type: 'json_object' },
+    } as any)
 
-    console.log('[analyzeTradeImage] OpenAI response received');
-    const content = response.choices[0]?.message?.content;
-    console.log('[analyzeTradeImage] Content:', content);
+    console.log('[analyzeTradeImage] OpenAI response received')
+    const content = response.choices[0]?.message?.content
+    console.log('[analyzeTradeImage] Content:', content)
 
     if (!content) {
-      console.log('[analyzeTradeImage] No content in response');
-      return null;
+      console.log('[analyzeTradeImage] No content in response')
+      return null
     }
 
-    const result = JSON.parse(content);
-    console.log('[analyzeTradeImage] Parsed result:', result);
+    const result = JSON.parse(content)
+    console.log('[analyzeTradeImage] Parsed result:', result)
 
     const finalResult = {
       date: result.date || new Date().toISOString().split('T')[0],
       ticker: result.ticker || '',
       name: result.name || '',
       price: Number.parseFloat(result.price) || 0,
-      quantity: mode === 'dividend' ? 1 : (Number.parseFloat(result.quantity) || 0),
-      type: mode === 'dividend' ? 'DIVIDEND' : (result.type || 'BUY'),
-    };
-    console.log('[analyzeTradeImage] Final result:', finalResult);
-    return finalResult;
+      quantity: mode === 'dividend' ? 1 : Number.parseFloat(result.quantity) || 0,
+      type: mode === 'dividend' ? 'DIVIDEND' : result.type || 'BUY',
+    }
+    console.log('[analyzeTradeImage] Final result:', finalResult)
+    return finalResult
   } catch (error) {
-    console.error('[analyzeTradeImage] OCR Analysis failed:', error);
-    return null;
+    console.error('[analyzeTradeImage] OCR Analysis failed:', error)
+    return null
   }
 }
 
@@ -133,11 +147,11 @@ For Korean stocks, ticker should be the 6-digit code.`;
  * 한 이미지에 여러 종목의 배당 내역이 있을 수 있음
  */
 export async function analyzeDividendImage(imageBase64: string): Promise<DividendOCRItem[]> {
-  console.log('[analyzeDividendImage] Called, imageBase64 length:', imageBase64?.length);
+  console.log('[analyzeDividendImage] Called, imageBase64 length:', imageBase64?.length)
 
   if (!process.env.OPENAI_API_KEY) {
-    console.error('[analyzeDividendImage] OPENAI_API_KEY is not set');
-    return [];
+    console.error('[analyzeDividendImage] OPENAI_API_KEY is not set')
+    return []
   }
 
   const prompt = `You are a financial data extraction assistant.
@@ -163,23 +177,26 @@ Return a JSON object with a "dividends" array containing all extracted entries:
     { "date": "2024-05-03", "ticker": "367380", "name": "ACE 미국나스닥100", "amountKRW": 5560, "amountUSD": 0 },
     { "date": "2024-05-03", "ticker": "360750", "name": "Tiger 미국S&P500", "amountKRW": 32780, "amountUSD": 0 }
   ]
-}`;
+}`
 
   try {
-    console.log('[analyzeDividendImage] Sending request to OpenAI...');
+    console.log('[analyzeDividendImage] Sending request to OpenAI...')
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: 'gpt-4o',
       messages: [
         {
-          role: "system",
-          content: prompt
+          role: 'system',
+          content: prompt,
         },
         {
-          role: "user",
+          role: 'user',
           content: [
-            { type: "text", text: "Extract ALL dividend entries from this image. Return them as a JSON array." },
             {
-              type: "image_url",
+              type: 'text',
+              text: 'Extract ALL dividend entries from this image. Return them as a JSON array.',
+            },
+            {
+              type: 'image_url',
               image_url: {
                 url: imageBase64,
               },
@@ -187,20 +204,20 @@ Return a JSON object with a "dividends" array containing all extracted entries:
           ],
         },
       ],
-      response_format: { type: "json_object" },
-    });
+      response_format: { type: 'json_object' },
+    } as any)
 
-    console.log('[analyzeDividendImage] OpenAI response received');
-    const content = response.choices[0]?.message?.content;
-    console.log('[analyzeDividendImage] Content:', content);
+    console.log('[analyzeDividendImage] OpenAI response received')
+    const content = response.choices[0]?.message?.content
+    console.log('[analyzeDividendImage] Content:', content)
 
     if (!content) {
-      console.log('[analyzeDividendImage] No content in response');
-      return [];
+      console.log('[analyzeDividendImage] No content in response')
+      return []
     }
 
-    const result = JSON.parse(content);
-    console.log('[analyzeDividendImage] Parsed result:', result);
+    const result = JSON.parse(content)
+    console.log('[analyzeDividendImage] Parsed result:', result)
 
     const dividends: DividendOCRItem[] = (result.dividends || []).map((item: any) => ({
       date: item.date || new Date().toISOString().split('T')[0],
@@ -208,13 +225,13 @@ Return a JSON object with a "dividends" array containing all extracted entries:
       name: item.name || '',
       amountKRW: Number(item.amountKRW) || 0,
       amountUSD: Number(item.amountUSD) || 0,
-    }));
+    }))
 
-    console.log('[analyzeDividendImage] Final dividends:', dividends);
-    return dividends;
+    console.log('[analyzeDividendImage] Final dividends:', dividends)
+    return dividends
   } catch (error) {
-    console.error('[analyzeDividendImage] OCR Analysis failed:', error);
-    return [];
+    console.error('[analyzeDividendImage] OCR Analysis failed:', error)
+    return []
   }
 }
 
@@ -225,13 +242,13 @@ Return a JSON object with a "dividends" array containing all extracted entries:
  * 3. 시트 '3. 종목현황' 탭에서 해당 종목의 수량/평단가 업데이트
  */
 export async function saveTransaction(transaction: OCRResult): Promise<SaveTransactionResult> {
-  const session = await auth();
+  const session = await auth()
 
   if (!session?.user?.id) {
-    return { success: false, error: '로그인이 필요합니다.' };
+    return { success: false, error: '로그인이 필요합니다.' }
   }
 
-  const supabase = createServiceClient();
+  const supabase = createServiceClient()
 
   try {
     // 1. 사용자의 spreadsheet_id 조회
@@ -240,25 +257,28 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
       .from('users')
       .select('id, spreadsheet_id')
       .eq('id', session.user.id)
-      .single();
+      .single()
 
     if (!user && session.user.email) {
       const { data: userByEmail } = await supabase
         .from('users')
         .select('id, spreadsheet_id')
         .eq('email', session.user.email)
-        .single();
+        .single()
 
       if (userByEmail) {
-        user = userByEmail;
+        user = userByEmail
       }
     }
 
     if (!user?.spreadsheet_id) {
-      return { success: false, error: '연동된 스프레드시트가 없습니다. 온보딩을 먼저 완료해주세요.' };
+      return {
+        success: false,
+        error: '연동된 스프레드시트가 없습니다. 온보딩을 먼저 완료해주세요.',
+      }
     }
 
-    const totalAmount = transaction.price * transaction.quantity;
+    const totalAmount = transaction.price * transaction.quantity
 
     // 2. Supabase에 거래내역 저장
     const { data: insertedTransaction, error: insertError } = await supabase
@@ -275,44 +295,41 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
         sheet_synced: false,
       })
       .select('id')
-      .single();
+      .single()
 
     if (insertError) {
-      console.error('Failed to insert transaction:', insertError);
-      return { success: false, error: '거래내역 저장에 실패했습니다.' };
+      console.error('Failed to insert transaction:', insertError)
+      return { success: false, error: '거래내역 저장에 실패했습니다.' }
     }
 
     // 3. Google Sheet 동기화
     if (session.accessToken) {
-      let sheetSynced = false;
+      let sheetSynced = false
 
       // 배당 vs 매매 분기 처리
       if (transaction.type === 'DIVIDEND') {
         try {
           // 배당내역 탭에 추가
           // "7. 배당내역" 탭: A=입금날짜, B=계좌구분, C=종목명, D=종목코드, E=통화, F=세전배당, G=세금, H=세후배당(원), I=세후배당($), J=비고
-          const isKorean = /^\d{6}$/.test(transaction.ticker);
-          await appendSheetData(
-            session.accessToken,
-            user.spreadsheet_id,
-            "'7. 배당내역'!A:J",
-            [[
+          const isKorean = /^\d{6}$/.test(transaction.ticker)
+          await appendSheetData(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!A:J", [
+            [
               transaction.date,
-              '일반 계좌',  // 기본값
+              '일반 계좌', // 기본값
               transaction.name || transaction.ticker,
               transaction.ticker,
               isKorean ? 'KRW' : 'USD',
-              '',  // 세전배당 (알 수 없음)
-              '',  // 세금 (알 수 없음)
-              isKorean ? transaction.price : '',  // 세후배당(원)
-              isKorean ? '' : (transaction.price / 1400).toFixed(2),  // 세후배당($) - KRW로 입력받았으므로 역산
+              '', // 세전배당 (알 수 없음)
+              '', // 세금 (알 수 없음)
+              isKorean ? transaction.price : '', // 세후배당(원)
+              isKorean ? '' : (transaction.price / 1400).toFixed(2), // 세후배당($) - KRW로 입력받았으므로 역산
               'App에서 추가',
-            ]]
-          );
+            ],
+          ])
 
-          sheetSynced = true;
+          sheetSynced = true
         } catch (appendError) {
-          console.warn('Failed to append to 배당내역 tab:', appendError);
+          console.warn('Failed to append to 배당내역 tab:', appendError)
         }
       } else {
         // 매수/매도인 경우
@@ -323,21 +340,23 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
             session.accessToken,
             user.spreadsheet_id,
             "'8. 매매일지(App)'!A:G",
-            [[
-              transaction.date,
-              transaction.ticker,
-              transaction.name || '',
-              transaction.type === 'BUY' ? '매수' : '매도',
-              transaction.price,
-              transaction.quantity,
-              totalAmount,
-            ]]
-          );
+            [
+              [
+                transaction.date,
+                transaction.ticker,
+                transaction.name || '',
+                transaction.type === 'BUY' ? '매수' : '매도',
+                transaction.price,
+                transaction.quantity,
+                totalAmount,
+              ],
+            ],
+          )
 
-          sheetSynced = true;
+          sheetSynced = true
         } catch (appendError) {
           // 매매일지 탭이 없을 수 있음 - 에러 무시하고 계속 진행
-          console.warn('Failed to append to 매매일지 tab (might not exist):', appendError);
+          console.warn('Failed to append to 매매일지 tab (might not exist):', appendError)
         }
 
         try {
@@ -345,14 +364,14 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
           const portfolioRows = await fetchSheetData(
             session.accessToken,
             user.spreadsheet_id,
-            "'3. 종목현황'!A:J"
-          );
+            "'3. 종목현황'!A:J",
+          )
 
           if (portfolioRows) {
-            const portfolio = parsePortfolioData(portfolioRows);
+            const portfolio = parsePortfolioData(portfolioRows)
             const existingItem = portfolio.find(
-              (item) => item.ticker.toUpperCase() === transaction.ticker.toUpperCase()
-            );
+              (item) => item.ticker.toUpperCase() === transaction.ticker.toUpperCase(),
+            )
 
             if (existingItem) {
               // 기존 종목 - 평단가/수량 계산 후 업데이트
@@ -361,44 +380,37 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
                 existingItem.avgPrice,
                 transaction.quantity,
                 transaction.price,
-                transaction.type
-              );
+                transaction.type,
+              )
 
               // 수량(E열)과 평단가(F열) 업데이트
-              const rowIndex = existingItem.rowIndex;
-              await batchUpdateSheet(
-                session.accessToken,
-                user.spreadsheet_id,
-                [
-                  { range: `'3. 종목현황'!E${rowIndex}`, values: [[newQty]] },
-                  { range: `'3. 종목현황'!F${rowIndex}`, values: [[newAvgPrice]] },
-                ]
-              );
+              const rowIndex = existingItem.rowIndex
+              await batchUpdateSheet(session.accessToken, user.spreadsheet_id, [
+                { range: `'3. 종목현황'!E${rowIndex}`, values: [[newQty]] },
+                { range: `'3. 종목현황'!F${rowIndex}`, values: [[newAvgPrice]] },
+              ])
 
-              sheetSynced = true;
+              sheetSynced = true
             } else if (transaction.type === 'BUY') {
               // 신규 종목 매수 - 새 행 추가
               // A=종목명, B=국가, C=종목코드, D=통화, E=수량, F=평단가
-              const isKorean = /^\d{6}$/.test(transaction.ticker);
-              await appendSheetData(
-                session.accessToken,
-                user.spreadsheet_id,
-                "'3. 종목현황'!A:F",
-                [[
+              const isKorean = /^\d{6}$/.test(transaction.ticker)
+              await appendSheetData(session.accessToken, user.spreadsheet_id, "'3. 종목현황'!A:F", [
+                [
                   transaction.name || transaction.ticker,
                   isKorean ? '한국' : '미국',
                   transaction.ticker,
                   isKorean ? 'KRW' : 'USD',
                   transaction.quantity,
                   transaction.price,
-                ]]
-              );
+                ],
+              ])
 
-              sheetSynced = true;
+              sheetSynced = true
             }
           }
         } catch (updateError) {
-          console.error('Failed to update 종목현황:', updateError);
+          console.error('Failed to update 종목현황:', updateError)
           // 종목현황 업데이트 실패해도 계속 진행
         }
       }
@@ -408,19 +420,19 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
         await supabase
           .from('transactions')
           .update({ sheet_synced: true })
-          .eq('id', insertedTransaction.id);
+          .eq('id', insertedTransaction.id)
       }
     }
 
-    revalidatePath('/dashboard');
-    revalidatePath('/transactions');
+    revalidatePath('/dashboard')
+    revalidatePath('/transactions')
 
     return {
       success: true,
       transactionId: insertedTransaction.id,
-    };
+    }
   } catch (error) {
-    console.error('saveTransaction error:', error);
-    return { success: false, error: '거래내역 저장 중 오류가 발생했습니다.' };
+    console.error('saveTransaction error:', error)
+    return { success: false, error: '거래내역 저장 중 오류가 발생했습니다.' }
   }
 }
