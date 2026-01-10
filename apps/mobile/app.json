@@ -30,7 +30,19 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.taewoong.gulim",
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "gulim"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "plugins": [
       [
@@ -39,19 +51,6 @@
           "backgroundColor": "#D6E6F5",
           "image": "./assets/splash.png",
           "resizeMode": "cover"
-        }
-      ],
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "deploymentTarget": "15.1"
-          },
-          "android": {
-            "kotlinVersion": "1.9.25",
-            "compileSdkVersion": 35,
-            "targetSdkVersion": 35
-          }
         }
       ],
       "expo-apple-authentication"
