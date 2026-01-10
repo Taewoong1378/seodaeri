@@ -1,30 +1,28 @@
-'use client';
+"use client";
 
-import { SmallBanner } from '@/app/dashboard/components/SmallBanner';
-import { Card, CardContent } from '@repo/design-system/components/card';
-import Link from 'next/link';
-import { useDashboard } from '../../../hooks';
-import { AccountTrendChart } from './AccountTrendChart';
-import { BannerCarousel } from './BannerCarousel';
-import { CumulativeDividendChart } from './CumulativeDividendChart';
-import { DashboardTabs } from './DashboardTabs';
-import { DividendByYearChart } from './DividendByYearChart';
-import { DividendChart } from './DividendChart';
-import { HeroCard } from './HeroCard';
-import { MajorIndexYieldComparisonChart } from './MajorIndexYieldComparisonChart';
-import { MonthlyProfitLossChart } from './MonthlyProfitLossChart';
-import { MonthlyYieldComparisonChart } from './MonthlyYieldComparisonChart';
-import { MonthlyYieldComparisonDollarAppliedChart } from './MonthlyYieldComparisonDollarAppliedChart';
-import { PerformanceComparisonChart } from './PerformanceComparisonChart';
-import { PortfolioDonutChart } from './PortfolioDonutChart';
-import { PortfolioHoldingsChart } from './PortfolioHoldingsChart';
-import { RollingAverageDividendChart } from './RollingAverageDividendChart';
-import { YearlyDividendChart } from './YearlyDividendChart';
-import { YieldComparisonChart } from './YieldComparisonChart';
-import { YieldComparisonDollarChart } from './YieldComparisonDollarChart';
+import { Card, CardContent } from "@repo/design-system/components/card";
+import Link from "next/link";
+import { useDashboard } from "../../../hooks";
+import { AccountTrendChart } from "./AccountTrendChart";
+import { CumulativeDividendChart } from "./CumulativeDividendChart";
+import { DashboardTabs } from "./DashboardTabs";
+import { DividendByYearChart } from "./DividendByYearChart";
+import { DividendChart } from "./DividendChart";
+import { HeroCard } from "./HeroCard";
+import { MajorIndexYieldComparisonChart } from "./MajorIndexYieldComparisonChart";
+import { MonthlyProfitLossChart } from "./MonthlyProfitLossChart";
+import { MonthlyYieldComparisonChart } from "./MonthlyYieldComparisonChart";
+import { MonthlyYieldComparisonDollarAppliedChart } from "./MonthlyYieldComparisonDollarAppliedChart";
+import { PerformanceComparisonChart } from "./PerformanceComparisonChart";
+import { PortfolioDonutChart } from "./PortfolioDonutChart";
+import { PortfolioHoldingsChart } from "./PortfolioHoldingsChart";
+import { RollingAverageDividendChart } from "./RollingAverageDividendChart";
+import { YearlyDividendChart } from "./YearlyDividendChart";
+import { YieldComparisonChart } from "./YieldComparisonChart";
+import { YieldComparisonDollarChart } from "./YieldComparisonDollarChart";
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('ko-KR').format(Math.round(amount));
+  return new Intl.NumberFormat("ko-KR").format(Math.round(amount));
 }
 
 function DashboardSkeleton() {
@@ -131,7 +129,10 @@ function DashboardSkeleton() {
       <section>
         <div className="grid grid-cols-2 gap-4 animate-pulse">
           {[1, 2].map((i) => (
-            <div key={i} className="bg-card border border-border rounded-[20px] p-5 backdrop-blur-sm">
+            <div
+              key={i}
+              className="bg-card border border-border rounded-[20px] p-5 backdrop-blur-sm"
+            >
               <div className="h-3 w-20 bg-muted rounded mb-2" />
               <div className="h-6 w-32 bg-muted rounded" />
             </div>
@@ -163,7 +164,9 @@ export function DashboardContent() {
   if (error && !data) {
     return (
       <div className="p-6 text-center">
-        <p className="text-red-400">데이터를 불러오는 중 오류가 발생했습니다.</p>
+        <p className="text-red-400">
+          데이터를 불러오는 중 오류가 발생했습니다.
+        </p>
         <p className="text-sm text-slate-500 mt-2">{error.message}</p>
       </div>
     );
@@ -175,7 +178,8 @@ export function DashboardContent() {
     <div className="space-y-6">
       {/* Hero Section */}
       <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <BannerCarousel />
+        {/* TODO: 배너 캐러셀 추가 */}
+        {/* <BannerCarousel /> */}
         {displayData.totalAsset > 0 && (
           <HeroCard
             totalAsset={displayData.totalAsset}
@@ -210,25 +214,32 @@ export function DashboardContent() {
               {displayData.performanceComparison.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between px-1">
-                    <h3 className="text-base font-bold text-foreground">누적 수익률</h3>
-                    <span className="text-xs text-muted-foreground">vs 주요 지수</span>
+                    <h3 className="text-base font-bold text-foreground">
+                      누적 수익률
+                    </h3>
+                    <span className="text-xs text-muted-foreground">
+                      vs 주요 지수
+                    </span>
                   </div>
                   <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                     <CardContent className="p-6">
-                      <PerformanceComparisonChart data={displayData.performanceComparison} />
+                      <PerformanceComparisonChart
+                        data={displayData.performanceComparison}
+                      />
                     </CardContent>
                   </Card>
                 </div>
               )}
 
+              {/* TODO: 배너 추가 */}
               {/* Small Banner 1 */}
-              <SmallBanner
+              {/* <SmallBanner
                 title="SOL 미국배당다우존스"
                 description="한국판 SCHD의 대명사"
                 image="/images/banners/banner-sol-etf.png"
                 link="#"
                 gradient="from-blue-600 to-cyan-600"
-              />
+              /> */}
 
               {/* Yield Comparison Bar Chart */}
               {displayData.yieldComparison && (
@@ -243,27 +254,35 @@ export function DashboardContent() {
               {displayData.yieldComparisonDollar && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
-                    <YieldComparisonDollarChart data={displayData.yieldComparisonDollar} />
+                    <YieldComparisonDollarChart
+                      data={displayData.yieldComparisonDollar}
+                    />
                   </CardContent>
                 </Card>
               )}
 
+              {/* TODO: 배너 추가 */}
               {/* Small Banner 2 */}
-              <SmallBanner
+              {/* <SmallBanner
                 title="TIGER 미국테크TOP10"
                 description="미국 빅테크 상위 10개 종목 집중 투자"
                 image="/images/banners/banner-tiger-etf.png"
                 link="#"
                 gradient="from-orange-500 to-amber-500"
-              />
+              /> */}
 
               {/* Portfolio Charts */}
               {displayData.portfolio.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between px-1">
-                    <h3 className="text-base font-bold text-foreground">포트폴리오</h3>
+                    <h3 className="text-base font-bold text-foreground">
+                      포트폴리오
+                    </h3>
                     <Link href="/portfolio">
-                      <button type="button" className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+                      <button
+                        type="button"
+                        className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      >
                         전체보기
                       </button>
                     </Link>
@@ -283,8 +302,12 @@ export function DashboardContent() {
                   <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-sm font-semibold text-foreground">상위 보유 종목</h4>
-                        <span className="text-xs text-muted-foreground">{displayData.portfolio.length}개 종목</span>
+                        <h4 className="text-sm font-semibold text-foreground">
+                          상위 보유 종목
+                        </h4>
+                        <span className="text-xs text-muted-foreground">
+                          {displayData.portfolio.length}개 종목
+                        </span>
                       </div>
                       <PortfolioHoldingsChart data={displayData.portfolio} />
                     </CardContent>
@@ -301,7 +324,9 @@ export function DashboardContent() {
               {displayData.monthlyYieldComparison && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
-                    <MonthlyYieldComparisonChart data={displayData.monthlyYieldComparison} />
+                    <MonthlyYieldComparisonChart
+                      data={displayData.monthlyYieldComparison}
+                    />
                   </CardContent>
                 </Card>
               )}
@@ -310,7 +335,9 @@ export function DashboardContent() {
               {displayData.monthlyYieldComparisonDollarApplied && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
-                    <MonthlyYieldComparisonDollarAppliedChart data={displayData.monthlyYieldComparisonDollarApplied} />
+                    <MonthlyYieldComparisonDollarAppliedChart
+                      data={displayData.monthlyYieldComparisonDollarApplied}
+                    />
                   </CardContent>
                 </Card>
               )}
@@ -319,7 +346,9 @@ export function DashboardContent() {
               {displayData.majorIndexYieldComparison && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
-                    <MajorIndexYieldComparisonChart data={displayData.majorIndexYieldComparison} />
+                    <MajorIndexYieldComparisonChart
+                      data={displayData.majorIndexYieldComparison}
+                    />
                   </CardContent>
                 </Card>
               )}
@@ -328,7 +357,9 @@ export function DashboardContent() {
               {displayData.monthlyProfitLoss.length > 0 ? (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
-                    <MonthlyProfitLossChart data={displayData.monthlyProfitLoss} />
+                    <MonthlyProfitLossChart
+                      data={displayData.monthlyProfitLoss}
+                    />
                   </CardContent>
                 </Card>
               ) : (
@@ -357,25 +388,33 @@ export function DashboardContent() {
               {/* Quick Stats Summary */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-card border border-border rounded-[20px] p-5 shadow-sm">
-                  <span className="text-xs font-medium text-muted-foreground block mb-1">이번 달 배당금</span>
+                  <span className="text-xs font-medium text-muted-foreground block mb-1">
+                    이번 달 배당금
+                  </span>
                   <div className="flex items-baseline gap-1">
                     <span className="text-xl font-bold text-foreground tracking-tight">
                       {formatCurrency(displayData.thisMonthDividend)}
                     </span>
-                    <span className="text-xs text-muted-foreground font-medium">원</span>
+                    <span className="text-xs text-muted-foreground font-medium">
+                      원
+                    </span>
                   </div>
                 </div>
                 <div className="bg-card border border-border rounded-[20px] p-5 shadow-sm">
-                  <span className="text-xs font-medium text-muted-foreground block mb-1">올해 총 배당금</span>
+                  <span className="text-xs font-medium text-muted-foreground block mb-1">
+                    올해 총 배당금
+                  </span>
                   <div className="flex items-baseline gap-1">
                     <span className="text-xl font-bold text-foreground tracking-tight">
                       {formatCurrency(displayData.yearlyDividend)}
                     </span>
-                    <span className="text-xs text-muted-foreground font-medium">원</span>
+                    <span className="text-xs text-muted-foreground font-medium">
+                      원
+                    </span>
                   </div>
                 </div>
               </div>
-              
+
               {/* Dividend By Year Chart (월별 배당금 현황) */}
               {displayData.dividendByYear && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
@@ -389,7 +428,9 @@ export function DashboardContent() {
               {displayData.yearlyDividendSummary && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
-                    <YearlyDividendChart data={displayData.yearlyDividendSummary} />
+                    <YearlyDividendChart
+                      data={displayData.yearlyDividendSummary}
+                    />
                   </CardContent>
                 </Card>
               )}
@@ -398,7 +439,9 @@ export function DashboardContent() {
               {displayData.rollingAverageDividend && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
-                    <RollingAverageDividendChart data={displayData.rollingAverageDividend} />
+                    <RollingAverageDividendChart
+                      data={displayData.rollingAverageDividend}
+                    />
                   </CardContent>
                 </Card>
               )}
@@ -407,7 +450,9 @@ export function DashboardContent() {
               {displayData.cumulativeDividend && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
-                    <CumulativeDividendChart data={displayData.cumulativeDividend} />
+                    <CumulativeDividendChart
+                      data={displayData.cumulativeDividend}
+                    />
                   </CardContent>
                 </Card>
               )}
