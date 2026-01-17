@@ -29,17 +29,17 @@ export async function isAppleAuthAvailable(): Promise<boolean> {
 /**
  * WebView로부터 Apple 로그인 요청 처리
  */
-export async function handleAppleLogin(
-  messageId: string,
-  webViewRef: WebViewRef
-) {
+export async function handleAppleLogin(messageId: string, webViewRef: WebViewRef) {
+  console.log('[AppleAuth] handleAppleLogin called, messageId:', messageId)
   try {
     if (!AppleAuthentication) {
+      console.log('[AppleAuth] AppleAuthentication module not loaded')
       throw new Error('NOT_AVAILABLE')
     }
 
     // 가용성 확인
     const isAvailable = await AppleAuthentication.isAvailableAsync()
+    console.log('[AppleAuth] isAvailableAsync result:', isAvailable)
     if (!isAvailable) {
       throw new Error('NOT_AVAILABLE')
     }
@@ -47,7 +47,7 @@ export async function handleAppleLogin(
     // 보안을 위한 nonce 생성
     const nonce = await Crypto.digestStringAsync(
       Crypto.CryptoDigestAlgorithm.SHA256,
-      Math.random().toString(36).substring(2, 15)
+      Math.random().toString(36).substring(2, 15),
     )
 
     // Apple Sign In 요청
@@ -96,15 +96,12 @@ export async function handleAppleLogin(
         errorMessage = 'REQUEST_FAILED'
       } else if (errorWithCode.code === 'ERR_INVALID_RESPONSE') {
         errorMessage = 'INVALID_RESPONSE'
-      } else if (
-        errorWithCode.code === 'ERR_NOT_AVAILABLE' ||
-        error.message === 'NOT_AVAILABLE'
-      ) {
+      } else if (errorWithCode.code === 'ERR_NOT_AVAILABLE' || error.message === 'NOT_AVAILABLE') {
         errorMessage = 'NOT_AVAILABLE'
       }
     }
 
-    console.error('Apple login error:', error)
+    console.error('[AppleAuth] Apple login error:', error)
 
     // WebView로 에러 응답 전송
     const script = `
@@ -122,11 +119,10 @@ export async function handleAppleLogin(
 /**
  * WebView로부터 Apple 로그인 가용성 확인 요청 처리
  */
-export async function handleCheckAppleAvailable(
-  messageId: string,
-  webViewRef: WebViewRef
-) {
+export async function handleCheckAppleAvailable(messageId: string, webViewRef: WebViewRef) {
+  console.log('[AppleAuth] handleCheckAppleAvailable called, messageId:', messageId)
   const available = await isAppleAuthAvailable()
+  console.log('[AppleAuth] isAppleAuthAvailable result:', available)
 
   const script = `
     (function() {
