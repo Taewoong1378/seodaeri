@@ -75,15 +75,31 @@ export async function handleAppleLogin(messageId: string, webViewRef: WebViewRef
     }
 
     // WebView로 성공 응답 전송
+    console.log('[AppleAuth] Sending success response to WebView')
+    console.log('[AppleAuth] Response data:', JSON.stringify(response))
+    console.log('[AppleAuth] WebView ref exists:', !!webViewRef.current)
+    
     const script = `
       (function() {
-        window.dispatchEvent(new CustomEvent('Bridge.AppleLogin', {
-          detail: { id: ${JSON.stringify(messageId)}, data: ${JSON.stringify(response)} }
-        }));
+        console.log('[AppleAuth WebView] Received Apple login response');
+        try {
+          window.dispatchEvent(new CustomEvent('Bridge.AppleLogin', {
+            detail: { id: ${JSON.stringify(messageId)}, data: ${JSON.stringify(response)} }
+          }));
+          console.log('[AppleAuth WebView] Event dispatched successfully');
+        } catch (e) {
+          console.error('[AppleAuth WebView] Error dispatching event:', e);
+        }
         return true;
       })();
     `
-    webViewRef.current?.injectJavaScript(script)
+    
+    if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(script)
+      console.log('[AppleAuth] Script injected')
+    } else {
+      console.error('[AppleAuth] WebView ref is null!')
+    }
   } catch (error: unknown) {
     let errorMessage = 'APPLE_LOGIN_FAILED'
 
@@ -102,17 +118,24 @@ export async function handleAppleLogin(messageId: string, webViewRef: WebViewRef
     }
 
     console.error('[AppleAuth] Apple login error:', error)
+    console.error('[AppleAuth] Error message:', errorMessage)
 
     // WebView로 에러 응답 전송
     const script = `
       (function() {
+        console.log('[AppleAuth WebView] Received Apple login error:', ${JSON.stringify(errorMessage)});
         window.dispatchEvent(new CustomEvent('Bridge.AppleLogin', {
           detail: { id: ${JSON.stringify(messageId)}, error: ${JSON.stringify(errorMessage)} }
         }));
         return true;
       })();
     `
-    webViewRef.current?.injectJavaScript(script)
+    
+    if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(script)
+    } else {
+      console.error('[AppleAuth] WebView ref is null for error response!')
+    }
   }
 }
 

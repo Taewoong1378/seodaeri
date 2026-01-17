@@ -40,33 +40,53 @@ export function AppleLogin({ onSuccess, onError, className, children }: AppleLog
   }, [isEnabled])
 
   const handleAppleLogin = async () => {
+    console.log('[AppleLogin] Button clicked, starting login...')
     setIsLoading(true)
     try {
+      console.log('[AppleLogin] Calling bridge.appleLogin()...')
       const response = await bridge.appleLogin()
+      console.log('[AppleLogin] Got response from native:', response)
 
       // 서버로 Apple 토큰 전송하여 세션 생성
+      console.log('[AppleLogin] Sending to server /api/auth/apple...')
       const res = await fetch('/api/auth/apple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(response),
       })
 
+      console.log('[AppleLogin] Server response status:', res.status)
+      
       if (res.ok) {
+        console.log('[AppleLogin] Login successful, redirecting...')
         onSuccess?.()
-        // 페이지 새로고침으로 세션 반영
-        window.location.href = '/dashboard'
+        // 페이지 새로고침으로 세션 반영 (여러 방법 시도)
+        try {
+          // 방법 1: location.replace (히스토리에 남지 않음)
+          window.location.replace('/dashboard')
+        } catch {
+          // 방법 2: location.href
+          window.location.href = '/dashboard'
+        }
+        // 방법 3: 강제 리로드 (fallback)
+        setTimeout(() => {
+          window.location.reload()
+        }, 1000)
       } else {
         const error = await res.json()
+        console.error('[AppleLogin] Server error:', error)
         throw new Error(error.message || 'Apple login failed')
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.error('[AppleLogin] Catch block error:', errorMessage)
       // 사용자 취소는 에러로 처리하지 않음
       if (errorMessage !== 'CANCELED') {
         console.error('Apple login error:', errorMessage)
         onError?.(errorMessage)
       }
     } finally {
+      console.log('[AppleLogin] Finally block, setting loading false')
       setIsLoading(false)
     }
   }
