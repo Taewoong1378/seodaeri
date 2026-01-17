@@ -9,6 +9,13 @@
 import { createServiceClient } from '@repo/database/server';
 import { getUSDKRWRate } from './exchange-rate-api';
 import { getStockPrices, isKoreanStock, type StockPrice } from './stock-price-api';
+import {
+  getKOSPIIndex,
+  getSP500Index,
+  getNASDAQIndex,
+  type IndexData,
+} from './index-data-api';
+import type { MajorIndexYieldComparisonData } from './google-sheets';
 
 // ============================================
 // 공통 타입 정의
@@ -378,6 +385,165 @@ export class StandaloneDataProvider implements DataProvider {
     }
 
     return true;
+  }
+
+  /**
+   * 주요 지수 수익률 비교 데이터 조회 (YTD 기준)
+   * - KOSPI, S&P500 (SPY), NASDAQ (QQQ) 지수 데이터
+   * - 포트폴리오 스냅샷 기반 계좌 수익률 계산
+   */
+  async getMajorIndexYieldComparison(userId: string): Promise<MajorIndexYieldComparisonData | null> {
+    const supabase = createServiceClient();
+
+    try {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth(); // 0-indexed
+
+      // 연초 날짜 (1월 1일)
+      const yearStart = `${currentYear}-01-01`;
+
+      // 1. 포트폴리오 스냅샷 조회 (연초부터 현재까지)
+      const { data: snapshots } = await supabase
+        .from('portfolio_snapshots')
+        .select('snapshot_date, total_asset, total_invested')
+        .eq('user_id', userId)
+        .gte('snapshot_date', yearStart)
+        .order('snapshot_date', { ascending: true });
+
+      // 2. 월별 레이블 생성
+      const months = ['시작'];
+      for (let m = 0; m <= currentMonth; m++) {
+        months.push(`${m + 1}월`);
+      }
+
+      // 3. 현재 지수 데이터 조회
+      const [kospiData, sp500Data, nasdaqData] = await Promise.all([
+        getKOSPIIndex(),
+        getSP500Index(),
+        getNASDAQIndex(),
+      ]);
+
+      // 4. 지수 YTD 수익률 계산
+      // 지수의 경우 연초 대비 현재 수익률을 사용
+      // 현재 API에서는 일간 변동률만 제공하므로,
+      // 실제 YTD는 추후 historical data API 연동 시 개선 가능
+      // 임시로 현재 일간 변동률을 누적 형태로 표시
+      const sp500Yields = this.generateMonthlyYields(sp500Data?.changePercent || 0, currentMonth + 1);
+      const nasdaqYields = this.generateMonthlyYields(nasdaqData?.changePercent || 0, currentMonth + 1);
+      const kospiYields = this.generateMonthlyYields(kospiData?.changePercent || 0, currentMonth + 1);
+
+      // 5. 계좌 수익률 계산
+      // null 값을 0으로 변환하여 타입 안정성 확보
+      const normalizedSnapshots = (snapshots || []).map(s => ({
+        snapshot_date: s.snapshot_date,
+        total_asset: s.total_asset ?? 0,
+        total_invested: s.total_invested ?? 0,
+      }));
+      const accountYields = this.calculateAccountYields(normalizedSnapshots, currentMonth + 1);
+
+      console.log('[StandaloneProvider] Index comparison:', {
+        kospi: kospiData?.changePercent,
+        sp500: sp500Data?.changePercent,
+        nasdaq: nasdaqData?.changePercent,
+        accountMonths: accountYields.length,
+      });
+
+      return {
+        months,
+        sp500: sp500Yields,
+        nasdaq: nasdaqYields,
+        kospi: kospiYields,
+        account: accountYields,
+      };
+    } catch (error) {
+      console.error('[StandaloneProvider] getMajorIndexYieldComparison error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 월별 수익률 배열 생성 (시뮬레이션)
+   * 실제 historical data가 없으므로 현재 수익률을 기반으로 추정
+   */
+  private generateMonthlyYields(currentYield: number, monthCount: number): number[] {
+    const yields: number[] = [0]; // 시작점은 0%
+
+    // 현재 수익률을 월별로 분배 (단순 선형)
+    // 실제 historical API 연동 시 개선 필요
+    for (let i = 1; i <= monthCount; i++) {
+      // 현재까지의 누적 수익률 비율
+      const ratio = i / monthCount;
+      yields.push(Number((currentYield * ratio).toFixed(1)));
+    }
+
+    return yields;
+  }
+
+  /**
+   * 포트폴리오 스냅샷 기반 월별 수익률 계산
+   */
+  private calculateAccountYields(
+    snapshots: Array<{ snapshot_date: string; total_asset: number; total_invested: number }>,
+    monthCount: number
+  ): (number | null)[] {
+    const yields: (number | null)[] = [0]; // 시작점은 0%
+
+    if (snapshots.length === 0) {
+      // 스냅샷이 없으면 null로 채움
+      for (let i = 0; i < monthCount; i++) {
+        yields.push(null);
+      }
+      return yields;
+    }
+
+    // 연초 자산 (첫 번째 스냅샷 기준)
+    const firstSnapshot = snapshots[0];
+    const startAsset = firstSnapshot?.total_asset || 0;
+    const startInvested = firstSnapshot?.total_invested || 0;
+
+    if (startAsset === 0) {
+      for (let i = 0; i < monthCount; i++) {
+        yields.push(null);
+      }
+      return yields;
+    }
+
+    // 월별로 그룹화
+    const monthlySnapshots = new Map<number, typeof snapshots[0]>();
+    for (const snapshot of snapshots) {
+      const month = new Date(snapshot.snapshot_date).getMonth(); // 0-indexed
+      // 각 월의 마지막 스냅샷 사용
+      monthlySnapshots.set(month, snapshot);
+    }
+
+    // 월별 수익률 계산
+    for (let m = 0; m < monthCount; m++) {
+      const monthSnapshot = monthlySnapshots.get(m);
+      if (!monthSnapshot) {
+        yields.push(null);
+        continue;
+      }
+
+      // 연초 대비 수익률: (현재자산 - 연초자산) / 연초자산 * 100
+      // 또는 투자금 대비: (현재자산 - 투자금) / 투자금 * 100
+      const asset = monthSnapshot.total_asset;
+      const invested = monthSnapshot.total_invested;
+
+      if (startInvested > 0) {
+        // 연초 투자금 대비 수익률 계산
+        const yieldPercent = ((asset - startInvested) / startInvested) * 100;
+        yields.push(Number(yieldPercent.toFixed(1)));
+      } else if (invested > 0) {
+        // 현재 투자금 대비 수익률
+        const yieldPercent = ((asset - invested) / invested) * 100;
+        yields.push(Number(yieldPercent.toFixed(1)));
+      } else {
+        yields.push(null);
+      }
+    }
+
+    return yields;
   }
 }
 

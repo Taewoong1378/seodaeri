@@ -1,8 +1,8 @@
 /**
- * 주가 API (한국투자증권 OpenAPI + Finnhub)
+ * 주가 API (한국투자증권 OpenAPI 통합)
  *
  * 한국 주식: 한국투자증권 OpenAPI (KIS Developers)
- * 미국 주식: Finnhub API
+ * 미국 주식: 한국투자증권 OpenAPI (해외주식)
  *
  * 캐싱 전략:
  * - 시장시간: 5분 캐시
@@ -140,6 +140,7 @@ async function fetchKISPrice(ticker: string): Promise<StockPrice | null> {
           appkey: appKey,
           appsecret: appSecret,
           tr_id: 'FHKST01010100', // 주식현재가 시세 조회
+          custtype: 'P', // P: 개인, B: 법인
         },
       }
     );
@@ -176,68 +177,168 @@ async function fetchKISPrice(ticker: string): Promise<StockPrice | null> {
 }
 
 // ============================================
-// Finnhub API (미국 주식)
+// KIS API (미국 주식 - 해외주식)
 // ============================================
 
-const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
-
-interface FinnhubQuoteResponse {
-  c: number; // Current price
-  d: number; // Change
-  dp: number; // Percent change
-  h: number; // High price of the day
-  l: number; // Low price of the day
-  o: number; // Open price of the day
-  pc: number; // Previous close price
-  t: number; // Timestamp
+interface KISOverseasPriceResponse {
+  rt_cd: string; // 성공시 "0"
+  msg_cd: string;
+  msg1: string;
+  output: {
+    rsym: string; // 실시간조회종목코드
+    zdiv: string; // 소수점자리수
+    base: string; // 전일종가
+    pvol: string; // 전일거래량
+    last: string; // 현재가
+    sign: string; // 대비기호 (1:상한, 2:상승, 3:보합, 4:하한, 5:하락)
+    diff: string; // 전일대비
+    rate: string; // 등락률
+    tvol: string; // 거래량
+    tamt: string; // 거래대금
+    ordy: string; // 매수가능여부
+  };
 }
 
 /**
- * Finnhub API로 미국 주식 현재가 조회
+ * 미국 거래소 코드 결정
+ * - NASDAQ 종목: NAS
+ * - NYSE 종목: NYS
+ * - AMEX/ETF 종목: AMS
  */
-async function fetchFinnhubPrice(ticker: string): Promise<StockPrice | null> {
-  const apiKey = process.env.FINNHUB_API_KEY;
-
-  if (!apiKey) {
-    console.warn('[Finnhub] API_KEY not configured');
-    return null;
+function getUSExchangeCode(ticker: string): string {
+  // 대표적인 ETF들은 AMEX
+  const amexTickers = ['SPY', 'QQQ', 'IVV', 'VOO', 'VTI', 'DIA', 'IWM', 'EEM', 'VEA', 'VWO', 'GLD', 'SLV', 'USO', 'TLT', 'HYG', 'LQD', 'XLF', 'XLK', 'XLE', 'XLV', 'XLI', 'XLY', 'XLP', 'XLB', 'XLU', 'XLRE'];
+  if (amexTickers.includes(ticker.toUpperCase())) {
+    return 'AMS';
   }
 
+  // 대표적인 NYSE 종목들
+  const nyseTickers = ['BRK.A', 'BRK.B', 'JPM', 'JNJ', 'V', 'PG', 'UNH', 'HD', 'MA', 'DIS', 'BAC', 'VZ', 'KO', 'PFE', 'MRK', 'WMT', 'ABBV', 'CVX', 'XOM', 'T', 'IBM', 'GS', 'CAT', 'BA', 'MMM'];
+  if (nyseTickers.includes(ticker.toUpperCase())) {
+    return 'NYS';
+  }
+
+  // 기본값: NASDAQ (대부분의 기술주)
+  return 'NAS';
+}
+
+/**
+ * KIS API로 미국 주식 현재가 조회
+ */
+async function fetchKISOverseasPrice(ticker: string): Promise<StockPrice | null> {
+  const token = await getKISToken();
+  if (!token) return null;
+
+  const appKey = process.env.KIS_APP_KEY;
+  const appSecret = process.env.KIS_APP_SECRET;
+
+  if (!appKey || !appSecret) return null;
+
   try {
+    const exchangeCode = getUSExchangeCode(ticker);
+
     const response = await fetch(
-      `${FINNHUB_BASE_URL}/quote?symbol=${ticker}&token=${apiKey}`,
+      `${KIS_BASE_URL}/uapi/overseas-price/v1/quotations/price?AUTH=&EXCD=${exchangeCode}&SYMB=${ticker}`,
       {
+        method: 'GET',
         headers: {
-          'Accept': 'application/json',
+          'Content-Type': 'application/json; charset=utf-8',
+          authorization: `Bearer ${token}`,
+          appkey: appKey,
+          appsecret: appSecret,
+          tr_id: 'HHDFS00000300', // 해외주식 현재가 조회
+          custtype: 'P',
         },
-        next: { revalidate: 300 }, // 5분 캐시
       }
     );
 
     if (!response.ok) {
-      console.error('[Finnhub] Request failed:', response.status);
+      console.error('[KIS-Overseas] Price request failed:', response.status);
       return null;
     }
 
-    const data: FinnhubQuoteResponse = await response.json();
+    const data: KISOverseasPriceResponse = await response.json();
 
-    // c가 0이면 유효하지 않은 심볼
-    if (!data.c || data.c === 0) {
-      console.warn('[Finnhub] Invalid or no data for', ticker);
+    if (data.rt_cd !== '0') {
+      console.error('[KIS-Overseas] API error:', data.msg1);
       return null;
+    }
+
+    const price = parseFloat(data.output.last) || 0;
+    const change = parseFloat(data.output.diff) || 0;
+    const changePercent = parseFloat(data.output.rate) || 0;
+
+    // 빈 응답 체크
+    if (price === 0) {
+      console.warn('[KIS-Overseas] Empty response for', ticker, '- trying different exchange');
+      // 다른 거래소로 재시도
+      const fallbackExchange = exchangeCode === 'NAS' ? 'AMS' : exchangeCode === 'AMS' ? 'NYS' : 'NAS';
+      return await fetchKISOverseasPriceWithExchange(ticker, fallbackExchange, token, appKey, appSecret);
     }
 
     return {
       ticker,
-      price: data.c,
+      price,
       currency: 'USD',
-      change: data.d,
-      changePercent: data.dp,
-      timestamp: data.t * 1000,
-      source: 'finnhub',
+      change,
+      changePercent,
+      timestamp: Date.now(),
+      source: 'kis-overseas',
     };
   } catch (error) {
-    console.error('[Finnhub] Fetch error:', error);
+    console.error('[KIS-Overseas] Fetch error:', error);
+    return null;
+  }
+}
+
+/**
+ * 특정 거래소 코드로 미국 주식 조회 (폴백용)
+ */
+async function fetchKISOverseasPriceWithExchange(
+  ticker: string,
+  exchangeCode: string,
+  token: string,
+  appKey: string,
+  appSecret: string
+): Promise<StockPrice | null> {
+  try {
+    const response = await fetch(
+      `${KIS_BASE_URL}/uapi/overseas-price/v1/quotations/price?AUTH=&EXCD=${exchangeCode}&SYMB=${ticker}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          authorization: `Bearer ${token}`,
+          appkey: appKey,
+          appsecret: appSecret,
+          tr_id: 'HHDFS00000300',
+          custtype: 'P',
+        },
+      }
+    );
+
+    if (!response.ok) return null;
+
+    const data: KISOverseasPriceResponse = await response.json();
+
+    if (data.rt_cd !== '0') return null;
+
+    const price = parseFloat(data.output.last) || 0;
+    if (price === 0) return null;
+
+    const change = parseFloat(data.output.diff) || 0;
+    const changePercent = parseFloat(data.output.rate) || 0;
+
+    return {
+      ticker,
+      price,
+      currency: 'USD',
+      change,
+      changePercent,
+      timestamp: Date.now(),
+      source: 'kis-overseas',
+    };
+  } catch {
     return null;
   }
 }
@@ -342,7 +443,7 @@ export async function getStockPrice(ticker: string): Promise<StockPrice | null> 
   if (isKoreanStock(ticker)) {
     result = await fetchKISPrice(ticker);
   } else {
-    result = await fetchFinnhubPrice(ticker);
+    result = await fetchKISOverseasPrice(ticker);
   }
 
   // 3. 캐시 저장

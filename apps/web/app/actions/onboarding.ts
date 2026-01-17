@@ -127,6 +127,61 @@ export async function checkSheetConnection(): Promise<{ connected: boolean; shee
 }
 
 /**
+ * Standalone 모드에서 입력한 데이터가 있는지 확인
+ * 시트 연동 전 경고 메시지 표시용
+ */
+export interface StandaloneDataInfo {
+  hasData: boolean;
+  holdingsCount: number;
+  dividendsCount: number;
+  depositsCount: number;
+}
+
+export async function checkStandaloneData(): Promise<StandaloneDataInfo> {
+  const session = await auth();
+
+  if (!session?.user?.id && !session?.user?.email) {
+    return { hasData: false, holdingsCount: 0, dividendsCount: 0, depositsCount: 0 };
+  }
+
+  const supabase = createServiceClient();
+
+  // 사용자 ID 조회 (이메일 fallback)
+  let userId: string | undefined = session.user.id;
+
+  if (!userId && session.user.email) {
+    const { data: user } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', session.user.email)
+      .single();
+    userId = user?.id ?? undefined;
+  }
+
+  if (!userId) {
+    return { hasData: false, holdingsCount: 0, dividendsCount: 0, depositsCount: 0 };
+  }
+
+  // 각 테이블의 데이터 개수 조회
+  const [holdingsResult, dividendsResult, depositsResult] = await Promise.all([
+    supabase.from('holdings').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase.from('dividends').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase.from('deposits').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+  ]);
+
+  const holdingsCount = holdingsResult.count || 0;
+  const dividendsCount = dividendsResult.count || 0;
+  const depositsCount = depositsResult.count || 0;
+
+  return {
+    hasData: holdingsCount > 0 || dividendsCount > 0 || depositsCount > 0,
+    holdingsCount,
+    dividendsCount,
+    depositsCount,
+  };
+}
+
+/**
  * 기존 서대리 시트 검색 및 연동
  */
 export async function searchAndConnectSheet(): Promise<OnboardingResult> {

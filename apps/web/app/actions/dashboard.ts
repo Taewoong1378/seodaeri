@@ -831,6 +831,9 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
     const rollingAverageDividend = calculateRollingAverageDividend(dividendRecords);
     const cumulativeDividend = calculateCumulativeDividend(dividendRecords);
 
+    // 4. 주요 지수 수익률 비교 데이터 조회
+    const majorIndexYieldComparison = await provider.getMajorIndexYieldComparison(userId);
+
     return {
       totalAsset: summary.totalAsset,
       totalYield: summary.totalYield,
@@ -851,7 +854,7 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       yieldComparisonDollar: null,
       monthlyYieldComparison: null,
       monthlyYieldComparisonDollarApplied: null,
-      majorIndexYieldComparison: null,
+      majorIndexYieldComparison,
       investmentDays: summary.investmentDays,
       lastSyncAt: new Date().toISOString(),
     };

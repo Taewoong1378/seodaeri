@@ -5,8 +5,7 @@
 ## 목차
 
 1. [한국수출입은행 API (환율)](#1-한국수출입은행-api-환율)
-2. [한국투자증권 OpenAPI (한국 주식)](#2-한국투자증권-openapi-한국-주식)
-3. [Finnhub API (미국 주식)](#3-finnhub-api-미국-주식)
+2. [한국투자증권 OpenAPI (주식/지수)](#2-한국투자증권-openapi-주식지수)
 
 ---
 
@@ -88,10 +87,12 @@ https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON?authkey=인증�
 
 ---
 
-## 2. 한국투자증권 OpenAPI (한국 주식)
+## 2. 한국투자증권 OpenAPI (주식/지수)
 
 ### 용도
-- KOSPI, KOSDAQ 주식 현재가 조회
+- **한국 주식**: KOSPI, KOSDAQ 주식 현재가 조회
+- **미국 주식**: NYSE, NASDAQ, AMEX 주식 현재가 조회
+- **지수 조회**: KOSPI/KOSDAQ 지수, S&P500(SPY), NASDAQ(QQQ)
 - ETF 가격 조회
 
 ### 발급 방법
@@ -125,47 +126,30 @@ https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON?authkey=인증�
 
 ### API 제한
 - **초당 요청 한도**: 20회
+- **토큰 발급**: 1분당 1회 (토큰 유효기간: 24시간)
 - **일일 요청 한도**: 제한 없음 (합리적 사용)
+
+### 지원하는 거래소 코드
+
+| 거래소 | 코드 | 설명 |
+|--------|------|------|
+| NASDAQ | NAS | 미국 나스닥 |
+| NYSE | NYS | 미국 뉴욕증권거래소 |
+| AMEX | AMS | 미국 아멕스 (ETF 포함) |
+
+### 주요 API 엔드포인트
+
+| 용도 | tr_id | 설명 |
+|------|-------|------|
+| 국내 주식 현재가 | FHKST01010100 | 한국 주식 시세 조회 |
+| 국내 업종지수 | FHPUP02100000 | KOSPI(0001), KOSDAQ(1001) |
+| 해외 주식 현재가 | HHDFS00000300 | 미국 주식/ETF 시세 조회 |
 
 ### 참고사항
 - App Key/Secret은 발급 후 즉시 사용 가능
 - 모의투자/실전투자 구분 있음 (현재가 조회는 둘 다 가능)
-- **중요**: 장 운영시간(09:00-15:30)에만 실시간 가격, 장외시간에는 종가 반환
-
----
-
-## 3. Finnhub API (미국 주식)
-
-### 용도
-- NYSE, NASDAQ 주식 현재가 조회
-- 미국 ETF 가격 조회
-
-### 발급 방법
-
-1. **Finnhub 사이트 접속**
-   - URL: https://finnhub.io
-
-2. **회원가입**
-   - "Get free API key" 클릭
-   - 이메일로 가입 또는 Google/GitHub 계정 연동
-
-3. **API Key 확인**
-   - 회원가입 완료 후 Dashboard에서 API Key 확인
-   - "API Key" 섹션에서 복사
-
-4. **환경변수 설정**
-   ```env
-   FINNHUB_API_KEY=발급받은_API_Key
-   ```
-
-### API 제한 (무료 플랜)
-- **분당 요청 한도**: 60회
-- **일일 요청 한도**: 제한 없음
-
-### 참고사항
-- 가입 즉시 API Key 발급
-- 무료 플랜으로 충분 (유료 플랜은 실시간 웹소켓 등 추가 기능)
-- 미국 장 운영시간(한국시간 23:30-06:00, 서머타임 22:30-05:00)에 실시간 가격
+- **한국 장**: 09:00-15:30 (KST), 장외시간에는 종가
+- **미국 장**: 22:30-05:00 (KST), 장외시간에는 종가
 
 ---
 
@@ -177,12 +161,9 @@ https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON?authkey=인증�
 # 한국수출입은행 (환율)
 KOREAEXIM_API_KEY=your_koreaexim_api_key
 
-# 한국투자증권 OpenAPI (한국 주식)
+# 한국투자증권 OpenAPI (한국/미국 주식, 지수)
 KIS_APP_KEY=your_kis_app_key
 KIS_APP_SECRET=your_kis_app_secret
-
-# Finnhub (미국 주식)
-FINNHUB_API_KEY=your_finnhub_api_key
 ```
 
 ---
@@ -194,8 +175,8 @@ FINNHUB_API_KEY=your_finnhub_api_key
 | API | 캐시 시간 (장중) | 캐시 시간 (장외) |
 |-----|------------------|------------------|
 | 환율 | 1시간 | 1시간 |
-| 한국 주식 | 5분 | 1시간 |
-| 미국 주식 | 5분 | 1시간 |
+| 한국 주식/지수 | 5분 | 1시간 |
+| 미국 주식/지수 | 5분 | 1시간 |
 
 ---
 
@@ -211,13 +192,18 @@ FINNHUB_API_KEY=your_finnhub_api_key
 
 ### 미국 주식 가격이 업데이트되지 않음
 - 미국 장 운영시간 외에는 종가만 제공됩니다.
-- API 호출 한도(60회/분) 초과 여부 확인
+- 거래소 코드가 올바른지 확인 (NAS/NYS/AMS)
+
+### 토큰 발급 오류 (EGW00133)
+- 1분당 1회 제한에 걸린 경우입니다.
+- 1분 후 다시 시도하세요.
+- 앱에서는 토큰을 24시간 캐싱하여 재사용합니다.
 
 ---
 
 ## 참고 링크
 
-- [한국수출입은행 Open API](https://www.koreaexim.go.kr/site/program/openapi/openApiView)
+- [한국수출입은행 Open API](https://www.koreaexim.go.kr/ir/HPHKIR020M01?apino=2&viewtype=C)
 - [공공데이터포털 - 한국수출입은행 환율정보](https://www.data.go.kr/data/3068846/openapi.do)
 - [한국투자증권 KIS Developers](https://apiportal.koreainvestment.com)
-- [Finnhub API Documentation](https://finnhub.io/docs/api)
+- [KIS Developers GitHub](https://github.com/koreainvestment/open-trading-api)

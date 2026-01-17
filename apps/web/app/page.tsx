@@ -3,11 +3,13 @@ import {
   ArrowRight,
   Check,
   ChevronRight,
-  FileSpreadsheet,
   LayoutDashboard,
   LineChart,
   Lock,
-  TrendingUp
+  Rocket,
+  Smartphone,
+  TrendingUp,
+  Zap
 } from 'lucide-react'
 import Link from 'next/link'
 import { LandingDividendChart, LandingProfitLossChart } from './components/LandingPageCharts'
@@ -47,8 +49,8 @@ export default function Home() {
           </h1>
           
           <p className="text-xl text-slate-600 mb-12 max-w-2xl mx-auto leading-relaxed font-normal">
-            서대리TV의 투자 철학을 담은 모바일 앱, <strong>굴림(Gulim)</strong>.<br className="hidden md:block" />
-            당신의 소중한 투자 데이터를 안전하게 보관하고 분석합니다.
+            서대리TV의 투자 철학을 담은 앱, <strong>굴림(Gulim)</strong>.<br className="hidden md:block" />
+            가입 후 바로 시작. 복잡한 설정 없이 투자를 기록하세요.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -72,11 +74,11 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             <div className="space-y-4">
               <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm">
-                <Lock className="w-5 h-5 text-slate-700" />
+                <Zap className="w-5 h-5 text-slate-700" />
               </div>
-              <h3 className="text-xl font-serif font-medium">안전한 데이터 관리</h3>
+              <h3 className="text-xl font-serif font-medium">즉시 시작</h3>
               <p className="text-slate-500 leading-relaxed">
-                모든 데이터는 안전한 클라우드 데이터베이스에 암호화되어 저장됩니다. 언제든지 엑셀로 내보내어 데이터를 소유할 수 있습니다.
+                복잡한 설정이나 스프레드시트 연동 없이, 가입 후 바로 투자 기록을 시작하세요. 한국/미국 주식 실시간 시세까지 즉시 제공됩니다.
               </p>
             </div>
             <div className="space-y-4">
@@ -85,7 +87,7 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-serif font-medium">직관적인 시각화</h3>
               <p className="text-slate-500 leading-relaxed">
-                복잡한 숫자들이 아름다운 차트와 대시보드로 변환됩니다. 모바일에서도 내 자산을 한눈에 파악하세요.
+                복잡한 숫자들이 아름다운 차트와 대시보드로 변환됩니다. 주요 지수 대비 수익률까지 한눈에 파악하세요.
               </p>
             </div>
             <div className="space-y-4">
@@ -104,54 +106,71 @@ export default function Home() {
       {/* Feature Sections */}
       <section id="features" className="py-32 space-y-32">
         
-        {/* Feature 1: Sync */}
+        {/* Feature 1: Quick Start */}
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-            <div className="order-2 lg:order-1 bg-slate-100 rounded-3xl p-6 md:p-12 relative overflow-hidden group">
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-[size:2rem_2rem] opacity-50" />
-              <div className="relative z-10 bg-white rounded-xl shadow-lg border border-slate-200 p-6 max-w-sm mx-auto transform transition-transform duration-500 group-hover:scale-105">
-                <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
-                  <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center text-green-700">
-                    <FileSpreadsheet className="w-5 h-5" />
+            <div className="order-2 lg:order-1 bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-6 md:p-12 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:2rem_2rem]" />
+              <div className="relative z-10 flex flex-col items-center justify-center space-y-6">
+                {/* Step indicators */}
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white border border-white/20">
+                      <span className="text-sm font-medium">1</span>
+                    </div>
+                    <span className="text-white/80 text-sm">가입</span>
                   </div>
-                  <div>
-                    <div className="font-medium text-sm">내 투자 기록.xlsx</div>
-                    <div className="text-xs text-slate-400">Google Sheets</div>
+                  <div className="w-8 h-[2px] bg-white/20" />
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white border border-white/20">
+                      <span className="text-sm font-medium">2</span>
+                    </div>
+                    <span className="text-white/80 text-sm">시작</span>
                   </div>
-                  <div className="ml-auto">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <div className="w-8 h-[2px] bg-white/20" />
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white">
+                      <Check className="w-5 h-5" />
+                    </div>
+                    <span className="text-white/80 text-sm">완료</span>
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <div className="h-2 bg-slate-100 rounded w-3/4" />
-                  <div className="h-2 bg-slate-100 rounded w-1/2" />
-                  <div className="h-2 bg-slate-100 rounded w-full" />
-                  <div className="h-2 bg-slate-100 rounded w-2/3" />
+                {/* Phone mockup */}
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/10 p-4 max-w-[200px] transform transition-transform duration-500 group-hover:scale-105">
+                  <div className="flex items-center justify-center gap-2 mb-4">
+                    <Rocket className="w-5 h-5 text-emerald-400" />
+                    <span className="text-white font-medium">바로 시작!</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-2 bg-white/20 rounded w-full" />
+                    <div className="h-2 bg-white/20 rounded w-3/4" />
+                    <div className="h-2 bg-emerald-400/50 rounded w-1/2" />
+                  </div>
                 </div>
               </div>
             </div>
             <div className="order-1 lg:order-2">
               <h2 className="font-serif text-4xl font-medium mb-6 leading-tight">
-                익숙한 시트 그대로,<br />
-                경험은 새롭게.
+                가입하고 바로 시작.<br />
+                설정은 필요 없습니다.
               </h2>
               <p className="text-lg text-slate-500 mb-8 leading-relaxed">
-                기존에 사용하던 서대리 투자 템플릿을 그대로 가져오세요. 
-                복잡한 데이터 이관 없이, 구글 시트 연동으로 즉시 시작할 수 있습니다.
-                물론, 앱에서 직접 입력하고 관리하는 것도 가능합니다.
+                복잡한 스프레드시트 연동이나 데이터 이관 없이,
+                계정만 만들면 즉시 투자 기록을 시작할 수 있습니다.
+                실시간 주가 조회부터 배당금 관리까지, 모든 기능이 준비되어 있습니다.
               </p>
               <ul className="space-y-3">
                 <li className="flex items-center gap-3 text-slate-700">
-                  <Check className="w-5 h-5 text-slate-900" />
-                  <span>기존 서대리 템플릿 100% 호환</span>
+                  <Zap className="w-5 h-5 text-amber-500" />
+                  <span>가입 후 30초 만에 첫 종목 등록</span>
                 </li>
                 <li className="flex items-center gap-3 text-slate-700">
-                  <Check className="w-5 h-5 text-slate-900" />
-                  <span>간편한 데이터 가져오기</span>
+                  <Smartphone className="w-5 h-5 text-blue-500" />
+                  <span>모바일에서 간편하게 입력</span>
                 </li>
                 <li className="flex items-center gap-3 text-slate-700">
-                  <Check className="w-5 h-5 text-slate-900" />
-                  <span>언제든지 엑셀로 데이터 백업 가능</span>
+                  <Check className="w-5 h-5 text-emerald-500" />
+                  <span>한국/미국 주식 실시간 시세 지원</span>
                 </li>
               </ul>
             </div>
@@ -228,11 +247,11 @@ export default function Home() {
       <section className="py-32 border-t border-slate-100">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="font-serif text-4xl md:text-5xl font-medium mb-8 text-slate-900">
-            지금 바로 시작하세요.
+            30초 만에 시작하세요.
           </h2>
           <p className="text-xl text-slate-500 mb-12 max-w-xl mx-auto">
-            복잡한 설정 없이, 구글 계정만 있으면 됩니다.<br />
-            당신의 투자를 더 체계적으로 기록해보세요.
+            계정을 만들고, 바로 투자 기록을 시작하세요.<br />
+            스프레드시트도, 복잡한 설정도 필요 없습니다.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" className="h-14 px-10 text-lg rounded-full bg-slate-900 text-white hover:bg-slate-800">
@@ -242,7 +261,7 @@ export default function Home() {
             </Button>
           </div>
           <p className="mt-8 text-sm text-slate-400">
-            * 신용카드 정보는 필요하지 않습니다.
+            * 영원히 무료. 신용카드 정보 불필요.
           </p>
         </div>
       </section>

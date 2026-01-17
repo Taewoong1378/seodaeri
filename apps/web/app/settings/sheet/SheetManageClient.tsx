@@ -3,11 +3,11 @@
 import { Button } from '@repo/design-system/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/design-system/components/card';
 import { useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, Check, ExternalLink, FileSpreadsheet, FolderOpen, Loader2, RefreshCw } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Check, ExternalLink, FileSpreadsheet, FolderOpen, Loader2, RefreshCw, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { connectSheetById } from '../../actions/onboarding';
+import { checkStandaloneData, connectSheetById, type StandaloneDataInfo } from '../../actions/onboarding';
 
 interface SheetManageClientProps {
   connected: boolean;
@@ -39,6 +39,16 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pickerReady, setPickerReady] = useState(false);
+  const [standaloneData, setStandaloneData] = useState<StandaloneDataInfo | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingSheet, setPendingSheet] = useState<{ id: string; name?: string } | null>(null);
+
+  // Standalone 데이터 존재 여부 확인
+  useEffect(() => {
+    if (!connected) {
+      checkStandaloneData().then(setStandaloneData);
+    }
+  }, [connected]);
 
   // Google Picker API 로드
   useEffect(() => {
@@ -105,14 +115,14 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
         .setOAuthToken(accessToken)
         .setDeveloperKey(GOOGLE_API_KEY)
         .setTitle('스프레드시트 선택')
-        .setCallback(async (data: any) => {
+        .setCallback((data: any) => {
           console.log('[Picker:Settings] Callback:', { action: data.action, docs: data.docs });
-          
+
           if (data.action === window.google.picker.Action.PICKED) {
             const doc = data.docs[0];
             if (doc) {
               console.log('[Picker:Settings] Selected:', { id: doc.id, name: doc.name });
-              await handleConnect(doc.id, doc.name);
+              handleSheetSelected(doc.id, doc.name);
             }
           } else if (data.action === window.google.picker.Action.CANCEL) {
             setLoading(null);
@@ -137,8 +147,23 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
     }
   }, [pickerReady, accessToken]);
 
+  // 시트 선택 후 연결 시도 (데이터 확인 포함)
+  const handleSheetSelected = (sheetId: string, sheetName?: string) => {
+    // 기존 데이터가 있으면 확인 모달 표시
+    if (standaloneData?.hasData && !connected) {
+      setPendingSheet({ id: sheetId, name: sheetName });
+      setShowConfirmModal(true);
+      setLoading(null);
+    } else {
+      // 데이터 없으면 바로 연결
+      handleConnect(sheetId, sheetName);
+    }
+  };
+
+  // 실제 연결 처리
   const handleConnect = async (sheetId: string, sheetName?: string) => {
     try {
+      setLoading('picker');
       const result = await connectSheetById(sheetId);
       if (result.success) {
         setSuccess(`"${sheetName || '시트'}" 연동 완료!`);
@@ -156,7 +181,23 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
       setError('시트 연동 중 오류가 발생했습니다.');
     } finally {
       setLoading(null);
+      setShowConfirmModal(false);
+      setPendingSheet(null);
     }
+  };
+
+  // 확인 모달에서 연결 확정
+  const handleConfirmConnect = () => {
+    if (pendingSheet) {
+      handleConnect(pendingSheet.id, pendingSheet.name);
+    }
+  };
+
+  // 확인 모달 취소
+  const handleCancelConnect = () => {
+    setShowConfirmModal(false);
+    setPendingSheet(null);
+    setLoading(null);
   };
 
   const sheetUrl = currentSheetId
@@ -266,6 +307,74 @@ export function SheetManageClient({ connected, currentSheetId, accessToken }: Sh
       {error && (
         <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
           <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
+
+      {/* Standalone Data Warning Modal */}
+      {showConfirmModal && standaloneData?.hasData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-amber-500/10 shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">기존 데이터가 있습니다</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  앱에서 직접 입력한 데이터가 있습니다. 스프레드시트를 연동하면 시트의 데이터를 사용하게 됩니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-muted/50 rounded-xl p-4 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">현재 저장된 데이터</p>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-background rounded-lg p-2">
+                  <p className="text-lg font-bold text-foreground">{standaloneData.holdingsCount}</p>
+                  <p className="text-xs text-muted-foreground">보유종목</p>
+                </div>
+                <div className="bg-background rounded-lg p-2">
+                  <p className="text-lg font-bold text-foreground">{standaloneData.dividendsCount}</p>
+                  <p className="text-xs text-muted-foreground">배당내역</p>
+                </div>
+                <div className="bg-background rounded-lg p-2">
+                  <p className="text-lg font-bold text-foreground">{standaloneData.depositsCount}</p>
+                  <p className="text-xs text-muted-foreground">입출금</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <p className="text-xs text-amber-700">
+                시트 연동 후에는 시트의 데이터가 사용됩니다. 기존 데이터는 DB에 보관되지만 앱에 표시되지 않습니다.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={handleCancelConnect}
+                className="flex-1"
+                disabled={loading !== null}
+              >
+                취소
+              </Button>
+              <Button
+                onClick={handleConfirmConnect}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={loading !== null}
+              >
+                {loading === 'picker' ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    연동 중...
+                  </>
+                ) : (
+                  '시트 연동하기'
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
