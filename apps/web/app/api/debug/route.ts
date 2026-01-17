@@ -1,4 +1,4 @@
-import { fetchSheetData, parseDividendData } from '@/lib/google-sheets';
+import { fetchSheetData, parseDividendData } from '../../../lib/google-sheets';
 import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
 import { NextResponse } from 'next/server';

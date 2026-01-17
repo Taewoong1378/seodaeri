@@ -22,7 +22,7 @@ export function WheelPicker({
 }: WheelPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isScrollingRef = useRef(false);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedIndex = items.findIndex((item) => item.value === value);
   const centerOffset = Math.floor(visibleItems / 2);

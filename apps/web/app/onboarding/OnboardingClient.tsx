@@ -2,13 +2,14 @@
 
 import { Button } from '@repo/design-system/components/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/design-system/components/card';
-import { FileSpreadsheet, FolderOpen, Loader2, Plus } from 'lucide-react';
+import { FileSpreadsheet, FolderOpen, Loader2, Rocket } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import {
   type OnboardingResult,
   connectSheetById,
   createNewSheet,
+  startWithoutSheet,
 } from '../actions/onboarding';
 
 interface OnboardingClientProps {
@@ -37,7 +38,7 @@ function extractAppId(clientId: string): string {
 
 export function OnboardingClient({ userName, accessToken }: OnboardingClientProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState<'picker' | 'create' | null>(null);
+  const [loading, setLoading] = useState<'picker' | 'create' | 'start' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pickerReady, setPickerReady] = useState(false);
 
@@ -180,16 +181,16 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
     }
   };
 
-  // 템플릿 복사해서 새 시트 만들기
-  const handleCreateSheet = async () => {
-    setLoading('create');
+  // 스프레드시트 없이 바로 시작하기
+  const handleStartWithoutSheet = async () => {
+    setLoading('start');
     setError(null);
     try {
-      const result = await createNewSheet();
+      const result = await startWithoutSheet();
       handleResult(result);
     } catch (err: any) {
-      console.error('handleCreateSheet error:', err);
-      setError(err?.message || '시트 생성 중 오류가 발생했습니다.');
+      console.error('handleStartWithoutSheet error:', err);
+      setError(err?.message || '시작 중 오류가 발생했습니다.');
       setLoading(null);
     }
   };
@@ -244,34 +245,34 @@ export function OnboardingClient({ userName, accessToken }: OnboardingClientProp
         <div className="flex-1 h-px bg-border" />
       </div>
 
-      {/* Option 2: 새 시트 만들기 */}
+      {/* Option 2: 바로 시작하기 (Standalone 모드) */}
       <Card className="bg-card border-border shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle className="text-foreground flex items-center gap-3 text-lg">
             <div className="p-2 rounded-lg bg-emerald-100 dark:bg-white">
-              <Plus className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <Rocket className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
-            새 시트 만들기
+            바로 시작하기
           </CardTitle>
           <CardDescription className="text-muted-foreground">
-            서대리 투자기록 템플릿으로 새 스프레드시트를 생성합니다.
+            스프레드시트 연동 없이 앱에서 바로 투자기록을 시작합니다.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button
-            onClick={handleCreateSheet}
+            onClick={handleStartWithoutSheet}
             disabled={loading !== null}
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
           >
-            {loading === 'create' ? (
+            {loading === 'start' ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                생성 중...
+                시작 중...
               </>
             ) : (
               <>
-                <Plus className="w-4 h-4 mr-2" />
-                새 시트 생성하기
+                <Rocket className="w-4 h-4 mr-2" />
+                바로 시작하기
               </>
             )}
           </Button>

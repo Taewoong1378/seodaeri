@@ -5,6 +5,73 @@ import { createServiceClient } from '@repo/database/server';
 import { revalidatePath } from 'next/cache';
 import { copyMasterTemplate, findSeodaeriSheet } from '../../lib/google-sheets';
 
+/**
+ * 스프레드시트 없이 바로 시작하기
+ * DB만 사용하는 Standalone 모드로 시작
+ */
+export async function startWithoutSheet(): Promise<OnboardingResult> {
+  const session = await auth();
+  if (!session?.user?.id || !session?.user?.email) {
+    return { success: false, error: '로그인이 필요합니다.' };
+  }
+
+  try {
+    const supabase = createServiceClient();
+
+    // 이메일로 기존 사용자 확인
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id, spreadsheet_id')
+      .eq('email', session.user.email)
+      .single();
+
+    if (existingUser) {
+      // 기존 사용자가 있으면 spreadsheet_id를 null로 업데이트 (standalone 모드)
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          name: session.user.name,
+          image: session.user.image,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingUser.id);
+
+      if (updateError) {
+        console.error('Failed to update user:', updateError);
+        return { success: false, error: '사용자 정보 업데이트에 실패했습니다.' };
+      }
+    } else {
+      // 새 사용자 생성 (spreadsheet_id = null → standalone 모드)
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.name,
+          image: session.user.image,
+          spreadsheet_id: null, // Standalone 모드!
+          updated_at: new Date().toISOString(),
+        });
+
+      if (insertError) {
+        console.error('Failed to insert user:', insertError);
+        return { success: false, error: '사용자 생성에 실패했습니다.' };
+      }
+    }
+
+    revalidatePath('/dashboard');
+    revalidatePath('/onboarding');
+
+    return {
+      success: true,
+      isNewSheet: false,
+    };
+  } catch (error) {
+    console.error('startWithoutSheet error:', error);
+    return { success: false, error: '시작 중 오류가 발생했습니다.' };
+  }
+}
+
 export interface OnboardingResult {
   success: boolean;
   sheetId?: string;

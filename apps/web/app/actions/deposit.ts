@@ -19,7 +19,7 @@ export interface SaveDepositResult {
 }
 
 /**
- * 입금내역을 Google Sheet에 저장
+ * 입금내역 저장 (Standalone 또는 Google Sheet)
  * 시트 구조: "6. 입금내역" - 일자 | 연도 | 월 | 일 | 구분 | 계좌 | 금액 | 비고
  */
 export async function saveDeposit(input: DepositInput): Promise<SaveDepositResult> {
@@ -29,24 +29,20 @@ export async function saveDeposit(input: DepositInput): Promise<SaveDepositResul
     return { success: false, error: '로그인이 필요합니다.' };
   }
 
-  if (!session.accessToken) {
-    return { success: false, error: 'Google 인증이 필요합니다.' };
-  }
-
   const supabase = createServiceClient();
 
   try {
     // 사용자의 spreadsheet_id 조회
     let { data: user } = await supabase
       .from('users')
-      .select('spreadsheet_id')
+      .select('id, spreadsheet_id')
       .eq('id', session.user.id)
       .single();
 
     if (!user && session.user.email) {
       const { data: userByEmail } = await supabase
         .from('users')
-        .select('spreadsheet_id')
+        .select('id, spreadsheet_id')
         .eq('email', session.user.email)
         .single();
 
@@ -55,8 +51,40 @@ export async function saveDeposit(input: DepositInput): Promise<SaveDepositResul
       }
     }
 
-    if (!user?.spreadsheet_id) {
-      return { success: false, error: '연동된 스프레드시트가 없습니다.' };
+    if (!user?.id) {
+      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' };
+    }
+
+    const userId = user.id as string;
+
+    // Standalone 모드: DB에만 저장
+    if (!user.spreadsheet_id) {
+      console.log('[saveDeposit] Standalone mode - saving to DB only');
+
+      const { error: dbError } = await supabase.from('deposits').insert({
+        user_id: userId,
+        type: input.type,
+        amount: input.amount,
+        currency: 'KRW',
+        deposit_date: input.date,
+        memo: input.memo || null,
+        sheet_synced: false,
+      });
+
+      if (dbError) {
+        console.error('[saveDeposit] DB insert error:', dbError);
+        return { success: false, error: '입출금내역 저장에 실패했습니다.' };
+      }
+
+      console.log('[saveDeposit] Standalone mode - Success!');
+      revalidatePath('/dashboard');
+      revalidatePath('/transactions');
+      return { success: true };
+    }
+
+    // Sheet 모드: Google Sheet에 저장
+    if (!session.accessToken) {
+      return { success: false, error: 'Google 인증이 필요합니다.' };
     }
 
     // 날짜 파싱 (YYYY-MM-DD)
@@ -312,7 +340,7 @@ function parseSheetNumber(val: any): number {
 }
 
 /**
- * 입출금내역 삭제 (Supabase + Google Sheet)
+ * 입출금내역 삭제 (Standalone 또는 Supabase + Google Sheet)
  */
 export async function deleteDeposit(input: DeleteDepositInput): Promise<SaveDepositResult> {
   console.log('[deleteDeposit] Called with input:', JSON.stringify(input));
@@ -322,11 +350,6 @@ export async function deleteDeposit(input: DeleteDepositInput): Promise<SaveDepo
   if (!session?.user?.id) {
     console.log('[deleteDeposit] No session user id');
     return { success: false, error: '로그인이 필요합니다.' };
-  }
-
-  if (!session.accessToken) {
-    console.log('[deleteDeposit] No access token');
-    return { success: false, error: 'Google 인증이 필요합니다.' };
   }
 
   const supabase = createServiceClient();
@@ -351,14 +374,43 @@ export async function deleteDeposit(input: DeleteDepositInput): Promise<SaveDepo
       }
     }
 
-    if (!user?.spreadsheet_id) {
-      console.log('[deleteDeposit] No spreadsheet_id');
-      return { success: false, error: '연동된 스프레드시트가 없습니다.' };
+    if (!user?.id) {
+      console.log('[deleteDeposit] No user found');
+      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' };
+    }
+
+    const userId = user.id as string;
+
+    // Standalone 모드: DB에서만 삭제
+    if (!user.spreadsheet_id) {
+      console.log('[deleteDeposit] Standalone mode - deleting from DB only');
+
+      const { error: dbError } = await supabase
+        .from('deposits')
+        .delete()
+        .eq('user_id', userId)
+        .eq('type', input.type)
+        .eq('amount', input.amount)
+        .eq('deposit_date', input.date);
+
+      if (dbError) {
+        console.error('[deleteDeposit] DB delete error:', dbError);
+        return { success: false, error: '입출금내역 삭제에 실패했습니다.' };
+      }
+
+      console.log('[deleteDeposit] Standalone mode - Success!');
+      revalidatePath('/dashboard');
+      revalidatePath('/transactions');
+      return { success: true };
+    }
+
+    // Sheet 모드: Google Sheet에서도 삭제
+    if (!session.accessToken) {
+      console.log('[deleteDeposit] No access token');
+      return { success: false, error: 'Google 인증이 필요합니다.' };
     }
 
     console.log('[deleteDeposit] User found, spreadsheet_id:', user.spreadsheet_id);
-
-    const userId = user.id as string;
 
     // 1. Supabase에서 삭제
     const { error: dbError, count } = await supabase
