@@ -104,15 +104,22 @@ export class RNBridge {
       // 전역 콜백 함수 등록 (이벤트 리스너보다 안정적)
       const callbackName = `__appleLoginCallback_${messageId}`;
       console.log("[Bridge] appleLogin - registering callback:", callbackName);
-      
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as unknown as Record<string, unknown>)[callbackName] = (data: { id: string; data?: AppleLoginResponse; error?: string }) => {
-        console.log("[Bridge] appleLogin - callback called with:", JSON.stringify(data));
-        
+      (window as unknown as Record<string, unknown>)[callbackName] = (data: {
+        id: string;
+        data?: AppleLoginResponse;
+        error?: string;
+      }) => {
+        console.log(
+          "[Bridge] appleLogin - callback called with:",
+          JSON.stringify(data)
+        );
+
         // 콜백 정리
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         delete (window as unknown as Record<string, unknown>)[callbackName];
-        
+
         if (data.error) {
           console.log("[Bridge] appleLogin - has error:", data.error);
           reject(new Error(data.error));
@@ -126,14 +133,17 @@ export class RNBridge {
       const handler = (event: Event) => {
         console.log("[Bridge] appleLogin - received event:", event.type);
         const customEvent = event as CustomEvent;
-        console.log("[Bridge] appleLogin - event detail:", JSON.stringify(customEvent.detail));
+        console.log(
+          "[Bridge] appleLogin - event detail:",
+          JSON.stringify(customEvent.detail)
+        );
 
         if (customEvent.detail?.id === messageId) {
           console.log("[Bridge] appleLogin - ID matched!");
           window.removeEventListener("Bridge.AppleLogin", handler);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           delete (window as unknown as Record<string, unknown>)[callbackName];
-          
+
           if (customEvent.detail.error) {
             reject(new Error(customEvent.detail.error));
           } else if (customEvent.detail.data) {
