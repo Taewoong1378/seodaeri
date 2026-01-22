@@ -86,7 +86,12 @@ export async function POST(request: NextRequest) {
       : "authjs.session-token";
 
     // NextResponse를 통해 직접 쿠키 설정 (더 확실한 방법)
-    const response = NextResponse.json({ success: true });
+    const response = NextResponse.json({ 
+      success: true,
+      // WebView에서 쿠키가 안 될 경우를 대비해 토큰도 반환
+      token: token,
+      cookieName: cookieName,
+    });
     response.cookies.set(cookieName, token, {
       httpOnly: true,
       secure: isProduction,

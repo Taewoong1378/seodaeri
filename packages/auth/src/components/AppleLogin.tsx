@@ -78,20 +78,20 @@ export function AppleLogin({
       debugLog("api_response", { status: res.status, ok: res.ok });
 
       if (res.ok) {
-        debugLog("login_success_redirecting");
+        const data = await res.json();
+        debugLog("login_success_redirecting", { hasToken: !!data.token });
         onSuccess?.();
-        // 페이지 새로고침으로 세션 반영 (여러 방법 시도)
-        try {
-          // 방법 1: location.replace (히스토리에 남지 않음)
-          window.location.replace("/dashboard");
-        } catch {
-          // 방법 2: location.href
+        
+        // WebView에서 쿠키가 안 되는 경우 토큰을 URL로 전달
+        if (data.token) {
+          // 토큰을 URL 파라미터로 전달하여 서버사이드에서 세션 설정
+          const redirectUrl = `/api/auth/set-session?token=${encodeURIComponent(data.token)}&redirect=/dashboard`;
+          debugLog("redirecting_with_token", { redirectUrl });
+          window.location.href = redirectUrl;
+        } else {
+          // 쿠키로 설정된 경우 바로 대시보드로
           window.location.href = "/dashboard";
         }
-        // 방법 3: 강제 리로드 (fallback)
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
       } else {
         const error = await res.json();
         debugLog("api_error", { error });
