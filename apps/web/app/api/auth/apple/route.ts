@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     const cookieName = isProduction
       ? "__Secure-authjs.session-token"
       : "authjs.session-token";
-    
+
     // NextResponse를 통해 직접 쿠키 설정 (더 확실한 방법)
     const response = NextResponse.json({ success: true });
     response.cookies.set(cookieName, token, {
