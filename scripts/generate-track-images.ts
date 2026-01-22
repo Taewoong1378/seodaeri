@@ -1,11 +1,11 @@
-import { GoogleGenAI } from '@google/genai';
-import mime from 'mime';
-import { existsSync } from 'node:fs';
-import { mkdir, writeFile } from 'node:fs/promises';
-import path from 'node:path';
+import { GoogleGenAI } from "@google/genai";
+import mime from "mime";
+import { existsSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAFsWQYe4HkZ2qim-fUsCSHUEogY68uj0c';
-const OUTPUT_DIR = path.join(process.cwd(), 'public', 'judgement-day');
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const OUTPUT_DIR = path.join(process.cwd(), "public", "judgement-day");
 
 const BASE_STYLE = `
 Create a high-end, cinematic 3D abstract illustration for an AI security challenge website.
@@ -23,20 +23,20 @@ CRITICAL STYLE REQUIREMENTS:
 
 const TRACKS = [
   {
-    slug: 'track1-unsafe-action',
+    slug: "track1-unsafe-action",
     concept:
       'A futuristic digital barrier or node turning INTENSE RED (#EF4444). It represents a system breach, a "STOP" command being ignored, or a dangerous action being executed. The red glow should look dangerous and unstable against the dark cold metal environment. Glitch effects or sharp jagged shapes.',
   },
   {
-    slug: 'track2-unsafe-inaction',
+    slug: "track2-unsafe-inaction",
     concept:
-      'A subtle, fading ORANGE (#F97316) signal in a vast dark network. It represents negligence, a missed warning, or a signal dying out. A lonely glowing ember or pulse that is being overlooked in a complex dark structure. Muted, quiet danger.',
+      "A subtle, fading ORANGE (#F97316) signal in a vast dark network. It represents negligence, a missed warning, or a signal dying out. A lonely glowing ember or pulse that is being overlooked in a complex dark structure. Muted, quiet danger.",
   },
 ];
 
 async function main(): Promise<void> {
-  console.log('🖼️  Track Image Generator (Cinematic Dark 3D)');
-  console.log('=============================================');
+  console.log("🖼️  Track Image Generator (Cinematic Dark 3D)");
+  console.log("=============================================");
 
   if (!existsSync(OUTPUT_DIR)) {
     await mkdir(OUTPUT_DIR, { recursive: true });
@@ -62,16 +62,16 @@ Additional details:
 
     try {
       const response = await ai.models.generateContentStream({
-        model: 'gemini-3-pro-image-preview',
+        model: "gemini-3-pro-image-preview",
         config: {
-          responseModalities: ['IMAGE', 'TEXT'],
+          responseModalities: ["IMAGE", "TEXT"],
           imageConfig: {
-            imageSize: '1K', // Changed to 1K for better quality/speed balance
+            imageSize: "1K", // Changed to 1K for better quality/speed balance
           },
         },
         contents: [
           {
-            role: 'user',
+            role: "user",
             parts: [{ text: prompt }],
           },
         ],
@@ -85,9 +85,13 @@ Additional details:
 
         if (part.inlineData) {
           const inlineData = part.inlineData;
-          const fileExtension = mime.getExtension(inlineData.mimeType || 'image/png') || 'png';
-          const buffer = Buffer.from(inlineData.data || '', 'base64');
-          const outputPath = path.join(OUTPUT_DIR, `${track.slug}.${fileExtension}`);
+          const fileExtension =
+            mime.getExtension(inlineData.mimeType || "image/png") || "png";
+          const buffer = Buffer.from(inlineData.data || "", "base64");
+          const outputPath = path.join(
+            OUTPUT_DIR,
+            `${track.slug}.${fileExtension}`
+          );
 
           await writeFile(outputPath, buffer);
           console.log(`✓ Saved: ${outputPath}`);
@@ -105,10 +109,10 @@ Additional details:
     }
   }
 
-  console.log('\n✅ Done!');
+  console.log("\n✅ Done!");
 }
 
 main().catch((error) => {
-  console.error('Error:', error);
+  console.error("Error:", error);
   process.exit(1);
 });
