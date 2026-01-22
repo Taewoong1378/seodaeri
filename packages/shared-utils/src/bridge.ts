@@ -111,6 +111,21 @@ export class RNBridge {
         data?: AppleLoginResponse;
         error?: string;
       }) => {
+        // 네이티브로 디버그 메시지 전송 (Safari 없이도 확인 가능)
+        try {
+          window.ReactNativeWebView?.postMessage(
+            JSON.stringify({
+              type: "Debug.Bridge",
+              step: "callback_received",
+              hasData: !!data?.data,
+              hasError: !!data?.error,
+              dataKeys: data ? Object.keys(data) : [],
+            })
+          );
+        } catch (e) {
+          // ignore
+        }
+
         console.log(
           "[Bridge] appleLogin - callback called with:",
           JSON.stringify(data)
@@ -122,10 +137,24 @@ export class RNBridge {
 
         if (data.error) {
           console.log("[Bridge] appleLogin - has error:", data.error);
+          window.ReactNativeWebView?.postMessage(
+            JSON.stringify({ type: "Debug.Bridge", step: "rejecting_error" })
+          );
           reject(new Error(data.error));
         } else if (data.data) {
           console.log("[Bridge] appleLogin - has data, resolving");
+          window.ReactNativeWebView?.postMessage(
+            JSON.stringify({ type: "Debug.Bridge", step: "resolving_data" })
+          );
           resolve(data.data);
+        } else {
+          window.ReactNativeWebView?.postMessage(
+            JSON.stringify({
+              type: "Debug.Bridge",
+              step: "no_data_no_error",
+              receivedData: JSON.stringify(data),
+            })
+          );
         }
       };
 
