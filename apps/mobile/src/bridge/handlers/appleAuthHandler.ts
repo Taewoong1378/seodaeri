@@ -81,14 +81,38 @@ export async function handleAppleLogin(messageId: string, webViewRef: WebViewRef
     
     const script = `
       (function() {
-        console.log('[AppleAuth WebView] Received Apple login response');
+        // 네이티브로 디버그 정보 전송
+        var debugInfo = {
+          type: 'Debug.AppleLogin',
+          step: 'script_executed',
+          url: window.location.href,
+          hasDispatchEvent: typeof window.dispatchEvent === 'function',
+          hasCustomEvent: typeof CustomEvent === 'function',
+        };
+        
         try {
-          window.dispatchEvent(new CustomEvent('Bridge.AppleLogin', {
+          window.ReactNativeWebView.postMessage(JSON.stringify(debugInfo));
+        } catch(e) {}
+        
+        try {
+          var event = new CustomEvent('Bridge.AppleLogin', {
             detail: { id: ${JSON.stringify(messageId)}, data: ${JSON.stringify(response)} }
+          });
+          window.dispatchEvent(event);
+          
+          // 이벤트 디스패치 성공 알림
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'Debug.AppleLogin',
+            step: 'event_dispatched',
+            eventType: event.type,
+            detailId: ${JSON.stringify(messageId)}
           }));
-          console.log('[AppleAuth WebView] Event dispatched successfully');
         } catch (e) {
-          console.error('[AppleAuth WebView] Error dispatching event:', e);
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'Debug.AppleLogin',
+            step: 'error',
+            error: e.message || String(e)
+          }));
         }
         return true;
       })();

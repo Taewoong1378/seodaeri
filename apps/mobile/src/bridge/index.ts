@@ -19,6 +19,12 @@ export function createMessageHandler(webViewRef: WebViewRef) {
       ) as BridgeMessage<BridgeMessageType>
       console.log('Bridge message:', message)
 
+      // 디버그 메시지 처리
+      if (message.type === 'Debug.AppleLogin') {
+        console.log('🔍 [Debug.AppleLogin]', JSON.stringify(message, null, 2))
+        return
+      }
+
       switch (message.type) {
         case 'UI.Share':
           await handleShare(message.payload as BridgePayloads['UI.Share'])
