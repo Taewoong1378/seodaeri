@@ -97,20 +97,31 @@ export class RNBridge {
       }
 
       const messageId = this.postMessage('Auth.Apple.Request')
+      console.log('[Bridge] appleLogin - sent messageId:', messageId)
 
       const handler = (event: Event) => {
+        console.log('[Bridge] appleLogin - received event:', event.type)
         const customEvent = event as CustomEvent
+        console.log('[Bridge] appleLogin - event detail:', JSON.stringify(customEvent.detail))
+        console.log('[Bridge] appleLogin - comparing ids:', customEvent.detail?.id, '===', messageId)
+        
         if (customEvent.detail?.id === messageId) {
+          console.log('[Bridge] appleLogin - ID matched!')
           window.removeEventListener('Bridge.AppleLogin', handler)
           if (customEvent.detail.error) {
+            console.log('[Bridge] appleLogin - has error:', customEvent.detail.error)
             reject(new Error(customEvent.detail.error))
           } else if (customEvent.detail.data) {
+            console.log('[Bridge] appleLogin - has data, resolving')
             resolve(customEvent.detail.data as AppleLoginResponse)
           }
+        } else {
+          console.log('[Bridge] appleLogin - ID mismatch, ignoring')
         }
       }
 
       window.addEventListener('Bridge.AppleLogin', handler)
+      console.log('[Bridge] appleLogin - event listener registered')
 
       // 60초 타임아웃
       setTimeout(() => {
