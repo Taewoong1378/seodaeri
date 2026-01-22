@@ -1,5 +1,4 @@
 import { encode } from "next-auth/jwt";
-import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 
 interface AppleLoginRequest {
@@ -86,8 +85,9 @@ export async function POST(request: NextRequest) {
       ? "__Secure-authjs.session-token"
       : "authjs.session-token";
     
-    const cookieStore = await cookies();
-    cookieStore.set(cookieName, token, {
+    // NextResponse를 통해 직접 쿠키 설정 (더 확실한 방법)
+    const response = NextResponse.json({ success: true });
+    response.cookies.set(cookieName, token, {
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? "none" : "lax", // WebView 호환성
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       maxAge: 30 * 24 * 60 * 60, // 30일
     });
 
-    return NextResponse.json({ success: true });
+    return response;
   } catch (error) {
     console.error("Apple auth error:", error);
     return NextResponse.json(

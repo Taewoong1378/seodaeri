@@ -72,6 +72,7 @@ export function AppleLogin({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(response),
+        credentials: "include", // 쿠키를 저장하기 위해 필수!
       });
 
       debugLog("api_response", { status: res.status, ok: res.ok });
