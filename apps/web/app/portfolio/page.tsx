@@ -8,6 +8,7 @@ import { getDashboardData } from "../actions/dashboard";
 import { checkSheetConnection } from "../actions/onboarding";
 import { BottomNav } from "../dashboard/components/BottomNav";
 import { SyncButton } from "../dashboard/components/SyncButton";
+import { BenefitBanner } from "./components/BenefitBanner";
 import { PortfolioClient } from "./components/PortfolioClient";
 
 function formatCurrency(amount: number, compact = false): string {
@@ -135,9 +136,8 @@ export default async function PortfolioPage() {
           )}
         </section>
 
-        {/* TODO: 배너 추가 */}
         {/* Account Opening Banner */}
-        {/* <BenefitBanner /> */}
+        <BenefitBanner />
 
         {/* Portfolio Content (List or Chart) */}
         {portfolio.length === 0 ? (
