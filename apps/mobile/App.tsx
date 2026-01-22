@@ -123,8 +123,8 @@ function AppContent() {
         allowsBackForwardNavigationGestures={canGoBack}
         javaScriptEnabled
         domStorageEnabled
-        sharedCookiesEnabled={Platform.OS === "android"}
-        thirdPartyCookiesEnabled={Platform.OS === "android"}
+        sharedCookiesEnabled={true}
+        thirdPartyCookiesEnabled={true}
         startInLoadingState
         mixedContentMode="compatibility"
         originWhitelist={["*"]}
