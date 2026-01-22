@@ -265,17 +265,16 @@ export class RNBridge {
 
       const callbackName = `__setCookieCallback_${messageId}`;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as unknown as Record<string, unknown>)[callbackName] = (
-        response: { success: boolean; error?: string }
-      ) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        delete (window as unknown as Record<string, unknown>)[callbackName];
-        if (response.error) {
-          reject(new Error(response.error));
-        } else {
-          resolve(response);
-        }
-      };
+      (window as unknown as Record<string, unknown>)[callbackName] =
+        (response: { success: boolean; error?: string }) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          delete (window as unknown as Record<string, unknown>)[callbackName];
+          if (response.error) {
+            reject(new Error(response.error));
+          } else {
+            resolve(response);
+          }
+        };
 
       // 10초 타임아웃
       setTimeout(() => {
