@@ -80,11 +80,12 @@ export async function POST(request: NextRequest) {
     });
 
     // 세션 쿠키 설정
+    // WebView에서는 sameSite: "none"이 필요 (cross-origin 요청으로 간주됨)
     const cookieStore = await cookies();
     cookieStore.set("authjs.session-token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: true, // sameSite: "none"은 secure: true 필수
+      sameSite: "none",
       path: "/",
       maxAge: 30 * 24 * 60 * 60, // 30일
     });
