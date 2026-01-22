@@ -32,8 +32,8 @@ export default async function PortfolioPage() {
     redirect("/login");
   }
 
-  const { connected, sheetId } = await checkSheetConnection();
-  if (!connected) {
+  const { connected, sheetId, userExists } = await checkSheetConnection();
+  if (!userExists) {
     redirect("/onboarding");
   }
 

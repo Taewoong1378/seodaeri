@@ -110,7 +110,9 @@ async function getKISToken(): Promise<string | null> {
     });
 
     if (!response.ok) {
-      console.error('[KIS-Index] Token request failed:', response.status);
+      const errorBody = await response.text().catch(() => 'No body');
+      console.warn('[KIS-Index] Token request failed:', response.status, '-', errorBody);
+      console.warn('[KIS-Index] App Key/Secret을 확인하거나 KIS Developers에서 앱 상태를 확인하세요.');
       return null;
     }
 

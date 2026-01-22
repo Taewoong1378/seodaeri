@@ -1,5 +1,108 @@
 import { google } from 'googleapis';
 
+// 서대리 투자기록시트 필수 탭 목록
+const REQUIRED_SHEET_TABS = [
+  '1. 계좌현황(누적)',
+  '3. 종목현황',
+  '5. 계좌내역(누적)',
+  '6. 입금내역',
+  '7. 배당내역',
+];
+
+export interface SheetValidationResult {
+  valid: boolean;
+  missingTabs: string[];
+  foundTabs: string[];
+  error?: string;
+}
+
+/**
+ * 스프레드시트가 서대리 투자기록 시트 형식인지 검증
+ */
+export async function validateSheetFormat(
+  accessToken: string,
+  spreadsheetId: string
+): Promise<SheetValidationResult> {
+  console.log('[validateSheetFormat] Validating spreadsheet:', spreadsheetId);
+
+  const auth = new google.auth.OAuth2();
+  auth.setCredentials({ access_token: accessToken });
+
+  const sheets = google.sheets({ version: 'v4', auth });
+
+  try {
+    // 스프레드시트의 모든 시트 목록 가져오기
+    const spreadsheet = await sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: 'sheets(properties(title))',
+    });
+
+    const sheetTitles = spreadsheet.data.sheets?.map((s) => s.properties?.title || '') || [];
+    console.log('[validateSheetFormat] Found tabs:', sheetTitles);
+
+    // 시트 이름에서 공백/특수문자 제거하여 비교
+    const normalizeSheetName = (name: string) =>
+      name.replace(/[\s\u00A0\u3000\u200B\uFEFF]/g, '').toLowerCase();
+
+    const foundTabs: string[] = [];
+    const missingTabs: string[] = [];
+
+    for (const requiredTab of REQUIRED_SHEET_TABS) {
+      const normalizedRequired = normalizeSheetName(requiredTab);
+      const found = sheetTitles.some(
+        (title) => normalizeSheetName(title) === normalizedRequired
+      );
+
+      if (found) {
+        foundTabs.push(requiredTab);
+      } else {
+        missingTabs.push(requiredTab);
+      }
+    }
+
+    const valid = missingTabs.length === 0;
+    console.log('[validateSheetFormat] Result:', { valid, foundTabs, missingTabs });
+
+    return {
+      valid,
+      foundTabs,
+      missingTabs,
+    };
+  } catch (error: any) {
+    console.error('[validateSheetFormat] Error:', {
+      code: error?.code,
+      message: error?.message,
+    });
+
+    // 권한 에러
+    if (error?.code === 403) {
+      return {
+        valid: false,
+        foundTabs: [],
+        missingTabs: REQUIRED_SHEET_TABS,
+        error: '스프레드시트에 접근할 권한이 없습니다.',
+      };
+    }
+
+    // 시트를 찾을 수 없음
+    if (error?.code === 404) {
+      return {
+        valid: false,
+        foundTabs: [],
+        missingTabs: REQUIRED_SHEET_TABS,
+        error: '스프레드시트를 찾을 수 없습니다.',
+      };
+    }
+
+    return {
+      valid: false,
+      foundTabs: [],
+      missingTabs: REQUIRED_SHEET_TABS,
+      error: error?.message || '시트 검증 중 오류가 발생했습니다.',
+    };
+  }
+}
+
 // 서대리 마스터 템플릿 ID (서버/클라이언트 환경변수 모두 지원)
 const MASTER_TEMPLATE_ID = process.env.SEODAERI_TEMPLATE_SHEET_ID
   || process.env.NEXT_PUBLIC_SEODAERI_TEMPLATE_SHEET_ID

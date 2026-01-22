@@ -551,10 +551,6 @@ export async function updateDeposit(input: UpdateDepositInput): Promise<SaveDepo
     return { success: false, error: '로그인이 필요합니다.' };
   }
 
-  if (!session.accessToken) {
-    return { success: false, error: 'Google 인증이 필요합니다.' };
-  }
-
   const supabase = createServiceClient();
 
   try {
@@ -577,11 +573,52 @@ export async function updateDeposit(input: UpdateDepositInput): Promise<SaveDepo
       }
     }
 
-    if (!user?.spreadsheet_id) {
-      return { success: false, error: '연동된 스프레드시트가 없습니다.' };
+    if (!user?.id) {
+      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' };
     }
 
     const userId = user.id as string;
+
+    // Standalone 모드: DB에서만 수정
+    if (!user.spreadsheet_id) {
+      console.log('[updateDeposit] Standalone mode - updating DB only');
+
+      // 기존 레코드 삭제 후 새로 생성
+      await supabase
+        .from('deposits')
+        .delete()
+        .eq('user_id', userId)
+        .eq('type', input.originalType)
+        .eq('amount', input.originalAmount)
+        .eq('deposit_date', input.originalDate);
+
+      const { error: insertError } = await supabase
+        .from('deposits')
+        .insert({
+          user_id: userId,
+          type: input.newType,
+          amount: input.newAmount,
+          currency: 'KRW',
+          deposit_date: input.newDate,
+          memo: input.newMemo,
+          sheet_synced: false,
+        });
+
+      if (insertError) {
+        console.error('[updateDeposit] DB insert error:', insertError);
+        return { success: false, error: '입출금내역 수정에 실패했습니다.' };
+      }
+
+      console.log('[updateDeposit] Standalone mode - Success!');
+      revalidatePath('/dashboard');
+      revalidatePath('/transactions');
+      return { success: true };
+    }
+
+    // Sheet 모드: Google Sheet에서도 수정
+    if (!session.accessToken) {
+      return { success: false, error: 'Google 인증이 필요합니다.' };
+    }
 
     // 1. Google Sheet에서 해당 행 찾아서 수정
     const sheetName = '6. 입금내역';

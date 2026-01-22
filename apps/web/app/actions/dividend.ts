@@ -208,7 +208,7 @@ export async function saveDividends(
     if (!user && session.user.email) {
       const { data: userByEmail } = await supabase
         .from("users")
-        .select("spreadsheet_id")
+        .select("id, spreadsheet_id")
         .eq("email", session.user.email)
         .single();
 
@@ -217,8 +217,39 @@ export async function saveDividends(
       }
     }
 
+    // Standalone 모드: DB에만 저장
     if (!user?.spreadsheet_id) {
-      return { success: false, error: "연동된 스프레드시트가 없습니다." };
+      console.log("[saveDividends] Standalone mode - saving to DB only");
+
+      const userId = (user as any)?.id || session.user.id;
+      if (!userId) {
+        return { success: false, error: "사용자 정보를 찾을 수 없습니다." };
+      }
+
+      // 환율 조회 (USD 배당금 원화 환산용)
+      const exchangeRate = await getUSDKRWRate();
+
+      const dividendRows = inputs.map((input) => ({
+        user_id: userId,
+        ticker: input.ticker,
+        name: input.name || input.ticker,
+        amount_krw: input.amountKRW,
+        amount_usd: input.amountUSD,
+        total_krw: input.amountKRW + input.amountUSD * exchangeRate,
+        dividend_date: input.date,
+        sheet_synced: false,
+      }));
+
+      const { error: dbError } = await supabase.from("dividends").insert(dividendRows);
+
+      if (dbError) {
+        console.error("[saveDividends] DB error:", dbError);
+        return { success: false, error: "배당내역 저장에 실패했습니다." };
+      }
+
+      revalidatePath("/dashboard");
+      revalidatePath("/transactions");
+      return { success: true };
     }
 
     // 모든 배당내역을 행 데이터로 변환

@@ -15,8 +15,8 @@ export default async function TransactionsPage() {
     redirect('/login');
   }
 
-  const { connected, sheetId } = await checkSheetConnection();
-  if (!connected) {
+  const { connected, sheetId, userExists } = await checkSheetConnection();
+  if (!userExists) {
     redirect('/onboarding');
   }
 

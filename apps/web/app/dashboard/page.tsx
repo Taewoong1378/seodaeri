@@ -17,9 +17,9 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  // 시트 연동 체크 - 연동 안 되어 있으면 온보딩으로
-  const { connected, sheetId } = await checkSheetConnection();
-  if (!connected) {
+  // 사용자 상태 체크 - 유저가 등록되지 않았으면 온보딩으로
+  const { connected, sheetId, userExists, isStandalone } = await checkSheetConnection();
+  if (!userExists) {
     redirect('/onboarding');
   }
 

@@ -442,12 +442,22 @@ export class StandaloneDataProvider implements DataProvider {
       }));
       const accountYields = this.calculateAccountYields(normalizedSnapshots, currentMonth + 1);
 
+      // 지수 데이터가 하나라도 없으면 비교 차트를 표시하지 않음
+      const hasAnyIndexData = kospiData || sp500Data || nasdaqData;
+
       console.log('[StandaloneProvider] Index comparison:', {
-        kospi: kospiData?.changePercent,
-        sp500: sp500Data?.changePercent,
-        nasdaq: nasdaqData?.changePercent,
+        kospi: kospiData?.changePercent ?? 'unavailable',
+        sp500: sp500Data?.changePercent ?? 'unavailable',
+        nasdaq: nasdaqData?.changePercent ?? 'unavailable',
         accountMonths: accountYields.length,
+        hasAnyIndexData,
       });
+
+      // 지수 데이터가 없으면 null 반환 (차트 미표시)
+      if (!hasAnyIndexData) {
+        console.warn('[StandaloneProvider] No index data available - skipping comparison chart');
+        return null;
+      }
 
       return {
         months,

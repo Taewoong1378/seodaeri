@@ -14,9 +14,9 @@ export default async function OnboardingPage() {
     redirect('/login');
   }
 
-  // 이미 시트가 연동되어 있으면 대시보드로
-  const { connected } = await checkSheetConnection();
-  if (connected) {
+  // 이미 등록된 사용자면 대시보드로 (시트 연동 여부 상관없이)
+  const { userExists } = await checkSheetConnection();
+  if (userExists) {
     redirect('/dashboard');
   }
 
@@ -57,7 +57,7 @@ export default async function OnboardingPage() {
               환영합니다, {session.user.name?.split(' ')[0]}님!
             </h1>
             <p className="text-muted-foreground">
-              투자 기록을 시작하려면 구글 스프레드시트를 연동해주세요.
+              굴림과 함께 투자기록을 시작해볼까요?
             </p>
           </div>
 

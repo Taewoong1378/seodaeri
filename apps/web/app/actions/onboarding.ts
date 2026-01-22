@@ -3,7 +3,37 @@
 import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
 import { revalidatePath } from 'next/cache';
-import { copyMasterTemplate, findSeodaeriSheet } from '../../lib/google-sheets';
+import { copyMasterTemplate, findSeodaeriSheet, validateSheetFormat, type SheetValidationResult } from '../../lib/google-sheets';
+
+// Re-export for client usage
+export type { SheetValidationResult };
+
+/**
+ * 스프레드시트가 서대리 투자기록 시트 형식인지 검증
+ */
+export async function validateSheet(sheetId: string): Promise<SheetValidationResult> {
+  const session = await auth();
+  if (!session?.accessToken) {
+    return {
+      valid: false,
+      foundTabs: [],
+      missingTabs: [],
+      error: '로그인이 필요합니다.',
+    };
+  }
+
+  try {
+    return await validateSheetFormat(session.accessToken, sheetId);
+  } catch (error: any) {
+    console.error('[validateSheet] Error:', error);
+    return {
+      valid: false,
+      foundTabs: [],
+      missingTabs: [],
+      error: error?.message || '시트 검증 중 오류가 발생했습니다.',
+    };
+  }
+}
 
 /**
  * 스프레드시트 없이 바로 시작하기
@@ -84,13 +114,18 @@ export interface OnboardingResult {
  * 사용자의 시트 연동 상태 확인
  * ID로 먼저 조회하고, 실패하면 이메일로 fallback 조회
  */
-export async function checkSheetConnection(): Promise<{ connected: boolean; sheetId?: string }> {
+export async function checkSheetConnection(): Promise<{
+  connected: boolean;
+  sheetId?: string;
+  userExists: boolean;
+  isStandalone: boolean;
+}> {
   const session = await auth();
   console.log('[checkSheetConnection] session.user.id:', session?.user?.id);
 
   if (!session?.user?.id) {
     console.log('[checkSheetConnection] No session user ID');
-    return { connected: false };
+    return { connected: false, userExists: false, isStandalone: false };
   }
 
   const supabase = createServiceClient();
@@ -120,9 +155,14 @@ export async function checkSheetConnection(): Promise<{ connected: boolean; shee
     }
   }
 
+  const userExists = !!user;
+  const hasSpreadsheet = !!user?.spreadsheet_id;
+
   return {
-    connected: !!user?.spreadsheet_id,
+    connected: hasSpreadsheet,
     sheetId: user?.spreadsheet_id || undefined,
+    userExists,
+    isStandalone: userExists && !hasSpreadsheet,
   };
 }
 

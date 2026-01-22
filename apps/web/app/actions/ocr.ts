@@ -271,16 +271,16 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
       }
     }
 
-    if (!user?.spreadsheet_id) {
+    if (!user?.id) {
       return {
         success: false,
-        error: '연동된 스프레드시트가 없습니다. 온보딩을 먼저 완료해주세요.',
+        error: '사용자 정보를 찾을 수 없습니다.',
       }
     }
 
     const totalAmount = transaction.price * transaction.quantity
 
-    // 2. Supabase에 거래내역 저장
+    // 2. Supabase에 거래내역 저장 (Standalone 및 Sheet 모드 공통)
     const { data: insertedTransaction, error: insertError } = await supabase
       .from('transactions')
       .insert({
@@ -302,8 +302,8 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
       return { success: false, error: '거래내역 저장에 실패했습니다.' }
     }
 
-    // 3. Google Sheet 동기화
-    if (session.accessToken) {
+    // 3. Google Sheet 동기화 (Sheet 모드에서만)
+    if (session.accessToken && user.spreadsheet_id) {
       let sheetSynced = false
 
       // 배당 vs 매매 분기 처리
