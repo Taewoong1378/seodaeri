@@ -101,35 +101,44 @@ export class RNBridge {
       const messageId = this.postMessage("Auth.Apple.Request");
       console.log("[Bridge] appleLogin - sent messageId:", messageId);
 
+      // 전역 콜백 함수 등록 (이벤트 리스너보다 안정적)
+      const callbackName = `__appleLoginCallback_${messageId}`;
+      console.log("[Bridge] appleLogin - registering callback:", callbackName);
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as unknown as Record<string, unknown>)[callbackName] = (data: { id: string; data?: AppleLoginResponse; error?: string }) => {
+        console.log("[Bridge] appleLogin - callback called with:", JSON.stringify(data));
+        
+        // 콜백 정리
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (window as unknown as Record<string, unknown>)[callbackName];
+        
+        if (data.error) {
+          console.log("[Bridge] appleLogin - has error:", data.error);
+          reject(new Error(data.error));
+        } else if (data.data) {
+          console.log("[Bridge] appleLogin - has data, resolving");
+          resolve(data.data);
+        }
+      };
+
+      // 이벤트 리스너도 백업으로 유지
       const handler = (event: Event) => {
         console.log("[Bridge] appleLogin - received event:", event.type);
         const customEvent = event as CustomEvent;
-        console.log(
-          "[Bridge] appleLogin - event detail:",
-          JSON.stringify(customEvent.detail)
-        );
-        console.log(
-          "[Bridge] appleLogin - comparing ids:",
-          customEvent.detail?.id,
-          "===",
-          messageId
-        );
+        console.log("[Bridge] appleLogin - event detail:", JSON.stringify(customEvent.detail));
 
         if (customEvent.detail?.id === messageId) {
           console.log("[Bridge] appleLogin - ID matched!");
           window.removeEventListener("Bridge.AppleLogin", handler);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          delete (window as unknown as Record<string, unknown>)[callbackName];
+          
           if (customEvent.detail.error) {
-            console.log(
-              "[Bridge] appleLogin - has error:",
-              customEvent.detail.error
-            );
             reject(new Error(customEvent.detail.error));
           } else if (customEvent.detail.data) {
-            console.log("[Bridge] appleLogin - has data, resolving");
             resolve(customEvent.detail.data as AppleLoginResponse);
           }
-        } else {
-          console.log("[Bridge] appleLogin - ID mismatch, ignoring");
         }
       };
 
@@ -139,6 +148,8 @@ export class RNBridge {
       // 60초 타임아웃
       setTimeout(() => {
         window.removeEventListener("Bridge.AppleLogin", handler);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (window as unknown as Record<string, unknown>)[callbackName];
         reject(new Error("Apple login timeout"));
       }, 60000);
     });

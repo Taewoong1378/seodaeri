@@ -81,39 +81,61 @@ export async function handleAppleLogin(messageId: string, webViewRef: WebViewRef
     
     const script = `
       (function() {
-        // 네이티브로 디버그 정보 전송
-        var debugInfo = {
+        var messageId = ${JSON.stringify(messageId)};
+        var responseData = ${JSON.stringify(response)};
+        var callbackName = '__appleLoginCallback_' + messageId;
+        
+        // 디버그 정보
+        window.ReactNativeWebView.postMessage(JSON.stringify({
           type: 'Debug.AppleLogin',
           step: 'script_executed',
           url: window.location.href,
-          hasDispatchEvent: typeof window.dispatchEvent === 'function',
-          hasCustomEvent: typeof CustomEvent === 'function',
-        };
+          callbackName: callbackName,
+          callbackExists: typeof window[callbackName] === 'function'
+        }));
         
-        try {
-          window.ReactNativeWebView.postMessage(JSON.stringify(debugInfo));
-        } catch(e) {}
-        
-        try {
-          var event = new CustomEvent('Bridge.AppleLogin', {
-            detail: { id: ${JSON.stringify(messageId)}, data: ${JSON.stringify(response)} }
-          });
-          window.dispatchEvent(event);
-          
-          // 이벤트 디스패치 성공 알림
+        // 방법 1: 전역 콜백 함수 호출 (더 안정적)
+        if (typeof window[callbackName] === 'function') {
+          try {
+            window[callbackName]({ id: messageId, data: responseData });
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'Debug.AppleLogin',
+              step: 'callback_called',
+              callbackName: callbackName
+            }));
+          } catch(e) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'Debug.AppleLogin',
+              step: 'callback_error',
+              error: e.message || String(e)
+            }));
+          }
+        } else {
           window.ReactNativeWebView.postMessage(JSON.stringify({
             type: 'Debug.AppleLogin',
-            step: 'event_dispatched',
-            eventType: event.type,
-            detailId: ${JSON.stringify(messageId)}
+            step: 'callback_not_found',
+            callbackName: callbackName
+          }));
+        }
+        
+        // 방법 2: 이벤트 디스패치 (백업)
+        try {
+          var event = new CustomEvent('Bridge.AppleLogin', {
+            detail: { id: messageId, data: responseData }
+          });
+          window.dispatchEvent(event);
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'Debug.AppleLogin',
+            step: 'event_dispatched'
           }));
         } catch (e) {
           window.ReactNativeWebView.postMessage(JSON.stringify({
             type: 'Debug.AppleLogin',
-            step: 'error',
+            step: 'event_error',
             error: e.message || String(e)
           }));
         }
+        
         return true;
       })();
     `
