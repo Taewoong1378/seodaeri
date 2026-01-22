@@ -15,12 +15,15 @@ export default async function TransactionsPage() {
     redirect('/login');
   }
 
-  const { connected, sheetId } = await checkSheetConnection();
-  if (!connected) {
-    redirect('/onboarding');
+  // 데모 계정은 시트 연동 체크 스킵 (Play Store 심사용)
+  let sheetUrl: string | null = null;
+  if (!session.isDemo) {
+    const { connected, sheetId } = await checkSheetConnection();
+    if (!connected) {
+      redirect('/onboarding');
+    }
+    sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit#gid=0` : null;
   }
-
-  const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit#gid=0` : null;
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-24">

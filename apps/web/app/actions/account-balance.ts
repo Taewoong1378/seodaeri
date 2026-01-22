@@ -588,7 +588,40 @@ export interface AccountBalanceRecord {
 export async function getAccountBalances(): Promise<AccountBalanceRecord[]> {
   const session = await auth();
 
-  if (!session?.user?.id || !session.accessToken) {
+  if (!session?.user?.id) {
+    return [];
+  }
+
+  // 데모 모드인 경우 데모 계좌 잔액 반환 (Play Store 심사용)
+  if (session.isDemo) {
+    const now = new Date();
+    const demoBalances: AccountBalanceRecord[] = [];
+
+    // 최근 12개월 데이터 생성
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(now);
+      date.setMonth(date.getMonth() - i);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+
+      // 기본 잔액 + 월별 증가분
+      const baseBalance = 100000000 + (11 - i) * 5000000;
+      const variation = Math.floor(Math.random() * 3000000) - 1500000;
+
+      demoBalances.push({
+        id: `${year}-${String(month).padStart(2, '0')}`,
+        yearMonth: `${year}-${String(month).padStart(2, '0')}`,
+        year,
+        month,
+        balance: baseBalance + variation,
+        displayDate: `${year}년 ${month}월`,
+      });
+    }
+
+    return demoBalances;
+  }
+
+  if (!session.accessToken) {
     return [];
   }
 

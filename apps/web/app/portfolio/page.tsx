@@ -33,15 +33,19 @@ export default async function PortfolioPage() {
     redirect("/login");
   }
 
-  const { connected, sheetId } = await checkSheetConnection();
-  if (!connected) {
-    redirect("/onboarding");
+  // 데모 계정은 시트 연동 체크 스킵 (Play Store 심사용)
+  let sheetUrl: string | null = null;
+  if (!session.isDemo) {
+    const { connected, sheetId } = await checkSheetConnection();
+    if (!connected) {
+      redirect("/onboarding");
+    }
+    sheetUrl = sheetId
+      ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit`
+      : null;
   }
 
   const data = await getDashboardData();
-  const sheetUrl = sheetId
-    ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit`
-    : null;
 
   const portfolio = data?.portfolio || [];
   const totalAsset = data?.totalAsset || 0;

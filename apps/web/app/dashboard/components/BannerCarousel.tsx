@@ -3,19 +3,31 @@
 import Autoplay from 'embla-carousel-autoplay';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ArrowRight } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactElement } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCarouselBanners, getIconElement } from '../../../lib/banner-data';
 
-export function BannerCarousel(): ReactElement {
-  // 환경변수에 따라 배너 데이터 선택
-  const BANNERS = useMemo(() => getCarouselBanners(), []);
+export function BannerCarousel(): ReactElement | null {
+  const { data: session } = useSession();
+
+  // 데모 모드에서는 배너 숨김 (Play Store 심사용)
+  const BANNERS = useMemo(() => {
+    if (session?.isDemo) return [];
+    return getCarouselBanners();
+  }, [session?.isDemo]);
+
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [
     Autoplay({ delay: 5000, stopOnInteraction: false }),
   ]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // 배너가 없으면 렌더링 안함
+  if (BANNERS.length === 0) {
+    return null;
+  }
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;

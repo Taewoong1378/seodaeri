@@ -43,6 +43,50 @@ export async function getTransactions(): Promise<TransactionsResult> {
     return { success: false, error: '로그인이 필요합니다.' };
   }
 
+  // 데모 모드인 경우 데모 거래내역 반환 (Play Store 심사용)
+  if (session.isDemo) {
+    const { DEMO_DIVIDEND_TRANSACTIONS, DEMO_DEPOSITS } = await import('../../lib/demo-data');
+
+    // 배당 거래내역을 Transaction 형식으로 변환
+    const dividendTransactions: Transaction[] = DEMO_DIVIDEND_TRANSACTIONS.map((d, idx) => ({
+      id: `demo-dividend-${idx}`,
+      ticker: d.ticker,
+      name: d.name,
+      type: 'DIVIDEND' as const,
+      price: d.amountKRW,
+      quantity: 1,
+      total_amount: d.amountKRW,
+      trade_date: d.date,
+      sheet_synced: false,
+      created_at: d.date,
+      source: 'sheet' as const,
+      amountKRW: d.amountKRW,
+      amountUSD: d.amountUSD,
+    }));
+
+    // 입출금 거래내역을 Transaction 형식으로 변환
+    const depositTransactions: Transaction[] = DEMO_DEPOSITS.map((d, idx) => ({
+      id: `demo-deposit-${idx}`,
+      ticker: '',
+      name: d.memo,
+      type: d.type as 'DEPOSIT' | 'WITHDRAW',
+      price: d.amount,
+      quantity: 1,
+      total_amount: d.amount,
+      trade_date: d.date,
+      sheet_synced: false,
+      created_at: d.date,
+      source: 'sheet' as const,
+      account: d.account,
+    }));
+
+    // 날짜 기준 정렬하여 반환
+    const allTransactions = [...dividendTransactions, ...depositTransactions]
+      .sort((a, b) => new Date(b.trade_date).getTime() - new Date(a.trade_date).getTime());
+
+    return { success: true, transactions: allTransactions };
+  }
+
   const supabase = createServiceClient();
 
   try {

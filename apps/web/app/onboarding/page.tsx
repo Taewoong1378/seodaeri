@@ -14,6 +14,11 @@ export default async function OnboardingPage() {
     redirect('/login');
   }
 
+  // 데모 계정은 온보딩 스킵하고 바로 대시보드로 (Play Store 심사용)
+  if (session.isDemo) {
+    redirect('/dashboard');
+  }
+
   // 이미 시트가 연동되어 있으면 대시보드로
   const { connected } = await checkSheetConnection();
   if (connected) {

@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo
 import { AlertCircle } from 'lucide-react'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { TestLoginForm } from './TestLoginForm'
 
 export const metadata: Metadata = {
   title: '로그인',
@@ -23,13 +24,14 @@ const errorMessages: Record<string, string> = {
 }
 
 interface LoginPageProps {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; mode?: string }>
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const session = await auth()
   const params = await searchParams
   const error = params.error
+  const showTestLogin = params.mode === 'test'
 
   // 이미 로그인된 경우 대시보드로 리다이렉트
   if (session?.user) {
@@ -64,13 +66,16 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <AppleLogin
             className="flex w-full items-center justify-center gap-2 rounded-md bg-black px-4 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-900"
           />
-          
+
           {error === 'scope_denied' && (
             <p className="text-xs text-muted-foreground text-center mt-4">
-              💡 굴림은 Google 스프레드시트에 투자 기록을 저장합니다.<br />
+              굴림은 Google 스프레드시트에 투자 기록을 저장합니다.<br />
               서비스 이용을 위해 Google Drive 권한이 필요합니다.
             </p>
           )}
+
+          {/* 테스트 로그인 폼 (Play Store 심사용) */}
+          {showTestLogin && <TestLoginForm />}
         </CardContent>
       </Card>
     </main>

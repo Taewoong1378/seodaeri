@@ -1,7 +1,9 @@
 "use client";
 
 import { Card, CardContent } from "@repo/design-system/components/card";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useMemo } from "react";
 import { useDashboard } from "../../../hooks";
 import { getSmallBanners } from "../../../lib/banner-data";
 import { AccountTrendChart } from "./AccountTrendChart";
@@ -23,9 +25,6 @@ import { SmallBanner } from "./SmallBanner";
 import { YearlyDividendChart } from "./YearlyDividendChart";
 import { YieldComparisonChart } from "./YieldComparisonChart";
 import { YieldComparisonDollarChart } from "./YieldComparisonDollarChart";
-
-// 환경변수에 따른 배너 데이터
-const smallBanners = getSmallBanners();
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("ko-KR").format(Math.round(amount));
@@ -159,7 +158,14 @@ function DashboardSkeleton() {
 }
 
 export function DashboardContent() {
+  const { data: session } = useSession();
   const { data, isPending, error } = useDashboard();
+
+  // 데모 모드에서는 배너 숨김 (Play Store 심사용)
+  const smallBanners = useMemo(() => {
+    if (session?.isDemo) return [];
+    return getSmallBanners();
+  }, [session?.isDemo]);
 
   // 로딩 중이거나 데이터가 아직 없으면 스켈레톤 표시
   // data가 있으면 바로 컨텐츠를 보여줌 (백그라운드 refetch 중에도)

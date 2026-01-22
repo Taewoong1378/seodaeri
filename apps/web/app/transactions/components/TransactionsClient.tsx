@@ -18,6 +18,7 @@ import {
   TrendingDown,
   Wallet,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useMemo, useState } from "react";
 import { getTransactionBannerByTab } from "../../../lib/banner-data";
 import { queryKeys } from "../../../lib/query-client";
@@ -102,6 +103,7 @@ export function TransactionsClient({
   activeTab,
   onTabChange,
 }: TransactionsClientProps) {
+  const { data: session } = useSession();
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
@@ -128,18 +130,18 @@ export function TransactionsClient({
   const [editTransactionTarget, setEditTransactionTarget] =
     useState<Transaction | null>(null);
 
-  // 탭별 배너 데이터
+  // 탭별 배너 데이터 (데모 모드에서는 숨김 - Play Store 심사용)
   const dividendBanner = useMemo(
-    () => getTransactionBannerByTab("dividend"),
-    []
+    () => (session?.isDemo ? null : getTransactionBannerByTab("dividend")),
+    [session?.isDemo]
   );
   const depositBanner = useMemo(
-    () => getTransactionBannerByTab("deposit"),
-    []
+    () => (session?.isDemo ? null : getTransactionBannerByTab("deposit")),
+    [session?.isDemo]
   );
   const balanceBanner = useMemo(
-    () => getTransactionBannerByTab("balance"),
-    []
+    () => (session?.isDemo ? null : getTransactionBannerByTab("balance")),
+    [session?.isDemo]
   );
 
   const getTypeText = (type: Transaction["type"]) => {

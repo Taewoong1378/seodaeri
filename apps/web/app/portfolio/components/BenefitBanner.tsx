@@ -1,13 +1,20 @@
 'use client';
 
 import { ArrowRight } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useMemo } from 'react';
 import { getBenefitBanner } from '../../../lib/banner-data';
 
 export function BenefitBanner() {
-  const bannerData = useMemo(() => getBenefitBanner(), []);
+  const { data: session } = useSession();
+
+  // 데모 모드에서는 배너 숨김 (Play Store 심사용)
+  const bannerData = useMemo(() => {
+    if (session?.isDemo) return null;
+    return getBenefitBanner();
+  }, [session?.isDemo]);
 
   const handleTrackClick = useCallback(() => {
     console.log('[Tracking] Benefit Banner Clicked');

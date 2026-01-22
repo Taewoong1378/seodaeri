@@ -120,6 +120,12 @@ export async function getDashboardData(): Promise<DashboardData | null> {
   const session = await auth();
   if (!session?.user?.id) return null;
 
+  // 데모 모드인 경우 데모 데이터 반환 (Play Store 심사용)
+  if (session.isDemo) {
+    const { DEMO_DASHBOARD_DATA } = await import('../../lib/demo-data');
+    return DEMO_DASHBOARD_DATA;
+  }
+
   const supabase = createServiceClient();
 
   // 사용자 정보 및 spreadsheet_id 조회
