@@ -81,11 +81,13 @@ export function AppleLogin({
         const data = await res.json();
         debugLog("login_success_redirecting", { hasToken: !!data.token });
         onSuccess?.();
-        
+
         // WebView에서 쿠키가 안 되는 경우 토큰을 URL로 전달
         if (data.token) {
           // 토큰을 URL 파라미터로 전달하여 서버사이드에서 세션 설정
-          const redirectUrl = `/api/auth/set-session?token=${encodeURIComponent(data.token)}&redirect=/dashboard`;
+          const redirectUrl = `/api/auth/set-session?token=${encodeURIComponent(
+            data.token
+          )}&redirect=/dashboard`;
           debugLog("redirecting_with_token", { redirectUrl });
           window.location.href = redirectUrl;
         } else {
