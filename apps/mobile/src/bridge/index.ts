@@ -28,6 +28,10 @@ export function createMessageHandler(webViewRef: WebViewRef) {
         console.log('🌉 [Debug.Bridge]', JSON.stringify(message, null, 2))
         return
       }
+      if (message.type === 'Debug.AppleLogin.Component') {
+        console.log('🍎 [AppleLogin]', JSON.stringify(message, null, 2))
+        return
+      }
 
       switch (message.type) {
         case 'UI.Share':

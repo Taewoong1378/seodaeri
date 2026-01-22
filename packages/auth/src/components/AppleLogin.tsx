@@ -39,26 +39,38 @@ export function AppleLogin({ onSuccess, onError, className, children }: AppleLog
     })
   }, [isEnabled])
 
+  // 네이티브로 디버그 메시지 전송 (Safari 없이도 확인 가능)
+  const debugLog = (step: string, data?: Record<string, unknown>) => {
+    console.log(`[AppleLogin] ${step}`, data)
+    try {
+      window.ReactNativeWebView?.postMessage(
+        JSON.stringify({ type: 'Debug.AppleLogin.Component', step, ...data })
+      )
+    } catch {
+      // ignore
+    }
+  }
+
   const handleAppleLogin = async () => {
-    console.log('[AppleLogin] Button clicked, starting login...')
+    debugLog('button_clicked')
     setIsLoading(true)
     try {
-      console.log('[AppleLogin] Calling bridge.appleLogin()...')
+      debugLog('calling_bridge')
       const response = await bridge.appleLogin()
-      console.log('[AppleLogin] Got response from native:', response)
+      debugLog('bridge_response_received', { hasToken: !!response?.identityToken })
 
       // 서버로 Apple 토큰 전송하여 세션 생성
-      console.log('[AppleLogin] Sending to server /api/auth/apple...')
+      debugLog('calling_api')
       const res = await fetch('/api/auth/apple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(response),
       })
 
-      console.log('[AppleLogin] Server response status:', res.status)
+      debugLog('api_response', { status: res.status, ok: res.ok })
       
       if (res.ok) {
-        console.log('[AppleLogin] Login successful, redirecting...')
+        debugLog('login_success_redirecting')
         onSuccess?.()
         // 페이지 새로고침으로 세션 반영 (여러 방법 시도)
         try {
@@ -74,19 +86,19 @@ export function AppleLogin({ onSuccess, onError, className, children }: AppleLog
         }, 1000)
       } else {
         const error = await res.json()
-        console.error('[AppleLogin] Server error:', error)
+        debugLog('api_error', { error })
         throw new Error(error.message || 'Apple login failed')
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      console.error('[AppleLogin] Catch block error:', errorMessage)
+      debugLog('catch_error', { errorMessage })
       // 사용자 취소는 에러로 처리하지 않음
       if (errorMessage !== 'CANCELED') {
         console.error('Apple login error:', errorMessage)
         onError?.(errorMessage)
       }
     } finally {
-      console.log('[AppleLogin] Finally block, setting loading false')
+      debugLog('finally_block')
       setIsLoading(false)
     }
   }
