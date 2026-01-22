@@ -7,13 +7,15 @@ export type BridgeMessageType =
   | "Navigation.GoBack"
   | "UI.Share"
   | "Auth.Apple.Request"
-  | "Auth.Apple.CheckAvailable";
+  | "Auth.Apple.CheckAvailable"
+  | "Auth.SetCookie";
 
 export interface BridgePayloads {
   "Navigation.GoBack": undefined;
   "UI.Share": { title: string; url: string; message?: string };
   "Auth.Apple.Request": undefined;
   "Auth.Apple.CheckAvailable": undefined;
+  "Auth.SetCookie": { token: string; cookieName: string; domain: string };
 }
 
 export interface AppleLoginResponse {
@@ -242,6 +244,46 @@ export class RNBridge {
         right: 0,
       }
     );
+  }
+
+  /**
+   * 네이티브에서 쿠키 설정 (iOS WebView 쿠키 문제 해결용)
+   */
+  setCookie(data: {
+    token: string;
+    cookieName: string;
+    domain: string;
+  }): Promise<{ success: boolean }> {
+    return new Promise((resolve, reject) => {
+      if (!this.isReactNative()) {
+        reject(new Error("setCookie is only available in React Native"));
+        return;
+      }
+
+      const messageId = this.postMessage("Auth.SetCookie", data);
+      console.log("[Bridge] setCookie - sent messageId:", messageId);
+
+      const callbackName = `__setCookieCallback_${messageId}`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as unknown as Record<string, unknown>)[callbackName] = (
+        response: { success: boolean; error?: string }
+      ) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (window as unknown as Record<string, unknown>)[callbackName];
+        if (response.error) {
+          reject(new Error(response.error));
+        } else {
+          resolve(response);
+        }
+      };
+
+      // 10초 타임아웃
+      setTimeout(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (window as unknown as Record<string, unknown>)[callbackName];
+        reject(new Error("setCookie timeout"));
+      }, 10000);
+    });
   }
 }
 

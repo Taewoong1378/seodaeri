@@ -10,6 +10,7 @@ import {
   handleAppleLogin,
   handleCheckAppleAvailable,
 } from './handlers/appleAuthHandler'
+import { handleSetCookie } from './handlers/cookieHandler'
 
 export function createMessageHandler(webViewRef: WebViewRef) {
   return async (event: WebViewMessageEvent) => {
@@ -44,6 +45,14 @@ export function createMessageHandler(webViewRef: WebViewRef) {
 
         case 'Auth.Apple.CheckAvailable':
           await handleCheckAppleAvailable(message.id || '', webViewRef)
+          break
+
+        case 'Auth.SetCookie':
+          await handleSetCookie(
+            message.id || '',
+            webViewRef,
+            message.payload as { token: string; cookieName: string; domain: string }
+          )
           break
 
         default:

@@ -79,19 +79,33 @@ export function AppleLogin({
 
       if (res.ok) {
         const data = await res.json();
-        debugLog("login_success_redirecting", { hasToken: !!data.token });
+        debugLog("login_success", {
+          hasToken: !!data.token,
+          cookieName: data.cookieName,
+        });
         onSuccess?.();
 
-        // WebView에서 쿠키가 안 되는 경우 토큰을 URL로 전달
-        if (data.token) {
-          // 토큰을 URL 파라미터로 전달하여 서버사이드에서 세션 설정
-          const redirectUrl = `/api/auth/set-session?token=${encodeURIComponent(
-            data.token
-          )}&redirect=/dashboard`;
-          debugLog("redirecting_with_token", { redirectUrl });
-          window.location.href = redirectUrl;
+        // 네이티브에서 쿠키 직접 설정 (iOS WebView 쿠키 문제 해결)
+        if (data.token && data.cookieName) {
+          debugLog("setting_cookie_via_native");
+          try {
+            await bridge.setCookie({
+              token: data.token,
+              cookieName: data.cookieName,
+              domain: window.location.origin,
+            });
+            debugLog("native_cookie_set_success");
+            // 쿠키 설정 후 네이티브에서 자동으로 /dashboard로 리다이렉트됨
+          } catch (cookieError) {
+            debugLog("native_cookie_error", { error: String(cookieError) });
+            // 네이티브 쿠키 설정 실패시 URL 파라미터 방식 fallback
+            const redirectUrl = `/api/auth/set-session?token=${encodeURIComponent(
+              data.token
+            )}&redirect=/dashboard`;
+            window.location.href = redirectUrl;
+          }
         } else {
-          // 쿠키로 설정된 경우 바로 대시보드로
+          // 쿠키로 이미 설정된 경우 바로 대시보드로
           window.location.href = "/dashboard";
         }
       } else {
