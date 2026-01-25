@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@repo/design-system/components/card";
+import { BarChart3, Coins } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useMemo } from "react";
@@ -207,8 +208,45 @@ export function DashboardContent() {
       <DashboardTabs>
         {{
           /* 탭 1: 계좌현황(누적) */
-          cumulative: (
+          cumulative: (() => {
+            // 누적 탭에 표시할 데이터가 있는지 확인
+            const hasCumulativeData =
+              displayData.accountTrend.length > 0 ||
+              displayData.performanceComparison.length > 0 ||
+              displayData.yieldComparison ||
+              displayData.yieldComparisonDollar ||
+              displayData.portfolio.length > 0;
+
+            return (
             <div className="space-y-6">
+              {/* 빈 상태 안내 (아무 데이터도 없을 때만 표시) */}
+              {!hasCumulativeData && (
+                <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                        <BarChart3 className="w-7 h-7 text-primary" />
+                      </div>
+                      <p className="text-base font-semibold text-foreground mb-2">
+                        아직 계좌 데이터가 없어요
+                      </p>
+                      <p className="text-sm text-muted-foreground mb-6 max-w-[280px]">
+                        내역 페이지에서 계좌총액, 배당금, 입출금 내역을
+                        기록해보세요
+                      </p>
+                      <Link href="/transactions">
+                        <button
+                          type="button"
+                          className="px-6 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-full hover:bg-primary/90 transition-colors"
+                        >
+                          내역 기록하러 가기
+                        </button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Account Trend Chart (누적입금액 vs 계좌총액) */}
               {displayData.accountTrend.length > 0 && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
@@ -243,7 +281,7 @@ export function DashboardContent() {
                 </div>
               )}
 
-              {/* Small Banner 1 */}
+              {/* Small Banner 1 - 데이터 유무와 관계없이 표시 */}
               {smallBanners[0] && (
                 <SmallBanner
                   title={smallBanners[0].title}
@@ -274,8 +312,8 @@ export function DashboardContent() {
                 </Card>
               )}
 
-              {/* Small Banner 2 */}
-              {smallBanners[1] && (
+              {/* Small Banner 2 - 데이터가 있을 때만 표시 (배너 연속 방지) */}
+              {smallBanners[1] && displayData.accountTrend.length > 0 && (
                 <SmallBanner
                   title={smallBanners[1].title}
                   description={smallBanners[1].description}
@@ -329,7 +367,8 @@ export function DashboardContent() {
                 </div>
               )}
             </div>
-          ),
+            );
+          })(),
 
           /* 탭 2: 계좌현황(올해) */
           yearly: (
@@ -381,7 +420,7 @@ export function DashboardContent() {
                   <CardContent className="p-6">
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                        <span className="text-2xl">📊</span>
+                        <BarChart3 className="w-6 h-6 text-muted-foreground" />
                       </div>
                       <p className="text-sm text-muted-foreground font-medium">
                         올해 손익 데이터가 없습니다
@@ -479,7 +518,7 @@ export function DashboardContent() {
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                        <span className="text-2xl">💰</span>
+                        <Coins className="w-6 h-6 text-muted-foreground" />
                       </div>
                       <p className="text-sm text-muted-foreground font-medium">
                         배당금 내역이 없습니다

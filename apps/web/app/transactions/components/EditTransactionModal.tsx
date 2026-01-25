@@ -149,6 +149,13 @@ export function EditTransactionModal({
     onClose();
   }, [onClose]);
 
+  const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    // 모바일 키보드가 올라온 후 스크롤
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }, []);
+
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
     setError(null);
@@ -320,9 +327,9 @@ export function EditTransactionModal({
                     inputMode="numeric"
                     value={balance}
                     onChange={(e) => setBalance(formatNumber(e.target.value))}
+                    onFocus={handleInputFocus}
                     placeholder="0"
                     className="text-right pr-10 text-lg font-bold"
-                    accentColor="emerald"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
                     원
@@ -343,7 +350,6 @@ export function EditTransactionModal({
                   value={dividendDate}
                   onChange={(date) => setDividendDate(date)}
                   placeholder="날짜 선택"
-                  accentColor="blue"
                 />
               </div>
               <StockSearchInput
@@ -359,7 +365,6 @@ export function EditTransactionModal({
                 }}
                 label="종목"
                 placeholder="종목명 또는 종목코드 검색"
-                accentColor="blue"
               />
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">
@@ -373,9 +378,9 @@ export function EditTransactionModal({
                     onChange={(e) =>
                       setDividendAmountKRW(formatNumber(e.target.value))
                     }
+                    onFocus={handleInputFocus}
                     placeholder="0"
                     className="text-right pr-10"
-                    accentColor="blue"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
                     원
@@ -396,7 +401,6 @@ export function EditTransactionModal({
                   value={depositDate}
                   onChange={(date) => setDepositDate(date)}
                   placeholder="날짜 선택"
-                  accentColor="purple"
                 />
               </div>
               <div className="space-y-2">
@@ -409,11 +413,11 @@ export function EditTransactionModal({
                     setDepositType(val as "DEPOSIT" | "WITHDRAW")
                   }
                 >
-                  <SelectTrigger className="bg-muted/50 border-border text-foreground h-12 rounded-xl focus:ring-purple-500/30 focus:border-purple-500">
+                  <SelectTrigger className="bg-muted/50 border-border text-foreground h-12 focus:ring-purple-500/30 focus:border-purple-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent
-                    className="bg-popover border-none shadow-xl rounded-xl p-1 min-w-(--radix-select-trigger-width)"
+                    className="bg-popover border-none shadow-xl p-1 min-w-(--radix-select-trigger-width)"
                     position="popper"
                     sideOffset={4}
                   >
@@ -440,11 +444,11 @@ export function EditTransactionModal({
                   value={depositAccount}
                   onValueChange={setDepositAccount}
                 >
-                  <SelectTrigger className="bg-muted/50 border-border text-foreground h-12 rounded-xl focus:ring-purple-500/30 focus:border-purple-500">
+                  <SelectTrigger className="bg-muted/50 border-border text-foreground h-12 focus:ring-purple-500/30 focus:border-purple-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent
-                    className="bg-popover border-none shadow-xl rounded-xl p-1 max-h-[200px] min-w-(--radix-select-trigger-width)"
+                    className="bg-popover border-none shadow-xl p-1 max-h-[200px] min-w-(--radix-select-trigger-width)"
                     position="popper"
                     sideOffset={4}
                   >
@@ -472,9 +476,9 @@ export function EditTransactionModal({
                     onChange={(e) =>
                       setDepositAmount(formatNumber(e.target.value))
                     }
+                    onFocus={handleInputFocus}
                     placeholder="0"
                     className="text-right pr-10"
-                    accentColor="purple"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
                     원
@@ -489,8 +493,8 @@ export function EditTransactionModal({
                   type="text"
                   value={depositMemo}
                   onChange={(e) => setDepositMemo(e.target.value)}
+                  onFocus={handleInputFocus}
                   placeholder="예: 월급, 보너스"
-                  accentColor="purple"
                 />
               </div>
             </>

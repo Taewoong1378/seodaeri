@@ -42,15 +42,15 @@ export function TransactionsWrapper() {
   const [activeTab, setActiveTab] = useState<TabType>("balance");
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const { data, isLoading, error } = useTransactions();
-  const { data: accountBalances, isLoading: isBalanceLoading } =
+  const { data, isPending, error } = useTransactions();
+  const { data: accountBalances, isPending: isBalancePending } =
     useAccountBalances();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (isLoading || isBalanceLoading) {
+  if (isPending || isBalancePending) {
     return <TransactionsSkeleton />;
   }
 
@@ -79,6 +79,7 @@ export function TransactionsWrapper() {
         accountBalances={accountBalances || []}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        isStandalone={data?.isStandalone ?? false}
       />
 
       {/* Tab-specific modals with color-coded floating buttons */}

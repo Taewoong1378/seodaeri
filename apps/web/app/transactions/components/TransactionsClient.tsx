@@ -82,6 +82,7 @@ interface TransactionsClientProps {
   accountBalances: AccountBalanceRecord[];
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;
+  isStandalone?: boolean;
 }
 
 function formatCurrency(amount: number): string {
@@ -102,6 +103,7 @@ export function TransactionsClient({
   accountBalances,
   activeTab,
   onTabChange,
+  isStandalone = false,
 }: TransactionsClientProps) {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
@@ -741,7 +743,7 @@ export function TransactionsClient({
                           </div>
                         </div>
                       </div>
-                      {!tx.sheet_synced && (
+                      {!isStandalone && !tx.sheet_synced && (
                         <div className="mt-3 pt-3 border-t border-border flex justify-end">
                           <span className="text-[10px] font-medium text-amber-500 bg-amber-500/10 px-2 py-1 rounded-full">
                             시트 동기화 대기 중

@@ -20,7 +20,7 @@ export interface SaveHoldingResult {
 }
 
 /**
- * 종목 보유현황을 Google Sheet와 Supabase에 저장
+ * 종목 보유현황 저장 (Standalone 또는 Google Sheet)
  * 시트 구조: "3. 종목현황" - C열=국가(수식), D열=종목코드, E열=종목명, F열=수량, G열=평단가(원화), H열=평단가(달러)
  * D~H열만 수정 가능 (C열은 수식이므로 건드리지 않음)
  * Row 9부터 데이터 시작
@@ -33,11 +33,6 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
   if (!session?.user?.id) {
     console.log('[saveHolding] No session user id');
     return { success: false, error: '로그인이 필요합니다.' };
-  }
-
-  if (!session.accessToken) {
-    console.log('[saveHolding] No access token');
-    return { success: false, error: 'Google 인증이 필요합니다.' };
   }
 
   const supabase = createServiceClient();
@@ -62,12 +57,48 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
       }
     }
 
-    if (!user?.spreadsheet_id) {
-      console.log('[saveHolding] No spreadsheet_id');
-      return { success: false, error: '연동된 스프레드시트가 없습니다.' };
+    if (!user?.id) {
+      console.log('[saveHolding] No user found');
+      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' };
     }
 
     const dbUserId = user.id as string;
+
+    // Standalone 모드: DB에만 저장
+    if (!user.spreadsheet_id) {
+      console.log('[saveHolding] Standalone mode - saving to DB only');
+
+      const { error: dbError } = await supabase
+        .from('holdings')
+        .upsert(
+          {
+            user_id: dbUserId,
+            ticker: input.ticker,
+            name: input.name,
+            quantity: input.quantity,
+            avg_price: input.avgPrice,
+            currency: input.currency,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,ticker' }
+        );
+
+      if (dbError) {
+        console.error('[saveHolding] DB upsert error:', dbError);
+        return { success: false, error: '종목 저장에 실패했습니다.' };
+      }
+
+      console.log('[saveHolding] Standalone mode - Success!');
+      revalidatePath('/portfolio');
+      revalidatePath('/dashboard');
+      return { success: true };
+    }
+
+    // Sheet 모드: Google Sheet에도 저장
+    if (!session.accessToken) {
+      console.log('[saveHolding] No access token');
+      return { success: false, error: 'Google 인증이 필요합니다.' };
+    }
     console.log('[saveHolding] Using dbUserId:', dbUserId);
 
     // 기존 데이터를 읽어서 해당 종목이 이미 있는지 확인
@@ -173,7 +204,7 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
 }
 
 /**
- * 종목 삭제 (Google Sheet와 Supabase에서)
+ * 종목 삭제 (Standalone 또는 Google Sheet + Supabase)
  * D~H열만 비움 (C열은 수식이므로 건드리지 않음)
  */
 export async function deleteHolding(ticker: string): Promise<SaveHoldingResult> {
@@ -183,10 +214,6 @@ export async function deleteHolding(ticker: string): Promise<SaveHoldingResult> 
 
   if (!session?.user?.id) {
     return { success: false, error: '로그인이 필요합니다.' };
-  }
-
-  if (!session.accessToken) {
-    return { success: false, error: 'Google 인증이 필요합니다.' };
   }
 
   const supabase = createServiceClient();
@@ -210,11 +237,37 @@ export async function deleteHolding(ticker: string): Promise<SaveHoldingResult> 
       }
     }
 
-    if (!user?.spreadsheet_id) {
-      return { success: false, error: '연동된 스프레드시트가 없습니다.' };
+    if (!user?.id) {
+      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' };
     }
 
     const dbUserId = user.id as string;
+
+    // Standalone 모드: DB에서만 삭제
+    if (!user.spreadsheet_id) {
+      console.log('[deleteHolding] Standalone mode - deleting from DB only');
+
+      const { error: dbError } = await supabase
+        .from('holdings')
+        .delete()
+        .eq('user_id', dbUserId)
+        .eq('ticker', ticker);
+
+      if (dbError) {
+        console.error('[deleteHolding] DB delete error:', dbError);
+        return { success: false, error: '종목 삭제에 실패했습니다.' };
+      }
+
+      console.log('[deleteHolding] Standalone mode - Success!');
+      revalidatePath('/portfolio');
+      revalidatePath('/dashboard');
+      return { success: true };
+    }
+
+    // Sheet 모드: Google Sheet에서도 삭제
+    if (!session.accessToken) {
+      return { success: false, error: 'Google 인증이 필요합니다.' };
+    }
 
     // Google Sheet에서 해당 종목 찾아서 D~H열만 비우기
     const sheetName = '3. 종목현황';
@@ -286,7 +339,7 @@ export interface HoldingRecord {
 export async function getHoldings(): Promise<HoldingRecord[]> {
   const session = await auth();
 
-  if (!session?.user?.id || !session.accessToken) {
+  if (!session?.user?.id) {
     return [];
   }
 
@@ -295,14 +348,14 @@ export async function getHoldings(): Promise<HoldingRecord[]> {
   try {
     let { data: user } = await supabase
       .from('users')
-      .select('spreadsheet_id')
+      .select('id, spreadsheet_id')
       .eq('id', session.user.id)
       .single();
 
     if (!user && session.user.email) {
       const { data: userByEmail } = await supabase
         .from('users')
-        .select('spreadsheet_id')
+        .select('id, spreadsheet_id')
         .eq('email', session.user.email)
         .single();
 
@@ -311,7 +364,37 @@ export async function getHoldings(): Promise<HoldingRecord[]> {
       }
     }
 
-    if (!user?.spreadsheet_id) {
+    if (!user?.id) {
+      return [];
+    }
+
+    const dbUserId = user.id as string;
+
+    // Standalone 모드: DB에서 조회
+    if (!user.spreadsheet_id) {
+      console.log('[getHoldings] Standalone mode - fetching from DB');
+
+      const { data: holdings } = await supabase
+        .from('holdings')
+        .select('*')
+        .eq('user_id', dbUserId);
+
+      if (!holdings || holdings.length === 0) {
+        return [];
+      }
+
+      return holdings.map((h) => ({
+        ticker: h.ticker,
+        name: h.name || h.ticker,
+        country: h.currency === 'USD' ? '미국' : '한국',
+        quantity: h.quantity || 0,
+        avgPrice: h.avg_price || 0,
+        currency: (h.currency as 'KRW' | 'USD') || 'KRW',
+      }));
+    }
+
+    // Sheet 모드: Google Sheet에서 조회
+    if (!session.accessToken) {
       return [];
     }
 

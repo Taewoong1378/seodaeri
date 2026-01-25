@@ -8,13 +8,6 @@ import {
   DialogTitle,
 } from "@repo/design-system/components/dialog";
 import { Input } from "@repo/design-system/components/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/design-system/components/select";
 import { useQueryClient } from "@tanstack/react-query";
 import { Briefcase, Loader2, Trash2, X } from "lucide-react";
 import type { JSX } from "react";
@@ -38,6 +31,21 @@ interface HoldingInputModalProps {
   editData?: HoldingEditData;
 }
 
+// 미국 마켓 여부 판별
+function isUSMarket(market?: string): boolean {
+  if (!market) return false;
+  const usMarkets = ['NASDAQ', 'NYSE', 'AMEX'];
+  return usMarkets.includes(market.toUpperCase());
+}
+
+// 티커로 미국 종목 여부 추정 (수동 입력 시 사용)
+function isLikelyUSTicker(ticker: string): boolean {
+  // 미국 티커: 1-5글자 알파벳
+  // 한국 티커: 6자리 숫자
+  const cleaned = ticker.trim().toUpperCase();
+  return /^[A-Z]{1,5}$/.test(cleaned);
+}
+
 function formatNumber(value: string): string {
   const numbers = value.replace(/[^\d.]/g, "");
   const parts = numbers.split(".");
@@ -59,27 +67,32 @@ export function HoldingInputModal({
 }: HoldingInputModalProps): JSX.Element {
   const queryClient = useQueryClient();
 
-  const [country, setCountry] = useState<string>("한국");
   const [ticker, setTicker] = useState<string>("");
   const [name, setName] = useState<string>("");
+  const [market, setMarket] = useState<string | undefined>(undefined);
   const [quantity, setQuantity] = useState<string>("");
   const [avgPrice, setAvgPrice] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showManualInput, setShowManualInput] = useState(false);
 
   const isEditMode = !!editData;
-  const currency = country === "미국" ? "USD" : "KRW";
+
+  // 통화 결정: market 정보가 있으면 그걸로, 없으면 티커 패턴으로 추정
+  const isUS = market ? isUSMarket(market) : isLikelyUSTicker(ticker);
+  const currency = isUS ? "USD" : "KRW";
 
   // editData가 변경되면 폼 채우기
   useEffect(() => {
     if (editData && isOpen) {
-      setCountry(editData.country || "한국");
       setTicker(editData.ticker);
       setName(editData.name);
+      setMarket(undefined); // 수정 시에는 기존 국가 정보로 추정
       setQuantity(formatNumber(String(editData.quantity)));
       setAvgPrice(formatNumber(String(editData.avgPrice)));
       setError(null);
+      setShowManualInput(true); // 수정 모드에서는 수동 입력 표시
     }
   }, [editData, isOpen]);
 
@@ -101,19 +114,39 @@ export function HoldingInputModal({
     []
   );
 
+  const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }, []);
+
   const resetForm = useCallback(() => {
-    setCountry("한국");
     setTicker("");
     setName("");
+    setMarket(undefined);
     setQuantity("");
     setAvgPrice("");
     setError(null);
+    setShowManualInput(false);
   }, []);
 
   const handleClose = useCallback(() => {
     resetForm();
     onClose();
   }, [onClose, resetForm]);
+
+  const handleStockSelect = useCallback((code: string, selectedName: string, selectedMarket?: string) => {
+    setTicker(code);
+    setName(selectedName);
+    setMarket(selectedMarket);
+    setError(null);
+  }, []);
+
+  const handleStockClear = useCallback(() => {
+    setTicker("");
+    setName("");
+    setMarket(undefined);
+  }, []);
 
   const handleSubmit = useCallback(async () => {
     const tickerVal = ticker.trim().toUpperCase();
@@ -146,7 +179,7 @@ export function HoldingInputModal({
 
     try {
       const result = await saveHolding({
-        country,
+        country: isUS ? "미국" : "한국",
         ticker: tickerVal,
         name: nameVal,
         quantity: quantityNum,
@@ -156,8 +189,10 @@ export function HoldingInputModal({
 
       if (result.success) {
         // 캐시 무효화
-        queryClient.invalidateQueries({ queryKey: queryKeys.portfolio });
-        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: queryKeys.portfolio, refetchType: 'all' }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' }),
+        ]);
         handleClose();
         onSuccess?.();
       } else {
@@ -169,11 +204,11 @@ export function HoldingInputModal({
       setIsSubmitting(false);
     }
   }, [
-    country,
     ticker,
     name,
     quantity,
     avgPrice,
+    isUS,
     currency,
     queryClient,
     handleClose,
@@ -190,8 +225,10 @@ export function HoldingInputModal({
       const result = await deleteHolding(editData.ticker);
 
       if (result.success) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.portfolio });
-        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: queryKeys.portfolio, refetchType: 'all' }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' }),
+        ]);
         handleClose();
         onSuccess?.();
       } else {
@@ -240,67 +277,27 @@ export function HoldingInputModal({
 
         {/* Body */}
         <div className="p-5 space-y-4">
-          {/* 국가 선택 */}
-          <div className="space-y-2">
-            <label
-              htmlFor="country"
-              className="text-sm font-medium text-muted-foreground"
-            >
-              국가
-            </label>
-            <Select 
-              value={country} 
-              onValueChange={(value) => {
-                setCountry(value);
-                // 국가 변경 시 종목 정보 초기화 (수정 모드가 아닐 때만)
-                if (!isEditMode) {
-                  setTicker("");
-                  setName("");
-                }
-              }}
-            >
-              <SelectTrigger className="bg-muted/50 border-border text-foreground h-12 rounded-xl">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent 
-                className="bg-popover border-none shadow-xl rounded-xl p-1 min-w-(--radix-select-trigger-width)"
-                position="popper"
-                sideOffset={4}
-              >
-                <SelectItem 
-                  value="한국"
-                  className="rounded-lg focus:bg-emerald-50 focus:text-emerald-600 data-[state=checked]:bg-emerald-50 data-[state=checked]:text-emerald-600 data-[state=checked]:font-medium cursor-pointer py-2.5 px-3 mb-1"
-                >
-                  한국
-                </SelectItem>
-                <SelectItem 
-                  value="미국"
-                  className="rounded-lg focus:bg-blue-50 focus:text-blue-600 data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-600 data-[state=checked]:font-medium cursor-pointer py-2.5 px-3"
-                >
-                  미국
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* 종목 검색 또는 수동 입력 */}
+          {!isEditMode && !showManualInput ? (
+            <>
+              <StockSearchInput
+                selectedCode={ticker}
+                selectedName={name}
+                onSelect={handleStockSelect}
+                onClear={handleStockClear}
+                label="종목"
+                placeholder="종목명 또는 종목코드 검색"
+              />
 
-          {/* 한국 종목: 검색 / 미국 종목: 직접 입력 */}
-          {country === "한국" && !isEditMode ? (
-            <StockSearchInput
-              selectedCode={ticker}
-              selectedName={name}
-              onSelect={(code, selectedName) => {
-                setTicker(code);
-                setName(selectedName);
-                setError(null);
-              }}
-              onClear={() => {
-                setTicker("");
-                setName("");
-              }}
-              label="종목"
-              placeholder="종목명 또는 종목코드 검색"
-              accentColor="emerald"
-            />
+              {/* 직접 입력 버튼 */}
+              <button
+                type="button"
+                onClick={() => setShowManualInput(true)}
+                className="w-full text-sm text-muted-foreground hover:text-foreground py-2 transition-colors"
+              >
+                찾는 종목이 없나요? <span className="underline">직접 입력하기</span>
+              </button>
+            </>
           ) : (
             <>
               {/* 종목코드 */}
@@ -316,13 +313,11 @@ export function HoldingInputModal({
                   value={ticker}
                   onChange={(e) => {
                     setTicker(e.target.value.toUpperCase());
+                    setMarket(undefined); // 수동 입력 시 market 초기화
                     setError(null);
                   }}
-                  placeholder={
-                    country === "미국" ? "AAPL, NVDA, SPY..." : "005930, 360750..."
-                  }
+                  placeholder="AAPL, 005930, 360750..."
                   className="uppercase disabled:opacity-60"
-                  accentColor="emerald"
                   disabled={isEditMode}
                 />
                 {isEditMode && (
@@ -347,13 +342,34 @@ export function HoldingInputModal({
                     setName(e.target.value);
                     setError(null);
                   }}
-                  placeholder={
-                    country === "미국" ? "Apple Inc." : "TIGER 미국S&P500"
-                  }
-                  accentColor="emerald"
+                  placeholder="Apple Inc., 삼성전자..."
                 />
               </div>
+
+              {/* 검색으로 돌아가기 버튼 (신규 입력 시만) */}
+              {!isEditMode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowManualInput(false);
+                    handleStockClear();
+                  }}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground py-2 transition-colors"
+                >
+                  <span className="underline">종목 검색으로 돌아가기</span>
+                </button>
+              )}
             </>
+          )}
+
+          {/* 통화 표시 (선택된 종목이 있을 때) */}
+          {ticker && (
+            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+              <span className="text-sm text-muted-foreground">통화:</span>
+              <span className={`text-sm font-medium ${isUS ? 'text-blue-600' : 'text-emerald-600'}`}>
+                {isUS ? '미국 (USD)' : '한국 (KRW)'}
+              </span>
+            </div>
           )}
 
           {/* 수량 & 평단가 */}
@@ -370,9 +386,9 @@ export function HoldingInputModal({
                 inputMode="numeric"
                 value={quantity}
                 onChange={handleQuantityChange}
+                onFocus={handleInputFocus}
                 placeholder="0"
                 className="text-right"
-                accentColor="emerald"
               />
             </div>
             <div className="space-y-2">
@@ -387,9 +403,9 @@ export function HoldingInputModal({
                 inputMode="decimal"
                 value={avgPrice}
                 onChange={handleAvgPriceChange}
+                onFocus={handleInputFocus}
                 placeholder="0"
                 className="text-right"
-                accentColor="emerald"
               />
             </div>
           </div>

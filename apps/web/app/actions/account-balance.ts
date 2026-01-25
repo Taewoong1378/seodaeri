@@ -32,11 +32,6 @@ export async function saveAccountBalance(
     return { success: false, error: "로그인이 필요합니다." };
   }
 
-  if (!session.accessToken) {
-    console.log("[saveAccountBalance] No access token");
-    return { success: false, error: "Google 인증이 필요합니다." };
-  }
-
   const supabase = createServiceClient();
 
   try {
@@ -65,13 +60,47 @@ export async function saveAccountBalance(
       }
     }
 
-    if (!user?.spreadsheet_id) {
-      console.log("[saveAccountBalance] No spreadsheet_id");
-      return { success: false, error: "연동된 스프레드시트가 없습니다." };
+    if (!user?.id) {
+      console.log("[saveAccountBalance] No user found");
+      return { success: false, error: "사용자 정보를 찾을 수 없습니다." };
     }
 
     // 실제 DB user ID 사용 (session.user.id와 다를 수 있음)
     const dbUserId = user.id as string;
+
+    // Standalone 모드: DB에만 저장
+    if (!user.spreadsheet_id) {
+      console.log("[saveAccountBalance] Standalone mode - saving to DB only");
+
+      const { error: dbError } = await (supabase as any)
+        .from("account_balances")
+        .upsert(
+          {
+            user_id: dbUserId,
+            year_month: input.yearMonth,
+            balance: input.balance,
+            sheet_synced: false,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,year_month" }
+        );
+
+      if (dbError) {
+        console.error("[saveAccountBalance] DB error:", dbError);
+        return { success: false, error: "계좌총액 저장에 실패했습니다." };
+      }
+
+      console.log("[saveAccountBalance] Standalone mode - Success!");
+      revalidatePath("/dashboard");
+      revalidatePath("/transactions");
+      return { success: true };
+    }
+
+    // Sheet 모드: Google Sheet에도 저장
+    if (!session.accessToken) {
+      console.log("[saveAccountBalance] No access token");
+      return { success: false, error: "Google 인증이 필요합니다." };
+    }
     console.log("[saveAccountBalance] Using dbUserId:", dbUserId);
 
     // 날짜 파싱 (YYYY-MM)
@@ -256,11 +285,6 @@ export async function deleteAccountBalance(
     return { success: false, error: "로그인이 필요합니다." };
   }
 
-  if (!session.accessToken) {
-    console.log("[deleteAccountBalance] No access token");
-    return { success: false, error: "Google 인증이 필요합니다." };
-  }
-
   const supabase = createServiceClient();
 
   try {
@@ -283,9 +307,38 @@ export async function deleteAccountBalance(
       }
     }
 
-    if (!user?.spreadsheet_id) {
-      console.log("[deleteAccountBalance] No spreadsheet_id");
-      return { success: false, error: "연동된 스프레드시트가 없습니다." };
+    if (!user?.id) {
+      console.log("[deleteAccountBalance] No user found");
+      return { success: false, error: "사용자 정보를 찾을 수 없습니다." };
+    }
+
+    const userId = user.id as string;
+
+    // Standalone 모드: DB에서만 삭제
+    if (!user.spreadsheet_id) {
+      console.log("[deleteAccountBalance] Standalone mode - deleting from DB only");
+
+      const { error: dbError } = await (supabase as any)
+        .from("account_balances")
+        .delete()
+        .eq("user_id", userId)
+        .eq("year_month", input.yearMonth);
+
+      if (dbError) {
+        console.error("[deleteAccountBalance] DB error:", dbError);
+        return { success: false, error: "계좌총액 삭제에 실패했습니다." };
+      }
+
+      console.log("[deleteAccountBalance] Standalone mode - Success!");
+      revalidatePath("/dashboard");
+      revalidatePath("/transactions");
+      return { success: true };
+    }
+
+    // Sheet 모드: Google Sheet에서도 삭제
+    if (!session.accessToken) {
+      console.log("[deleteAccountBalance] No access token");
+      return { success: false, error: "Google 인증이 필요합니다." };
     }
 
     console.log(
@@ -370,7 +423,6 @@ export async function deleteAccountBalance(
 
     // Supabase에서도 삭제
     // Note: account_balances 테이블은 새로 생성된 테이블이므로 타입 재생성 전까지 any 사용
-    const userId = user.id as string;
     const { error: dbError } = await (supabase as any)
       .from("account_balances")
       .delete()
@@ -408,10 +460,6 @@ export async function updateAccountBalance(
     return { success: false, error: "로그인이 필요합니다." };
   }
 
-  if (!session.accessToken) {
-    return { success: false, error: "Google 인증이 필요합니다." };
-  }
-
   const supabase = createServiceClient();
 
   try {
@@ -434,11 +482,68 @@ export async function updateAccountBalance(
       }
     }
 
-    if (!user?.spreadsheet_id) {
-      return { success: false, error: "연동된 스프레드시트가 없습니다." };
+    if (!user?.id) {
+      return { success: false, error: "사용자 정보를 찾을 수 없습니다." };
     }
 
     const userId = user.id as string;
+
+    // Standalone 모드: DB에서만 수정
+    if (!user.spreadsheet_id) {
+      console.log("[updateAccountBalance] Standalone mode - updating DB only");
+
+      if (input.originalYearMonth !== input.newYearMonth) {
+        // 연월이 바뀌면 기존 삭제 후 새로 생성
+        await (supabase as any)
+          .from("account_balances")
+          .delete()
+          .eq("user_id", userId)
+          .eq("year_month", input.originalYearMonth);
+
+        const { error: insertError } = await (supabase as any)
+          .from("account_balances")
+          .upsert(
+            {
+              user_id: userId,
+              year_month: input.newYearMonth,
+              balance: input.newBalance,
+              sheet_synced: false,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id,year_month" }
+          );
+
+        if (insertError) {
+          console.error("[updateAccountBalance] DB error:", insertError);
+          return { success: false, error: "계좌총액 수정에 실패했습니다." };
+        }
+      } else {
+        // 금액만 바뀌면 업데이트
+        const { error: updateError } = await (supabase as any)
+          .from("account_balances")
+          .update({
+            balance: input.newBalance,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", userId)
+          .eq("year_month", input.originalYearMonth);
+
+        if (updateError) {
+          console.error("[updateAccountBalance] DB error:", updateError);
+          return { success: false, error: "계좌총액 수정에 실패했습니다." };
+        }
+      }
+
+      console.log("[updateAccountBalance] Standalone mode - Success!");
+      revalidatePath("/dashboard");
+      revalidatePath("/transactions");
+      return { success: true };
+    }
+
+    // Sheet 모드: Google Sheet에서도 수정
+    if (!session.accessToken) {
+      return { success: false, error: "Google 인증이 필요합니다." };
+    }
 
     // Google Sheet에서 해당 행 찾아서 수정
     const sheetName = "5. 계좌내역(누적)";
@@ -621,23 +726,20 @@ export async function getAccountBalances(): Promise<AccountBalanceRecord[]> {
     return demoBalances;
   }
 
-  if (!session.accessToken) {
-    return [];
-  }
-
   const supabase = createServiceClient();
 
   try {
+    // 사용자 정보 조회 (ID와 spreadsheet_id)
     let { data: user } = await supabase
       .from("users")
-      .select("spreadsheet_id")
+      .select("id, spreadsheet_id")
       .eq("id", session.user.id)
       .single();
 
     if (!user && session.user.email) {
       const { data: userByEmail } = await supabase
         .from("users")
-        .select("spreadsheet_id")
+        .select("id, spreadsheet_id")
         .eq("email", session.user.email)
         .single();
 
@@ -646,7 +748,43 @@ export async function getAccountBalances(): Promise<AccountBalanceRecord[]> {
       }
     }
 
-    if (!user?.spreadsheet_id) {
+    if (!user?.id) {
+      return [];
+    }
+
+    // Standalone 모드: DB에서 조회
+    if (!user.spreadsheet_id) {
+      console.log("[getAccountBalances] Standalone mode - reading from DB");
+      const { data: dbBalances, error } = await (supabase as any)
+        .from("account_balances")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("year_month", { ascending: false });
+
+      if (error) {
+        console.error("[getAccountBalances] DB error:", error);
+        return [];
+      }
+
+      const results: AccountBalanceRecord[] = (dbBalances || []).map((row: any) => {
+        const [yearStr, monthStr] = (row.year_month || "").split("-");
+        const year = Number.parseInt(yearStr || "0", 10);
+        const month = Number.parseInt(monthStr || "0", 10);
+        return {
+          id: row.year_month,
+          yearMonth: row.year_month,
+          year,
+          month,
+          balance: Math.round(row.balance || 0),
+          displayDate: `${year}년 ${month}월`,
+        };
+      });
+
+      return results;
+    }
+
+    // Sheet 모드: accessToken 필요
+    if (!session.accessToken) {
       return [];
     }
 

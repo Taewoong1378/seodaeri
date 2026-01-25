@@ -20,7 +20,7 @@ export function useStockSearch(options: UseStockSearchOptions = {}) {
   const [showResults, setShowResults] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockSearchResult | null>(null);
 
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // API 호출 (최소 2글자 이상)
   const searchStocks = useCallback(async (searchQuery: string) => {

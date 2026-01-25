@@ -1,5 +1,108 @@
 import { google } from 'googleapis';
 
+// 서대리 투자기록시트 필수 탭 목록
+const REQUIRED_SHEET_TABS = [
+  '1. 계좌현황(누적)',
+  '3. 종목현황',
+  '5. 계좌내역(누적)',
+  '6. 입금내역',
+  '7. 배당내역',
+];
+
+export interface SheetValidationResult {
+  valid: boolean;
+  missingTabs: string[];
+  foundTabs: string[];
+  error?: string;
+}
+
+/**
+ * 스프레드시트가 서대리 투자기록 시트 형식인지 검증
+ */
+export async function validateSheetFormat(
+  accessToken: string,
+  spreadsheetId: string
+): Promise<SheetValidationResult> {
+  console.log('[validateSheetFormat] Validating spreadsheet:', spreadsheetId);
+
+  const auth = new google.auth.OAuth2();
+  auth.setCredentials({ access_token: accessToken });
+
+  const sheets = google.sheets({ version: 'v4', auth });
+
+  try {
+    // 스프레드시트의 모든 시트 목록 가져오기
+    const spreadsheet = await sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: 'sheets(properties(title))',
+    });
+
+    const sheetTitles = spreadsheet.data.sheets?.map((s) => s.properties?.title || '') || [];
+    console.log('[validateSheetFormat] Found tabs:', sheetTitles);
+
+    // 시트 이름에서 공백/특수문자 제거하여 비교
+    const normalizeSheetName = (name: string) =>
+      name.replace(/[\s\u00A0\u3000\u200B\uFEFF]/g, '').toLowerCase();
+
+    const foundTabs: string[] = [];
+    const missingTabs: string[] = [];
+
+    for (const requiredTab of REQUIRED_SHEET_TABS) {
+      const normalizedRequired = normalizeSheetName(requiredTab);
+      const found = sheetTitles.some(
+        (title) => normalizeSheetName(title) === normalizedRequired
+      );
+
+      if (found) {
+        foundTabs.push(requiredTab);
+      } else {
+        missingTabs.push(requiredTab);
+      }
+    }
+
+    const valid = missingTabs.length === 0;
+    console.log('[validateSheetFormat] Result:', { valid, foundTabs, missingTabs });
+
+    return {
+      valid,
+      foundTabs,
+      missingTabs,
+    };
+  } catch (error: any) {
+    console.error('[validateSheetFormat] Error:', {
+      code: error?.code,
+      message: error?.message,
+    });
+
+    // 권한 에러
+    if (error?.code === 403) {
+      return {
+        valid: false,
+        foundTabs: [],
+        missingTabs: REQUIRED_SHEET_TABS,
+        error: '스프레드시트에 접근할 권한이 없습니다.',
+      };
+    }
+
+    // 시트를 찾을 수 없음
+    if (error?.code === 404) {
+      return {
+        valid: false,
+        foundTabs: [],
+        missingTabs: REQUIRED_SHEET_TABS,
+        error: '스프레드시트를 찾을 수 없습니다.',
+      };
+    }
+
+    return {
+      valid: false,
+      foundTabs: [],
+      missingTabs: REQUIRED_SHEET_TABS,
+      error: error?.message || '시트 검증 중 오류가 발생했습니다.',
+    };
+  }
+}
+
 // 서대리 마스터 템플릿 ID (서버/클라이언트 환경변수 모두 지원)
 const MASTER_TEMPLATE_ID = process.env.SEODAERI_TEMPLATE_SHEET_ID
   || process.env.NEXT_PUBLIC_SEODAERI_TEMPLATE_SHEET_ID
@@ -2002,10 +2105,11 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
   const COL_ACCOUNT = 8;          // O열 - 계좌종합 지수 (100 기준)
   const COL_KOSPI_PRICE = 13;     // T열 - 코스피 가격 (YieldComparisonChart와 동일하게 올해 수익률용)
   const COL_KOSPI_IDX = 9;        // P열 - 코스피 지수 (100 기준, 연평균용)
-  const COL_SP500_DOLLAR = 28;    // AI열 - S&P500 달러환율 적용 지수
-  const COL_NASDAQ_DOLLAR = 29;   // AJ열 - NASDAQ 달러환율 적용 지수
   const COL_DOLLAR_THIS_YEAR = 23; // AD열 - 달러 환율값 (올해 수익률 계산용)
-  const COL_DOLLAR_ANNUAL = 27;   // AH열 - DOLLAR 지수 (연평균 계산용)
+  // 100 기준 지수 컬럼 (연평균 수익률 계산용)
+  const COL_DOLLAR_IDX = 33;      // AN열 - 달러환율 지수 (100 기준)
+  const COL_SP500_DOLLAR_IDX = 34; // AO열 - S&P500 달러환율 지수 (100 기준)
+  const COL_NASDAQ_DOLLAR_IDX = 35; // AP열 - 나스닥 달러환율 지수 (100 기준)
 
   // 환율 값 파싱 (₩1,467 → 1467)
   const parseExchangeRate = (val: any): number => {
@@ -2023,59 +2127,7 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
     return Number.isNaN(num) ? 0 : num;
   };
 
-  // 올해 수익률용 데이터
-  const currentAccountIdx = parsePercent(currentRow[COL_ACCOUNT]); // O열: 계좌 지수
-  const currentKospiPrice = parseNumber(currentRow[COL_KOSPI_PRICE]); // T열: 코스피 가격 (올해 수익률용)
-  const currentSp500Idx = parsePercent(currentRow[COL_SP500_DOLLAR]); // AI열: S&P500 달러환율 적용 지수
-  const currentNasdaqIdx = parsePercent(currentRow[COL_NASDAQ_DOLLAR]); // AJ열: NASDAQ 달러환율 적용 지수
-  // 달러 환율값 (올해 수익률 계산용) - AD열
-  const currentDollarExchangeRate = parseExchangeRate(currentRow[COL_DOLLAR_THIS_YEAR]);
-
-  // 연평균 수익률용 데이터
-  const currentKospiIdx = parsePercent(currentRow[COL_KOSPI_IDX]); // P열: 코스피 지수
-  const currentDollarIdx = parsePercent(currentRow[COL_DOLLAR_ANNUAL]); // AH열: DOLLAR 지수
-
-  let prevAccountIdx = 100;
-  let prevKospiPrice = 1;
-  let prevKospiIdx = 100;
-  let prevSp500Idx = 100;
-  let prevNasdaqIdx = 100;
-  let prevDollarExchangeRate = 0;
-  let prevDollarIdx = 100;
-
-  if (prevYearDecRow) {
-    prevAccountIdx = parsePercent(prevYearDecRow[COL_ACCOUNT]) || 100;
-    prevKospiPrice = parseNumber(prevYearDecRow[COL_KOSPI_PRICE]) || 1;
-    prevKospiIdx = parsePercent(prevYearDecRow[COL_KOSPI_IDX]) || 100;
-    prevSp500Idx = parsePercent(prevYearDecRow[COL_SP500_DOLLAR]) || 100;
-    prevNasdaqIdx = parsePercent(prevYearDecRow[COL_NASDAQ_DOLLAR]) || 100;
-    prevDollarExchangeRate = parseExchangeRate(prevYearDecRow[COL_DOLLAR_THIS_YEAR]);
-    prevDollarIdx = parsePercent(prevYearDecRow[COL_DOLLAR_ANNUAL]) || 100;
-  }
-
-  console.log('[parseYieldComparisonDollarData] Current - Account:', currentAccountIdx, 'KospiPrice:', currentKospiPrice, 'S&P500:', currentSp500Idx, 'NASDAQ:', currentNasdaqIdx);
-  console.log('[parseYieldComparisonDollarData] Prev - Account:', prevAccountIdx, 'KospiPrice:', prevKospiPrice, 'S&P500:', prevSp500Idx, 'NASDAQ:', prevNasdaqIdx);
-  console.log('[parseYieldComparisonDollarData] Dollar exchange rates:', { current: currentDollarExchangeRate, prev: prevDollarExchangeRate });
-
-  // 올해 수익률 계산 (작년말 대비 증감률)
-  // KOSPI는 T열 가격 기준 (YieldComparisonChart와 동일)
-  const thisYearYield = {
-    account: prevAccountIdx > 0 ? ((currentAccountIdx / prevAccountIdx) - 1) * 100 : 0,
-    kospi: prevKospiPrice > 0 ? ((currentKospiPrice / prevKospiPrice) - 1) * 100 : 0,
-    sp500: prevSp500Idx > 0 ? ((currentSp500Idx / prevSp500Idx) - 1) * 100 : 0,
-    nasdaq: prevNasdaqIdx > 0 ? ((currentNasdaqIdx / prevNasdaqIdx) - 1) * 100 : 0,
-    // 달러 올해 수익률: 환율 변동률 (AD열 사용)
-    dollar: prevDollarExchangeRate > 0 ? ((currentDollarExchangeRate / prevDollarExchangeRate) - 1) * 100 : 0,
-  };
-
-  // 누적 수익률 (100 기준 대비) - 연평균 계산용
-  const cumulativeYield = currentAccountIdx - 100;
-  const cumulativeKospi = currentKospiIdx - 100; // P열 지수 기준
-  const cumulativeSp500 = currentSp500Idx - 100;
-  const cumulativeNasdaq = currentNasdaqIdx - 100;
-  const cumulativeDollar = currentDollarIdx - 100;
-
-  // 투자 기간 계산
+  // 첫 번째 데이터 행 찾기 (투자 기간 계산용)
   let firstDate: string | null = null;
   for (const row of rows) {
     if (!row || !Array.isArray(row)) continue;
@@ -2085,6 +2137,60 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
       break;
     }
   }
+
+  // 올해 수익률용 데이터
+  const currentAccountIdx = parsePercent(currentRow[COL_ACCOUNT]); // O열: 계좌 지수 (100 기준)
+  const currentKospiPrice = parseNumber(currentRow[COL_KOSPI_PRICE]); // T열: 코스피 가격 (올해 수익률용)
+  // 달러 환율값 (올해 수익률 계산용) - AD열
+  const currentDollarExchangeRate = parseExchangeRate(currentRow[COL_DOLLAR_THIS_YEAR]);
+
+  // 연평균 수익률용 데이터 (100 기준 지수 컬럼)
+  const currentKospiIdx = parsePercent(currentRow[COL_KOSPI_IDX]); // P열: 코스피 지수 (100 기준)
+  const currentDollarIdx = parsePercent(currentRow[COL_DOLLAR_IDX]); // AN열: 달러환율 지수 (100 기준)
+  const currentSp500DollarIdx = parsePercent(currentRow[COL_SP500_DOLLAR_IDX]); // AO열: S&P500 달러환율 지수 (100 기준)
+  const currentNasdaqDollarIdx = parsePercent(currentRow[COL_NASDAQ_DOLLAR_IDX]); // AP열: 나스닥 달러환율 지수 (100 기준)
+
+  let prevAccountIdx = 100;
+  let prevKospiPrice = 1;
+  let prevDollarExchangeRate = 0;
+  let prevDollarIdx = 100;
+  let prevSp500DollarIdx = 100;
+  let prevNasdaqDollarIdx = 100;
+
+  if (prevYearDecRow) {
+    prevAccountIdx = parsePercent(prevYearDecRow[COL_ACCOUNT]) || 100;
+    prevKospiPrice = parseNumber(prevYearDecRow[COL_KOSPI_PRICE]) || 1;
+    prevDollarExchangeRate = parseExchangeRate(prevYearDecRow[COL_DOLLAR_THIS_YEAR]);
+    prevDollarIdx = parsePercent(prevYearDecRow[COL_DOLLAR_IDX]) || 100;
+    prevSp500DollarIdx = parsePercent(prevYearDecRow[COL_SP500_DOLLAR_IDX]) || 100;
+    prevNasdaqDollarIdx = parsePercent(prevYearDecRow[COL_NASDAQ_DOLLAR_IDX]) || 100;
+  }
+
+  console.log('[parseYieldComparisonDollarData] First date:', firstDate);
+  console.log('[parseYieldComparisonDollarData] Current - Account:', currentAccountIdx, 'KospiPrice:', currentKospiPrice);
+  console.log('[parseYieldComparisonDollarData] Current 100-base indices - Dollar:', currentDollarIdx, 'S&P500:', currentSp500DollarIdx, 'NASDAQ:', currentNasdaqDollarIdx);
+  console.log('[parseYieldComparisonDollarData] Prev (Dec) - Account:', prevAccountIdx, 'KospiPrice:', prevKospiPrice);
+  console.log('[parseYieldComparisonDollarData] Prev 100-base indices - Dollar:', prevDollarIdx, 'S&P500:', prevSp500DollarIdx, 'NASDAQ:', prevNasdaqDollarIdx);
+
+  // 올해 수익률 계산 (작년말 대비 증감률)
+  // 모든 값은 100 기준 지수 사용
+  const thisYearYield = {
+    account: prevAccountIdx > 0 ? ((currentAccountIdx / prevAccountIdx) - 1) * 100 : 0,
+    kospi: prevKospiPrice > 0 ? ((currentKospiPrice / prevKospiPrice) - 1) * 100 : 0,
+    sp500: prevSp500DollarIdx > 0 ? ((currentSp500DollarIdx / prevSp500DollarIdx) - 1) * 100 : 0,
+    nasdaq: prevNasdaqDollarIdx > 0 ? ((currentNasdaqDollarIdx / prevNasdaqDollarIdx) - 1) * 100 : 0,
+    // 달러 올해 수익률: 100 기준 지수 사용
+    dollar: prevDollarIdx > 0 ? ((currentDollarIdx / prevDollarIdx) - 1) * 100 : 0,
+  };
+
+  // 누적 수익률 계산 (모두 100 기준 지수이므로 -100)
+  const cumulativeYield = currentAccountIdx - 100;
+  const cumulativeKospi = currentKospiIdx - 100;
+  const cumulativeSp500 = currentSp500DollarIdx - 100;
+  const cumulativeNasdaq = currentNasdaqDollarIdx - 100;
+  const cumulativeDollar = currentDollarIdx - 100;
+
+  console.log('[parseYieldComparisonDollarData] Cumulative - Account:', cumulativeYield, 'Kospi:', cumulativeKospi, 'S&P500:', cumulativeSp500, 'NASDAQ:', cumulativeNasdaq, 'Dollar:', cumulativeDollar);
 
   let years = 1;
   if (firstDate) {

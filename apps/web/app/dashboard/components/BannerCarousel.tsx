@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import Autoplay from 'embla-carousel-autoplay';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -37,8 +37,8 @@ export function BannerCarousel(): ReactElement | null {
   useEffect(() => {
     if (!emblaApi) return;
     onSelect();
-    emblaApi.on('select', onSelect);
-    emblaApi.on('reInit', onSelect);
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
   }, [emblaApi, onSelect]);
 
   const scrollTo = useCallback(
@@ -51,10 +51,7 @@ export function BannerCarousel(): ReactElement | null {
       <div className="overflow-hidden" ref={emblaRef}>
         <div className="flex">
           {BANNERS.map((banner) => (
-            <div
-              key={banner.id}
-              className="flex-[0_0_100%] min-w-0 relative"
-            >
+            <div key={banner.id} className="flex-[0_0_100%] min-w-0 relative">
               <div
                 className={`w-full min-h-[12rem] h-auto sm:h-56 bg-gradient-to-br ${banner.bgGradient} p-6 sm:p-8 flex flex-col justify-center relative overflow-hidden`}
               >
@@ -67,12 +64,14 @@ export function BannerCarousel(): ReactElement | null {
                     className="object-cover opacity-60 mix-blend-overlay"
                     priority={banner.id === 1}
                   />
-                  <div className={`absolute inset-0 bg-gradient-to-br ${banner.bgGradient} opacity-90 mix-blend-multiply`} />
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-br ${banner.bgGradient} opacity-90 mix-blend-multiply`}
+                  />
                 </div>
 
                 {/* Background Pattern */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl z-0" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full translate-y-1/3 -translate-x-1/4 blur-2xl z-0" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-background/10 rounded-full translate-y-1/3 -translate-x-1/4 blur-2xl z-0" />
 
                 <div className="relative z-10 flex flex-col sm:flex-row items-start justify-between gap-4 h-full sm:h-auto">
                   <div className="space-y-2 max-w-full sm:max-w-[70%]">
@@ -132,8 +131,8 @@ export function BannerCarousel(): ReactElement | null {
             type="button"
             className={`w-2 h-2 rounded-full transition-all duration-300 ${
               index === selectedIndex
-                ? 'w-6 bg-white'
-                : 'bg-white/40 hover:bg-white/60'
+                ? "w-6 bg-white"
+                : "bg-white/40 hover:bg-white/60"
             }`}
             onClick={() => scrollTo(index)}
             aria-label={`Go to slide ${index + 1}`}

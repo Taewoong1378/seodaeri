@@ -3,7 +3,104 @@
 import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
 import { revalidatePath } from 'next/cache';
-import { copyMasterTemplate, findSeodaeriSheet } from '../../lib/google-sheets';
+import { copyMasterTemplate, findSeodaeriSheet, validateSheetFormat, type SheetValidationResult } from '../../lib/google-sheets';
+
+// Re-export for client usage
+export type { SheetValidationResult };
+
+/**
+ * 스프레드시트가 서대리 투자기록 시트 형식인지 검증
+ */
+export async function validateSheet(sheetId: string): Promise<SheetValidationResult> {
+  const session = await auth();
+  if (!session?.accessToken) {
+    return {
+      valid: false,
+      foundTabs: [],
+      missingTabs: [],
+      error: '로그인이 필요합니다.',
+    };
+  }
+
+  try {
+    return await validateSheetFormat(session.accessToken, sheetId);
+  } catch (error: any) {
+    console.error('[validateSheet] Error:', error);
+    return {
+      valid: false,
+      foundTabs: [],
+      missingTabs: [],
+      error: error?.message || '시트 검증 중 오류가 발생했습니다.',
+    };
+  }
+}
+
+/**
+ * 스프레드시트 없이 바로 시작하기
+ * DB만 사용하는 Standalone 모드로 시작
+ */
+export async function startWithoutSheet(): Promise<OnboardingResult> {
+  const session = await auth();
+  if (!session?.user?.id || !session?.user?.email) {
+    return { success: false, error: '로그인이 필요합니다.' };
+  }
+
+  try {
+    const supabase = createServiceClient();
+
+    // 이메일로 기존 사용자 확인
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id, spreadsheet_id')
+      .eq('email', session.user.email)
+      .single();
+
+    if (existingUser) {
+      // 기존 사용자가 있으면 spreadsheet_id를 null로 업데이트 (standalone 모드)
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          name: session.user.name,
+          image: session.user.image,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existingUser.id);
+
+      if (updateError) {
+        console.error('Failed to update user:', updateError);
+        return { success: false, error: '사용자 정보 업데이트에 실패했습니다.' };
+      }
+    } else {
+      // 새 사용자 생성 (spreadsheet_id = null → standalone 모드)
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.name,
+          image: session.user.image,
+          spreadsheet_id: null, // Standalone 모드!
+          updated_at: new Date().toISOString(),
+        });
+
+      if (insertError) {
+        console.error('Failed to insert user:', insertError);
+        return { success: false, error: '사용자 생성에 실패했습니다.' };
+      }
+    }
+
+    revalidatePath('/dashboard');
+    revalidatePath('/onboarding');
+
+    return {
+      success: true,
+      isNewSheet: false,
+    };
+  } catch (error) {
+    console.error('startWithoutSheet error:', error);
+    return { success: false, error: '시작 중 오류가 발생했습니다.' };
+  }
+}
 
 export interface OnboardingResult {
   success: boolean;
@@ -17,13 +114,18 @@ export interface OnboardingResult {
  * 사용자의 시트 연동 상태 확인
  * ID로 먼저 조회하고, 실패하면 이메일로 fallback 조회
  */
-export async function checkSheetConnection(): Promise<{ connected: boolean; sheetId?: string }> {
+export async function checkSheetConnection(): Promise<{
+  connected: boolean;
+  sheetId?: string;
+  userExists: boolean;
+  isStandalone: boolean;
+}> {
   const session = await auth();
   console.log('[checkSheetConnection] session.user.id:', session?.user?.id);
 
   if (!session?.user?.id) {
     console.log('[checkSheetConnection] No session user ID');
-    return { connected: false };
+    return { connected: false, userExists: false, isStandalone: false };
   }
 
   const supabase = createServiceClient();
@@ -53,9 +155,69 @@ export async function checkSheetConnection(): Promise<{ connected: boolean; shee
     }
   }
 
+  const userExists = !!user;
+  const hasSpreadsheet = !!user?.spreadsheet_id;
+
   return {
-    connected: !!user?.spreadsheet_id,
+    connected: hasSpreadsheet,
     sheetId: user?.spreadsheet_id || undefined,
+    userExists,
+    isStandalone: userExists && !hasSpreadsheet,
+  };
+}
+
+/**
+ * Standalone 모드에서 입력한 데이터가 있는지 확인
+ * 시트 연동 전 경고 메시지 표시용
+ */
+export interface StandaloneDataInfo {
+  hasData: boolean;
+  holdingsCount: number;
+  dividendsCount: number;
+  depositsCount: number;
+}
+
+export async function checkStandaloneData(): Promise<StandaloneDataInfo> {
+  const session = await auth();
+
+  if (!session?.user?.id && !session?.user?.email) {
+    return { hasData: false, holdingsCount: 0, dividendsCount: 0, depositsCount: 0 };
+  }
+
+  const supabase = createServiceClient();
+
+  // 사용자 ID 조회 (이메일 fallback)
+  let userId: string | undefined = session.user.id;
+
+  if (!userId && session.user.email) {
+    const { data: user } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', session.user.email)
+      .single();
+    userId = user?.id ?? undefined;
+  }
+
+  if (!userId) {
+    return { hasData: false, holdingsCount: 0, dividendsCount: 0, depositsCount: 0 };
+  }
+
+  // 각 테이블의 데이터 개수 조회
+  const [holdingsResult, dividendsResult, depositsResult] = await Promise.all([
+    supabase.from('holdings').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase.from('dividends').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase.from('deposits').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+  ]);
+
+  const holdingsCount = holdingsResult.count || 0;
+  const dividendsCount = dividendsResult.count || 0;
+  const depositsCount = depositsResult.count || 0;
+
+  return {
+    hasData: holdingsCount > 0 || dividendsCount > 0 || depositsCount > 0,
+    holdingsCount,
+    dividendsCount,
+    depositsCount,
   };
 }
 

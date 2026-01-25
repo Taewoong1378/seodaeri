@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from '@repo/design-system/components/card';
 import { cn } from '@repo/design-system/lib/utils';
-import { BarChart3, List, Pencil, Plus, TrendingDown, TrendingUp } from 'lucide-react';
+import { BarChart3, List, Pencil, PieChart, Plus, TrendingDown, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 import { HoldingInputModal, type HoldingEditData } from './HoldingInputModal';
 import { PortfolioTreemap } from './PortfolioTreemap';
@@ -22,6 +22,7 @@ interface PortfolioItem {
 
 interface PortfolioClientProps {
   portfolio: PortfolioItem[];
+  isStandalone?: boolean;
 }
 
 function formatCurrency(amount: number, compact = false): string {
@@ -39,7 +40,7 @@ function formatPercent(value: number): string {
   return `${prefix}${value.toFixed(2)}%`;
 }
 
-export function PortfolioClient({ portfolio }: PortfolioClientProps) {
+export function PortfolioClient({ portfolio, isStandalone = false }: PortfolioClientProps) {
   const [view, setView] = useState<'list' | 'chart'>('list');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editData, setEditData] = useState<HoldingEditData | undefined>(undefined);
@@ -124,7 +125,23 @@ export function PortfolioClient({ portfolio }: PortfolioClientProps) {
 
       {/* Content */}
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {view === 'chart' ? (
+        {portfolio.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <PieChart className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-medium text-foreground mb-2">
+              보유 종목이 없습니다
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-[280px] mb-6">
+              {isStandalone ? (
+                <>위의 '종목 추가' 버튼을 눌러<br />보유 종목을 추가해보세요.</>
+              ) : (
+                <>시트의 '3. 종목현황' 탭에 데이터를 입력하거나<br />위의 버튼을 눌러 종목을 추가해보세요.</>
+              )}
+            </p>
+          </div>
+        ) : view === 'chart' ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between px-1">
               <h3 className="text-sm font-medium text-muted-foreground">포트폴리오 비중</h3>

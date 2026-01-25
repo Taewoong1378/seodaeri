@@ -154,9 +154,6 @@ export default async function SettingsPage() {
         {/* App Info */}
         <div className="text-center pt-4">
           <p className="text-xs text-muted-foreground">굴림(Gulim) v1.0.0</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Made By Taewoong Kang
-          </p>
         </div>
       </main>
 

@@ -242,24 +242,26 @@ export async function getStocksCountByMarket(): Promise<{
   const supabase = createServiceClient();
 
   try {
-    // 한국 종목
-    const { count: krCount } = await supabase
+    // 한국 종목 - 타입 추론 깊이 문제 회피를 위해 as any 사용
+    const krResult = await (supabase
       .from("stocks")
-      .select("*", { count: "exact", head: true })
+      .select("*", { count: "exact", head: true }) as any)
       .eq("is_active", true)
       .eq("country", "KR");
+    const krCount: number = krResult?.count || 0;
 
     // 미국 종목
-    const { count: usCount } = await supabase
+    const usResult = await (supabase
       .from("stocks")
-      .select("*", { count: "exact", head: true })
+      .select("*", { count: "exact", head: true }) as any)
       .eq("is_active", true)
       .eq("country", "US");
+    const usCount: number = usResult?.count || 0;
 
     return {
-      kr: krCount || 0,
-      us: usCount || 0,
-      total: (krCount || 0) + (usCount || 0),
+      kr: krCount,
+      us: usCount,
+      total: krCount + usCount,
     };
   } catch {
     return { kr: 0, us: 0, total: 0 };
@@ -293,10 +295,10 @@ export async function searchStocksFromDB(
   const q = query.trim();
 
   try {
-    // 쿼리 빌더
-    let queryBuilder = supabase
+    // 쿼리 빌더 - 타입 추론 깊이 문제 회피를 위해 as any 사용
+    let queryBuilder = (supabase
       .from("stocks")
-      .select("code, name, market")
+      .select("code, name, market") as any)
       .eq("is_active", true);
 
     // 국가 필터 적용

@@ -30,6 +30,7 @@ export interface Transaction {
 export interface TransactionsResult {
   success: boolean;
   transactions?: Transaction[];
+  isStandalone?: boolean;
   error?: string;
 }
 
@@ -113,6 +114,9 @@ export async function getTransactions(): Promise<TransactionsResult> {
       return { success: false, error: '사용자 정보를 찾을 수 없습니다.' };
     }
 
+    // Standalone 모드 여부 판별
+    const isStandalone = !user.spreadsheet_id;
+
     // 2. Supabase에서 앱으로 기록한 거래내역 조회
     const { data: dbTransactions, error: dbError } = await supabase
       .from('transactions')
@@ -136,11 +140,79 @@ export async function getTransactions(): Promise<TransactionsResult> {
       source: 'app' as const,
     }));
 
-    // 3. Google Sheets에서 입금내역, 배당내역 조회
+    // 3. 추가 데이터 소스 (Standalone: DB / Sheet 모드: Google Sheets)
 
-    const sheetTransactions: Transaction[] = [];
+    const additionalTransactions: Transaction[] = [];
 
-    if (user?.spreadsheet_id && session.accessToken) {
+    // Standalone 모드: DB에서 배당내역과 입출금내역 조회
+    if (!user?.spreadsheet_id) {
+      console.log('[Transactions] Standalone mode - fetching from DB');
+
+      // 배당내역 조회
+      const { data: dbDividends, error: dividendError } = await supabase
+        .from('dividends')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('dividend_date', { ascending: false });
+
+      if (dividendError) {
+        console.error('[Transactions] Failed to fetch dividends from DB:', dividendError);
+      } else if (dbDividends) {
+        console.log('[Transactions] DB dividends count:', dbDividends.length);
+        const dividendTransactions: Transaction[] = dbDividends.map((d, index) => {
+          // 환율 기본값 사용 (standalone 모드에서는 실시간 환율 없음)
+          const estimatedRate = 1450; // USD/KRW 기본 환율
+          const totalKRW = (d.amount_krw || 0) + (d.amount_usd || 0) * estimatedRate;
+
+          return {
+            id: d.id || `db-dividend-${d.dividend_date}-${index}`,
+            ticker: d.ticker || '',
+            name: d.name || d.ticker || '',
+            type: 'DIVIDEND' as const,
+            price: totalKRW,
+            quantity: 1,
+            total_amount: totalKRW,
+            trade_date: d.dividend_date,
+            sheet_synced: d.sheet_synced || false,
+            created_at: d.created_at || d.dividend_date,
+            source: 'app' as const,
+            amountKRW: d.amount_krw || 0,
+            amountUSD: d.amount_usd || 0,
+          };
+        });
+        additionalTransactions.push(...dividendTransactions);
+      }
+
+      // 입출금내역 조회
+      const { data: dbDeposits, error: depositError } = await supabase
+        .from('deposits')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('deposit_date', { ascending: false });
+
+      if (depositError) {
+        console.error('[Transactions] Failed to fetch deposits from DB:', depositError);
+      } else if (dbDeposits) {
+        console.log('[Transactions] DB deposits count:', dbDeposits.length);
+        const depositTransactions: Transaction[] = dbDeposits.map((d, index) => ({
+          id: d.id || `db-deposit-${d.deposit_date}-${index}`,
+          ticker: '',
+          name: d.memo || null,
+          type: d.type as 'DEPOSIT' | 'WITHDRAW',
+          price: d.amount || 0,
+          quantity: 1,
+          total_amount: d.amount || 0,
+          trade_date: d.deposit_date,
+          sheet_synced: d.sheet_synced || false,
+          created_at: d.created_at || d.deposit_date,
+          source: 'app' as const,
+          account: undefined, // standalone 모드에서는 계좌 정보 없음 (deposits 테이블에 account 컬럼 없음)
+        }));
+        additionalTransactions.push(...depositTransactions);
+      }
+    }
+    // Sheet 모드: Google Sheets에서 입금내역, 배당내역 조회
+    else if (user?.spreadsheet_id && session.accessToken) {
       try {
         // 입금내역과 배당내역 병렬 조회
         const [depositRows, dividendRows] = await Promise.all([
@@ -182,7 +254,7 @@ export async function getTransactions(): Promise<TransactionsResult> {
               account: d.account, // 계좌(증권사) 정보
             })
           );
-          sheetTransactions.push(...depositTransactions);
+          additionalTransactions.push(...depositTransactions);
         }
 
         // 배당내역 파싱
@@ -209,15 +281,15 @@ export async function getTransactions(): Promise<TransactionsResult> {
               };
             }
           );
-          sheetTransactions.push(...dividendTransactions);
+          additionalTransactions.push(...dividendTransactions);
         }
       } catch (sheetError) {
         console.error('Failed to fetch from sheets:', sheetError);
       }
     }
 
-    // 3. 모든 거래내역 합치고 날짜순 정렬
-    const allTransactions = [...appTransactions, ...sheetTransactions].sort(
+    // 4. 모든 거래내역 합치고 날짜순 정렬
+    const allTransactions = [...appTransactions, ...additionalTransactions].sort(
       (a, b) => {
         const dateCompare =
           new Date(b.trade_date).getTime() - new Date(a.trade_date).getTime();
@@ -228,11 +300,12 @@ export async function getTransactions(): Promise<TransactionsResult> {
       }
     );
 
-    console.log('[Transactions] Total:', allTransactions.length, '(App:', appTransactions.length, ', Sheet:', sheetTransactions.length, ')');
+    console.log('[Transactions] Total:', allTransactions.length, '(App:', appTransactions.length, ', Additional:', additionalTransactions.length, '), isStandalone:', isStandalone);
 
     return {
       success: true,
       transactions: allTransactions,
+      isStandalone,
     };
   } catch (error) {
     console.error('getTransactions error:', error);

@@ -40,6 +40,8 @@ import {
   parseYieldComparisonData,
   parseYieldComparisonDollarData,
 } from '../../lib/google-sheets';
+import { StandaloneDataProvider } from '../../lib/data-provider';
+import { getUSDKRWRate } from '../../lib/exchange-rate-api';
 
 // 사용자별 캐시 태그 생성
 function getDashboardCacheTag(userId: string) {
@@ -148,8 +150,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     }
   }
 
-  if (!user?.id || !user?.spreadsheet_id || !session.accessToken) {
-    // 시트 연동 안됨 - 기본값 반환
+  if (!user?.id) {
+    // 사용자 없음 - 기본값 반환
     return {
       totalAsset: 0,
       totalYield: 0,
@@ -174,6 +176,18 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       investmentDays: 0,
       lastSyncAt: null,
     };
+  }
+
+  // Standalone 모드: 스프레드시트 없이 DB + API 사용
+  if (!user.spreadsheet_id) {
+    console.log('[getDashboardData] Standalone mode for user:', user.id);
+    return getStandaloneDashboardData(user.id);
+  }
+
+  // Sheet 모드: accessToken 필요
+  if (!session.accessToken) {
+    console.log('[getDashboardData] No access token for sheet mode');
+    return getStandaloneDashboardData(user.id); // fallback to standalone
   }
 
   try {
@@ -769,4 +783,114 @@ export async function syncPortfolio() {
       snapshot: snapshotSaved,
     },
   };
+}
+
+/**
+ * Standalone 모드 대시보드 데이터 조회
+ * DB + 외부 API (환율, 주가)를 사용하여 데이터 생성
+ */
+async function getStandaloneDashboardData(userId: string): Promise<DashboardData> {
+  const supabase = createServiceClient();
+  const provider = new StandaloneDataProvider();
+
+  try {
+    // 환율 조회
+    const exchangeRate = await getUSDKRWRate();
+
+    // 1. 포트폴리오 조회 (현재가 API 포함)
+    const portfolioItems = await provider.getPortfolio(userId);
+    const portfolio: PortfolioItem[] = portfolioItems.map((item, index) => ({
+      ticker: item.ticker,
+      name: item.name,
+      country: item.currency === 'USD' ? '미국' : '한국',
+      currency: item.currency,
+      quantity: item.quantity,
+      avgPrice: item.avgPrice,
+      currentPrice: item.currentPrice,
+      totalValue: item.totalValue,
+      profit: item.profit,
+      yieldPercent: item.profitPercent,
+      weight: item.weight || 0,
+      rowIndex: index + 9, // standalone에서는 가상 rowIndex
+    }));
+
+    // 2. 대시보드 요약 조회
+    const summary = await provider.getDashboardSummary(userId);
+
+    // 3. 배당금 내역 조회 (monthlyDividends 계산용)
+    const dividends = await provider.getDividends(userId);
+
+    // DividendRecord 형식으로 변환
+    const dividendRecords: DividendRecord[] = dividends.map(d => ({
+      date: d.date,
+      ticker: d.ticker,
+      name: d.name,
+      amountKRW: d.amountKRW,
+      amountUSD: d.amountUSD,
+      totalKRW: d.amountKRW + (d.amountUSD * exchangeRate), // 원화 환산
+    }));
+
+    // 배당금 집계
+    const monthlyDividends = aggregateMonthlyDividends(dividendRecords);
+    const dividendByYear = aggregateDividendsByYear(dividendRecords);
+    const yearlyDividendSummary = aggregateYearlyDividends(dividendRecords);
+    const rollingAverageDividend = calculateRollingAverageDividend(dividendRecords);
+    const cumulativeDividend = calculateCumulativeDividend(dividendRecords);
+
+    // 4. 주요 지수 수익률 비교 데이터 조회
+    const majorIndexYieldComparison = await provider.getMajorIndexYieldComparison(userId);
+
+    return {
+      totalAsset: summary.totalAsset,
+      totalYield: summary.totalYield,
+      totalInvested: summary.totalInvested,
+      totalProfit: summary.totalProfit,
+      thisMonthDividend: summary.thisMonthDividend,
+      yearlyDividend: summary.yearlyDividend,
+      monthlyDividends,
+      dividendByYear,
+      yearlyDividendSummary,
+      rollingAverageDividend,
+      cumulativeDividend,
+      portfolio,
+      performanceComparison: [], // Standalone에서는 지원 안함
+      accountTrend: [], // Standalone에서는 지원 안함
+      monthlyProfitLoss: [], // Standalone에서는 지원 안함
+      yieldComparison: null, // Standalone에서는 지원 안함
+      yieldComparisonDollar: null,
+      monthlyYieldComparison: null,
+      monthlyYieldComparisonDollarApplied: null,
+      majorIndexYieldComparison,
+      investmentDays: summary.investmentDays,
+      lastSyncAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error('[getStandaloneDashboardData] Error:', error);
+
+    // 에러 시 기본값 반환
+    return {
+      totalAsset: 0,
+      totalYield: 0,
+      totalInvested: 0,
+      totalProfit: 0,
+      thisMonthDividend: 0,
+      yearlyDividend: 0,
+      monthlyDividends: [],
+      dividendByYear: null,
+      yearlyDividendSummary: null,
+      rollingAverageDividend: null,
+      cumulativeDividend: null,
+      portfolio: [],
+      performanceComparison: [],
+      accountTrend: [],
+      monthlyProfitLoss: [],
+      yieldComparison: null,
+      yieldComparisonDollar: null,
+      monthlyYieldComparison: null,
+      monthlyYieldComparisonDollarApplied: null,
+      majorIndexYieldComparison: null,
+      investmentDays: 0,
+      lastSyncAt: null,
+    };
+  }
 }
