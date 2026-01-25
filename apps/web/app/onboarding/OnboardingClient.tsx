@@ -228,7 +228,17 @@ export function OnboardingClient({
     setError(null);
     try {
       const result = await startWithoutSheet();
-      handleResult(result);
+      if (result.success) {
+        // Standalone 유저는 내역 페이지로 바로 이동
+        router.refresh();
+        router.push("/transactions");
+        setTimeout(() => {
+          window.location.href = "/transactions";
+        }, 500);
+      } else {
+        setError(result.error || "오류가 발생했습니다.");
+        setLoading(null);
+      }
     } catch (err: any) {
       console.error("handleStartWithoutSheet error:", err);
       setError(err?.message || "시작 중 오류가 발생했습니다.");

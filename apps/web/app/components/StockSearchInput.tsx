@@ -10,8 +10,8 @@ interface StockSearchInputProps {
   selectedCode: string;
   /** 선택된 종목명 */
   selectedName: string;
-  /** 종목 선택 시 콜백 (code, name 전달) */
-  onSelect: (code: string, name: string) => void;
+  /** 종목 선택 시 콜백 (code, name, market 전달) */
+  onSelect: (code: string, name: string, market?: string) => void;
   /** 선택 해제 시 콜백 */
   onClear: () => void;
   /** 라벨 텍스트 */
@@ -22,8 +22,6 @@ interface StockSearchInputProps {
   darkTheme?: boolean;
   /** 외부에서 리셋할 때 사용 */
   resetKey?: number;
-  /** 포커스 시 강조 색상 */
-  accentColor?: "default" | "brand" | "blue" | "emerald" | "purple" | "orange";
 }
 
 export function StockSearchInput({
@@ -35,7 +33,6 @@ export function StockSearchInput({
   placeholder = "종목명 또는 종목코드 검색",
   darkTheme = false,
   resetKey = 0,
-  accentColor = "blue",
 }: StockSearchInputProps): JSX.Element {
   const {
     query,
@@ -48,7 +45,7 @@ export function StockSearchInput({
     reset,
   } = useStockSearch({
     onSelect: (stock: StockSearchResult) => {
-      onSelect(stock.code, stock.name);
+      onSelect(stock.code, stock.name, stock.market);
     },
   });
 
@@ -61,23 +58,6 @@ export function StockSearchInput({
     }
   }, [resetKey, reset]);
 
-  // Accent color styles (Focus within container) - Subtle ring for modern look
-  const focusStyles =
-    {
-      default:
-        "focus-within:border-gray-300 focus-within:ring-2 focus-within:ring-gray-200/50",
-      brand:
-        "focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-500/20",
-      blue: "focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20",
-      emerald:
-        "focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-500/20",
-      purple:
-        "focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-500/20",
-      orange:
-        "focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-500/20",
-    }[accentColor] ||
-    "focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/20";
-
   // 이미 선택된 종목이 있으면 표시
   if (selectedCode) {
     return (
@@ -85,30 +65,30 @@ export function StockSearchInput({
         <label
           htmlFor="stock-search"
           className={`text-sm font-medium ${
-            darkTheme ? "text-slate-300" : "text-gray-700"
+            darkTheme ? "text-slate-300" : "text-muted-foreground"
           }`}
         >
           {label}
         </label>
         <div
-          className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 ${
+          className={`flex items-center gap-3 p-3 h-11 rounded-lg border transition-all duration-200 ${
             darkTheme
               ? "bg-white/5 border-white/10"
-              : "bg-white border-gray-200 shadow-sm hover:border-blue-300"
+              : "bg-background border-border shadow-sm"
           }`}
         >
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span
                 className={`font-semibold truncate ${
-                  darkTheme ? "text-white" : "text-gray-900"
+                  darkTheme ? "text-white" : "text-foreground"
                 }`}
               >
                 {selectedName || selectedCode}
               </span>
               <span
-                className={`text-xs px-1.5 py-0.5 rounded-md bg-gray-100 font-medium ${
-                  darkTheme ? "bg-white/10 text-slate-400" : "text-gray-500"
+                className={`text-xs px-1.5 py-0.5 rounded-md bg-muted font-medium ${
+                  darkTheme ? "bg-white/10 text-slate-400" : "text-muted-foreground"
                 }`}
               >
                 {selectedCode}
@@ -124,7 +104,7 @@ export function StockSearchInput({
             className={`p-1.5 rounded-full transition-colors ${
               darkTheme
                 ? "text-slate-400 hover:text-red-400 hover:bg-white/10"
-                : "text-gray-400 hover:text-red-500 hover:bg-red-50"
+                : "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
             }`}
           >
             <X size={18} />
@@ -139,18 +119,18 @@ export function StockSearchInput({
       <label
         htmlFor="stock-search"
         className={`text-sm font-medium ${
-          darkTheme ? "text-slate-300" : "text-gray-700"
+          darkTheme ? "text-slate-300" : "text-muted-foreground"
         }`}
       >
         {label}
       </label>
       <div className="relative group">
         <div
-          className={`relative flex items-center w-full h-12 rounded-xl border transition-all duration-200 ease-in-out
+          className={`relative flex items-center w-full h-11 rounded-lg border transition-all duration-200 ease-in-out focus-within-container
             ${
               darkTheme
-                ? "bg-white/5 border-white/10 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-400/20"
-                : `bg-white border-gray-200 shadow-sm hover:border-gray-300 ${focusStyles}`
+                ? "bg-white/5 border-white/10 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30"
+                : "bg-background border-border shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30"
             }
           `}
           onClick={() => inputRef.current?.focus()}
@@ -159,8 +139,8 @@ export function StockSearchInput({
             size={18}
             className={`ml-4 mr-3 flex-shrink-0 transition-colors duration-200 ${
               darkTheme
-                ? "text-slate-500 group-focus-within:text-blue-400"
-                : "text-gray-400 group-focus-within:text-blue-500"
+                ? "text-slate-500 group-focus-within:text-primary"
+                : "text-muted-foreground group-focus-within:text-primary"
             }`}
           />
           <input
@@ -169,11 +149,12 @@ export function StockSearchInput({
             onChange={(e) => handleQueryChange(e.target.value)}
             onFocus={() => query && setShowResults(true)}
             placeholder={placeholder}
-            className={`flex-1 h-full bg-transparent border-none outline-none text-base font-medium
+            data-no-ring
+            className={`flex-1 h-full bg-transparent border-none text-base focus:outline-none focus:ring-0 focus:border-transparent
               ${
                 darkTheme
                   ? "text-white placeholder:text-slate-500"
-                  : "text-gray-900 placeholder:text-gray-400 placeholder:font-normal"
+                  : "text-foreground placeholder:text-muted-foreground"
               }
             `}
             autoComplete="off"
@@ -184,7 +165,7 @@ export function StockSearchInput({
               <Loader2
                 size={18}
                 className={`animate-spin ${
-                  darkTheme ? "text-slate-500" : "text-blue-500"
+                  darkTheme ? "text-slate-500" : "text-primary"
                 }`}
               />
             </div>
@@ -194,10 +175,10 @@ export function StockSearchInput({
         {/* 검색 결과 드롭다운 */}
         {showResults && results.length > 0 && (
           <div
-            className={`absolute z-50 w-full mt-2 rounded-xl shadow-xl max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in zoom-in-95 duration-200 ${
+            className={`absolute z-50 w-full mt-2 rounded-lg shadow-xl max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in zoom-in-95 duration-200 ${
               darkTheme
                 ? "bg-[#1e293b] border border-white/10"
-                : "bg-white border border-gray-100 ring-1 ring-black/5"
+                : "bg-popover border border-border"
             }`}
           >
             {results.map((stock) => (
@@ -216,14 +197,14 @@ export function StockSearchInput({
                     className={`font-medium truncate ${
                       darkTheme
                         ? "text-white"
-                        : "text-gray-900 group-hover/item:text-blue-700"
+                        : "text-foreground group-hover/item:text-primary"
                     }`}
                   >
                     {stock.name}
                   </div>
                   <div
                     className={`text-xs mt-0.5 ${
-                      darkTheme ? "text-slate-400" : "text-gray-500"
+                      darkTheme ? "text-slate-400" : "text-muted-foreground"
                     }`}
                   >
                     {stock.code}
@@ -248,15 +229,15 @@ export function StockSearchInput({
         {/* 검색 결과 없음 */}
         {showResults && query && !isSearching && results.length === 0 && (
           <div
-            className={`absolute z-50 w-full mt-2 rounded-xl shadow-xl p-4 text-center animate-in fade-in zoom-in-95 duration-200 ${
+            className={`absolute z-50 w-full mt-2 rounded-lg shadow-xl p-4 text-center animate-in fade-in zoom-in-95 duration-200 ${
               darkTheme
                 ? "bg-[#1e293b] border border-white/10"
-                : "bg-white border border-gray-100 ring-1 ring-black/5"
+                : "bg-popover border border-border"
             }`}
           >
             <p
               className={`text-sm ${
-                darkTheme ? "text-slate-400" : "text-gray-500"
+                darkTheme ? "text-slate-400" : "text-muted-foreground"
               }`}
             >
               검색 결과가 없습니다.
@@ -269,7 +250,7 @@ export function StockSearchInput({
       {!selectedCode && query && !isSearching && results.length === 0 && (
         <p
           className={`text-xs px-1 ${
-            darkTheme ? "text-slate-500" : "text-gray-500"
+            darkTheme ? "text-slate-500" : "text-muted-foreground"
           }`}
         >
           찾으시는 종목이 없나요? 아래에서 직접 입력해주세요.

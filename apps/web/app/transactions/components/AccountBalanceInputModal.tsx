@@ -47,6 +47,12 @@ export function AccountBalanceInputModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }, []);
+
   const handleBalanceChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const formatted = formatNumber(e.target.value);
@@ -108,7 +114,7 @@ export function AccountBalanceInputModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent
-        className="sm:max-w-[380px] bg-white border-0 rounded-[28px] p-0 gap-0 overflow-hidden shadow-2xl"
+        className="sm:max-w-[380px] bg-popover border-border rounded-xl p-0 gap-0 overflow-hidden shadow-xl"
         style={{
           left: "50%",
           top: "50%",
@@ -117,11 +123,11 @@ export function AccountBalanceInputModal({
         }}
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-popover">
           <DialogHeader className="p-0 space-y-0">
-            <DialogTitle className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                <PiggyBank className="w-5 h-5 text-emerald-600" />
+            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <PiggyBank className="w-5 h-5 text-primary" />
               </div>
               계좌총액 입력
             </DialogTitle>
@@ -129,23 +135,23 @@ export function AccountBalanceInputModal({
           <button
             type="button"
             onClick={handleClose}
-            className="p-2 rounded-full text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-6 bg-white">
+        <div className="p-5 space-y-5 bg-popover">
           {/* 연월 선택 - Wheel Picker */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <label
-              className="text-sm font-medium text-gray-700"
+              className="text-sm font-medium text-muted-foreground"
               htmlFor="year-month-picker"
             >
               연월 선택
             </label>
-            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+            <div className="bg-muted/50 rounded-lg p-4 border border-border">
               <YearMonthPicker
                 year={selectedYear}
                 month={selectedMonth}
@@ -160,7 +166,7 @@ export function AccountBalanceInputModal({
           {/* 계좌총액 입력 */}
           <div className="space-y-2">
             <label
-              className="text-sm font-medium text-gray-700"
+              className="text-sm font-medium text-muted-foreground"
               htmlFor="balance"
             >
               계좌총액
@@ -171,23 +177,23 @@ export function AccountBalanceInputModal({
                 inputMode="numeric"
                 value={balance}
                 onChange={handleBalanceChange}
+                onFocus={handleInputFocus}
                 placeholder="0"
-                className="h-14 text-right pr-10 text-xl font-bold rounded-xl"
-                accentColor="emerald"
+                className="text-right pr-10 text-lg font-semibold"
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
                 원
               </span>
             </div>
-            <p className="text-xs text-gray-500 px-1">
+            <p className="text-xs text-muted-foreground px-1">
               해당 월 말 기준 전체 계좌의 총 평가금액을 입력하세요.
             </p>
           </div>
 
           {/* 에러 메시지 */}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-100 rounded-xl animate-in fade-in slide-in-from-top-1">
-              <p className="text-sm text-red-600 font-medium flex items-center gap-2">
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <p className="text-sm text-destructive font-medium flex items-center gap-2">
                 <X size={14} /> {error}
               </p>
             </div>
@@ -195,11 +201,11 @@ export function AccountBalanceInputModal({
         </div>
 
         {/* Footer */}
-        <div className="p-6 pt-0 flex gap-3 bg-white">
+        <div className="p-5 pt-0 flex gap-3 bg-popover">
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={handleClose}
-            className="flex-1 h-12 rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 font-medium"
+            className="flex-1 border-border text-muted-foreground hover:text-foreground hover:bg-muted"
             disabled={isSubmitting}
           >
             취소
@@ -207,10 +213,10 @@ export function AccountBalanceInputModal({
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting || parseFormattedNumber(balance) <= 0}
-            className="flex-[2] h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 font-medium text-base"
+            className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             {isSubmitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               "저장하기"
             )}

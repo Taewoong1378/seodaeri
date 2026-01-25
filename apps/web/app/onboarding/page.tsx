@@ -19,9 +19,9 @@ export default async function OnboardingPage() {
     redirect('/dashboard');
   }
 
-  // 이미 시트가 연동되어 있으면 대시보드로
-  const { connected } = await checkSheetConnection();
-  if (connected) {
+  // 이미 시트가 연동되어 있거나 standalone 모드면 대시보드로
+  const { connected, isStandalone } = await checkSheetConnection();
+  if (connected || isStandalone) {
     redirect('/dashboard');
   }
 

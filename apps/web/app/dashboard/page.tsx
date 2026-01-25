@@ -20,9 +20,9 @@ export default async function DashboardPage() {
   // 데모 계정은 시트 연동 체크 스킵 (Play Store 심사용)
   let sheetUrl: string | null = null;
   if (!session.isDemo) {
-    // 시트 연동 체크 - 연동 안 되어 있으면 온보딩으로
-    const { connected, sheetId } = await checkSheetConnection();
-    if (!connected) {
+    // 시트 연동 체크 - 연동 안 되어 있고 standalone도 아니면 온보딩으로
+    const { connected, sheetId, isStandalone } = await checkSheetConnection();
+    if (!connected && !isStandalone) {
       redirect('/onboarding');
     }
     sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : null;

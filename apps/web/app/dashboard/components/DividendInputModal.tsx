@@ -13,7 +13,7 @@ import {
 import { Input } from "@repo/design-system/components/input";
 import { Label } from "@repo/design-system/components/label";
 import { Camera, Check, Loader2, Pen, Trash2, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSaveDividend, useSaveDividends } from "../../../hooks";
 import type { DividendInput } from "../../actions/dividend";
@@ -59,6 +59,8 @@ export function DividendInputModal() {
   // 다중 입력용 (사진 분석)
   const [multipleItems, setMultipleItems] = useState<DividendInput[]>([]);
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  // 다중 항목의 포맷된 금액 상태
+  const [formattedMultipleAmountsKRW, setFormattedMultipleAmountsKRW] = useState<string[]>([]);
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
@@ -81,6 +83,8 @@ export function DividendInputModal() {
     setSelectedItems(new Set());
     setSearchResetKey((prev) => prev + 1);
     setIsSearchSelected(false);
+    setFormattedAmountKRW("");
+    setFormattedMultipleAmountsKRW([]);
   };
 
   const handleManualMode = () => {
@@ -123,6 +127,12 @@ export function DividendInputModal() {
         setMultipleItems(results);
         // 모든 항목 선택
         setSelectedItems(new Set(results.map((_, idx) => idx)));
+        // 포맷된 금액 초기화
+        setFormattedMultipleAmountsKRW(
+          results.map((item) =>
+            item.amountKRW ? formatNumberWithComma(String(item.amountKRW)) : ""
+          )
+        );
         setMode("photo-verify");
       } else {
         toast.error("배당내역을 찾을 수 없습니다. 다시 시도해주세요.");
@@ -217,6 +227,7 @@ export function DividendInputModal() {
 
   const removeItem = (idx: number) => {
     setMultipleItems((prev) => prev.filter((_, i) => i !== idx));
+    setFormattedMultipleAmountsKRW((prev) => prev.filter((_, i) => i !== idx));
     const newSelected = new Set(selectedItems);
     newSelected.delete(idx);
     // Adjust indices
@@ -231,6 +242,16 @@ export function DividendInputModal() {
     setSelectedItems(adjusted);
   };
 
+  const handleMultipleAmountKRWChange = (idx: number, value: string) => {
+    const formatted = formatNumberWithComma(value);
+    setFormattedMultipleAmountsKRW((prev) => {
+      const newArr = [...prev];
+      newArr[idx] = formatted;
+      return newArr;
+    });
+    updateMultipleItem(idx, "amountKRW", parseFormattedNumber(formatted));
+  };
+
   const updateSingleField = (
     field: keyof DividendInput,
     value: string | number
@@ -241,6 +262,31 @@ export function DividendInputModal() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("ko-KR").format(amount);
   };
+
+  // 천 단위 콤마 포맷팅 (입력용)
+  const formatNumberWithComma = (value: string): string => {
+    const numbers = value.replace(/[^\d]/g, "");
+    return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  const parseFormattedNumber = (value: string): number => {
+    return Number.parseInt(value.replace(/,/g, ""), 10) || 0;
+  };
+
+  // 원화 배당금 포맷된 문자열 상태
+  const [formattedAmountKRW, setFormattedAmountKRW] = useState<string>("");
+
+  const handleAmountKRWChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatNumberWithComma(e.target.value);
+    setFormattedAmountKRW(formatted);
+    updateSingleField("amountKRW", parseFormattedNumber(formatted));
+  };
+
+  const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }, []);
 
   return (
     <>
@@ -339,7 +385,6 @@ export function DividendInputModal() {
                     value={singleForm.date}
                     onChange={(date) => updateSingleField("date", date)}
                     placeholder="날짜 선택"
-                    accentColor="blue"
                     className="w-full"
                   />
                 </div>
@@ -361,13 +406,12 @@ export function DividendInputModal() {
                     setIsSearchSelected(false);
                   }}
                   resetKey={searchResetKey}
-                  accentColor="blue"
                   label="종목 검색"
                 />
 
                 {/* 직접 입력 (검색되지 않는 종목용 - 미국주식 등) */}
                 {!isSearchSelected && (
-                  <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="p-4 bg-gray-50 border border-gray-100 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-1 h-4 bg-gray-300 rounded-full" />
                       <p className="text-xs font-semibold text-gray-500">
@@ -392,8 +436,7 @@ export function DividendInputModal() {
                             )
                           }
                           placeholder="예: AAPL"
-                          className="h-11 text-sm uppercase rounded-xl"
-                          accentColor="blue"
+                          className="h-11 text-sm uppercase"
                         />
                       </div>
                       <div className="space-y-2">
@@ -410,8 +453,7 @@ export function DividendInputModal() {
                             updateSingleField("name", e.target.value)
                           }
                           placeholder="예: Apple"
-                          className="h-11 text-sm rounded-xl"
-                          accentColor="blue"
+                          className="h-11 text-sm"
                         />
                       </div>
                     </div>
@@ -429,14 +471,13 @@ export function DividendInputModal() {
                     <div className="relative">
                       <Input
                         id="amountKRW"
-                        type="number"
-                        value={singleForm.amountKRW || ""}
-                        onChange={(e) =>
-                          updateSingleField("amountKRW", Number(e.target.value))
-                        }
+                        type="text"
+                        inputMode="numeric"
+                        value={formattedAmountKRW}
+                        onChange={handleAmountKRWChange}
+                        onFocus={handleInputFocus}
                         placeholder="0"
-                        className="h-12 text-right pr-8 font-medium rounded-xl"
-                        accentColor="blue"
+                        className="h-12 text-right pr-8 font-medium"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
                         ₩
@@ -460,8 +501,7 @@ export function DividendInputModal() {
                           updateSingleField("amountUSD", Number(e.target.value))
                         }
                         placeholder="0.00"
-                        className="h-12 text-right pr-8 font-medium rounded-xl"
-                        accentColor="blue"
+                        className="h-12 text-right pr-8 font-medium"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
                         $
@@ -472,7 +512,7 @@ export function DividendInputModal() {
 
                 <div className="pt-6 space-y-3">
                   <Button
-                    className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/20 font-medium text-base transition-all active:scale-[0.98]"
+                    className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 font-medium text-base transition-all active:scale-[0.98]"
                     onClick={handleSaveSingle}
                     disabled={isSaving}
                   >
@@ -490,7 +530,7 @@ export function DividendInputModal() {
                   </Button>
                   <Button
                     variant="ghost"
-                    className="w-full h-12 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl"
+                    className="w-full h-12 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                     onClick={() => setMode("select")}
                     disabled={isSaving}
                   >
@@ -519,7 +559,7 @@ export function DividendInputModal() {
                 </div>
                 <div className="space-y-3">
                   <Button
-                    className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/20 font-medium text-base"
+                    className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 font-medium text-base"
                     onClick={handleAnalyze}
                     disabled={isAnalyzing}
                   >
@@ -534,7 +574,7 @@ export function DividendInputModal() {
                   </Button>
                   <Button
                     variant="ghost"
-                    className="w-full h-12 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl"
+                    className="w-full h-12 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                     onClick={() => {
                       setImageSrc(null);
                       setMode("select");
@@ -616,7 +656,6 @@ export function DividendInputModal() {
                               }
                               type="date"
                               className="h-10 text-xs bg-white border-gray-200 rounded-lg"
-                              accentColor="blue"
                             />
                             <Input
                               value={item.ticker}
@@ -629,25 +668,21 @@ export function DividendInputModal() {
                               }
                               placeholder="종목코드"
                               className="h-10 text-xs bg-white border-gray-200 rounded-lg"
-                              accentColor="blue"
                             />
                           </div>
 
                           <div className="grid grid-cols-2 gap-3">
                             <div className="relative">
                               <Input
-                                type="number"
-                                value={item.amountKRW || ""}
+                                type="text"
+                                inputMode="numeric"
+                                value={formattedMultipleAmountsKRW[idx] || ""}
                                 onChange={(e) =>
-                                  updateMultipleItem(
-                                    idx,
-                                    "amountKRW",
-                                    Number(e.target.value)
-                                  )
+                                  handleMultipleAmountKRWChange(idx, e.target.value)
                                 }
+                                onFocus={handleInputFocus}
                                 placeholder="원화"
                                 className="h-10 text-xs bg-white border-gray-200 pr-7 rounded-lg text-right"
-                                accentColor="blue"
                               />
                               <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">
                                 ₩
@@ -665,9 +700,9 @@ export function DividendInputModal() {
                                     Number(e.target.value)
                                   )
                                 }
+                                onFocus={handleInputFocus}
                                 placeholder="외화"
                                 className="h-10 text-xs bg-white border-gray-200 pr-7 rounded-lg text-right"
-                                accentColor="blue"
                               />
                               <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">
                                 $
@@ -707,7 +742,7 @@ export function DividendInputModal() {
 
                 <div className="pt-4 space-y-3">
                   <Button
-                    className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/20 font-medium text-base"
+                    className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 font-medium text-base"
                     onClick={handleSaveMultiple}
                     disabled={isSaving || selectedItems.size === 0}
                   >
@@ -725,7 +760,7 @@ export function DividendInputModal() {
                   </Button>
                   <Button
                     variant="ghost"
-                    className="w-full h-12 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl"
+                    className="w-full h-12 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                     onClick={() => {
                       if (
                         confirm(

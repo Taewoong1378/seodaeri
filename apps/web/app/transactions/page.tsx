@@ -18,8 +18,8 @@ export default async function TransactionsPage() {
   // 데모 계정은 시트 연동 체크 스킵 (Play Store 심사용)
   let sheetUrl: string | null = null;
   if (!session.isDemo) {
-    const { connected, sheetId } = await checkSheetConnection();
-    if (!connected) {
+    const { connected, sheetId, isStandalone } = await checkSheetConnection();
+    if (!connected && !isStandalone) {
       redirect('/onboarding');
     }
     sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit#gid=0` : null;

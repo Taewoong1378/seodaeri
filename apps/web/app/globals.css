@@ -1,5 +1,14 @@
 @import 'tailwindcss';
 
+/* Reset browser default focus outline globally */
+*:focus {
+  outline: none !important;
+}
+
+*:focus-visible {
+  outline: none !important;
+}
+
 @theme {
   --color-background: #F5F5F5; /* Soft White */
   --color-foreground: #1B261D; /* Dark Moss Charcoal */
@@ -29,11 +38,11 @@
   --color-input: #E0E5E1;
   --color-ring: #2E7D32;
 
-  --radius-sm: 0.75rem;
-  --radius-md: 1rem;
-  --radius-lg: 1.25rem; /* 20px */
-  --radius-xl: 1.5rem;
-  --radius-2xl: 2rem;
+  --radius-sm: 0.375rem;  /* 6px */
+  --radius-md: 0.5rem;    /* 8px */
+  --radius-lg: 0.5rem;    /* 8px - standard form elements */
+  --radius-xl: 0.75rem;   /* 12px */
+  --radius-2xl: 1rem;     /* 16px */
 
   /* Brand Colors - Gulim */
   --color-brand-primary: #2E7D32;      /* Deep Forest Green */
@@ -56,6 +65,37 @@
   * {
     @apply border-border;
   }
+
+  /* Remove browser default focus outline - let Tailwind handle it */
+  input,
+  textarea,
+  select,
+  button {
+    outline: none !important;
+  }
+
+  input:focus,
+  input:focus-visible,
+  textarea:focus,
+  textarea:focus-visible,
+  select:focus,
+  select:focus-visible,
+  button:focus,
+  button:focus-visible {
+    outline: none !important;
+    outline-width: 0 !important;
+    outline-style: none !important;
+  }
+
+  /* Inputs inside focus-within containers should not have their own ring */
+  .focus-within-container input,
+  .focus-within-container input:focus,
+  .focus-within-container input:focus-visible {
+    box-shadow: none !important;
+    border-color: transparent !important;
+    --tw-ring-shadow: none !important;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings:
@@ -94,6 +134,17 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Hide number input spinners */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
   }
 }
 

@@ -726,23 +726,20 @@ export async function getAccountBalances(): Promise<AccountBalanceRecord[]> {
     return demoBalances;
   }
 
-  if (!session.accessToken) {
-    return [];
-  }
-
   const supabase = createServiceClient();
 
   try {
+    // 사용자 정보 조회 (ID와 spreadsheet_id)
     let { data: user } = await supabase
       .from("users")
-      .select("spreadsheet_id")
+      .select("id, spreadsheet_id")
       .eq("id", session.user.id)
       .single();
 
     if (!user && session.user.email) {
       const { data: userByEmail } = await supabase
         .from("users")
-        .select("spreadsheet_id")
+        .select("id, spreadsheet_id")
         .eq("email", session.user.email)
         .single();
 
@@ -751,7 +748,43 @@ export async function getAccountBalances(): Promise<AccountBalanceRecord[]> {
       }
     }
 
-    if (!user?.spreadsheet_id) {
+    if (!user?.id) {
+      return [];
+    }
+
+    // Standalone 모드: DB에서 조회
+    if (!user.spreadsheet_id) {
+      console.log("[getAccountBalances] Standalone mode - reading from DB");
+      const { data: dbBalances, error } = await (supabase as any)
+        .from("account_balances")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("year_month", { ascending: false });
+
+      if (error) {
+        console.error("[getAccountBalances] DB error:", error);
+        return [];
+      }
+
+      const results: AccountBalanceRecord[] = (dbBalances || []).map((row: any) => {
+        const [yearStr, monthStr] = (row.year_month || "").split("-");
+        const year = Number.parseInt(yearStr || "0", 10);
+        const month = Number.parseInt(monthStr || "0", 10);
+        return {
+          id: row.year_month,
+          yearMonth: row.year_month,
+          year,
+          month,
+          balance: Math.round(row.balance || 0),
+          displayDate: `${year}년 ${month}월`,
+        };
+      });
+
+      return results;
+    }
+
+    // Sheet 모드: accessToken 필요
+    if (!session.accessToken) {
       return [];
     }
 
