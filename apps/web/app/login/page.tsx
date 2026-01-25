@@ -24,14 +24,13 @@ const errorMessages: Record<string, string> = {
 }
 
 interface LoginPageProps {
-  searchParams: Promise<{ error?: string; mode?: string }>
+  searchParams: Promise<{ error?: string }>
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const session = await auth()
   const params = await searchParams
   const error = params.error
-  const showTestLogin = params.mode === 'test'
 
   // 이미 로그인된 경우 대시보드로 리다이렉트
   if (session?.user) {
@@ -74,8 +73,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </p>
           )}
 
-          {/* 테스트 로그인 폼 (Play Store 심사용) */}
-          {showTestLogin && <TestLoginForm />}
+          {/* 테스트 로그인 폼 (앱스토어 심사용) */}
+          <TestLoginForm />
         </CardContent>
       </Card>
     </main>

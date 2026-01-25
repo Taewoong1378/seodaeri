@@ -82,6 +82,9 @@ export async function POST(request: NextRequest) {
         accessToken: identityToken,
         accessTokenExpires: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30일
         isAppleUser: true,
+        // Apple 로그인 사용자는 Google accessToken이 없어서 스프레드시트 사용 불가
+        // 데모 모드로 설정하여 데모 데이터 표시 (앱스토어 심사용)
+        isDemo: true,
       },
       secret: process.env.AUTH_SECRET!,
       salt: cookieName, // 쿠키 이름과 동일하게!

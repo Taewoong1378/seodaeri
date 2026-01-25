@@ -41,7 +41,7 @@ export function TestLoginForm() {
   return (
     <div className="mt-6 pt-6 border-t border-border">
       <p className="text-xs text-muted-foreground text-center mb-4">
-        테스트 계정 로그인 (Play Store 심사용)
+        이메일로 로그인
       </p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
