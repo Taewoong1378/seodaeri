@@ -1,54 +1,67 @@
 'use client';
 
 import { ArrowRight } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
+import { getBenefitBanner } from '../../../lib/banner-data';
 
 export function BenefitBanner() {
+  const { data: session } = useSession();
+
+  // 데모 모드에서는 배너 숨김 (Play Store 심사용)
+  const bannerData = useMemo(() => {
+    if (session?.isDemo) return null;
+    return getBenefitBanner();
+  }, [session?.isDemo]);
+
   const handleTrackClick = useCallback(() => {
-    // Mock tracking function
-    console.log('[Tracking] Account Opening Clicked');
-    // In a real app, this would send an event to analytics (e.g., PostHog, GA)
+    console.log('[Tracking] Benefit Banner Clicked');
   }, []);
 
+  if (!bannerData) {
+    return null;
+  }
+
   return (
-    <div className="relative overflow-hidden rounded-[24px] bg-card border border-border p-1 shadow-sm">
-      <div className="relative bg-muted/30 backdrop-blur-sm rounded-[20px] p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4 w-full sm:w-auto">
-          <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden border border-border shadow-inner shrink-0">
-             <Image
-              src="/images/banners/banner-benefit-kiwoom.png"
-              alt="키움증권 혜택"
+    <Link
+      href={bannerData.link}
+      target="_blank"
+      onClick={handleTrackClick}
+      className="block"
+    >
+      <div className="relative overflow-hidden rounded-2xl bg-card border border-border shadow-sm">
+        <div className="relative p-4 flex items-center gap-4">
+          {/* 이미지 */}
+          <div className={`relative w-14 h-14 rounded-xl overflow-hidden ring-2 ${bannerData.highlightColor.replace('text-', 'ring-')}/40 shadow-lg shrink-0`}>
+            <Image
+              src={bannerData.image}
+              alt={bannerData.title}
               fill
               className="object-cover"
             />
           </div>
-          <div className="text-left space-y-1">
-            <h3 className="text-lg font-bold text-foreground tracking-tight">
-              키움증권 계좌 개설하고
-            </h3>
-            <p className="text-sm text-muted-foreground font-medium">
-              최대 <span className="text-foreground font-bold">40달러</span> 투자지원금 받기
+
+          {/* 텍스트 */}
+          <div className="flex-1 min-w-0">
+            <span className={`text-xs font-bold ${bannerData.highlightColor}`}>
+              {bannerData.highlight}
+            </span>
+            <p className="text-sm font-semibold text-foreground truncate">
+              {bannerData.title}
+            </p>
+            <p className="text-[11px] text-muted-foreground truncate">
+              {bannerData.subtitle}
             </p>
           </div>
-        </div>
 
-        <Link
-          href="https://www.kiwoom.com"
-          target="_blank"
-          onClick={handleTrackClick}
-          className="w-full sm:w-auto"
-        >
-          <button
-            type="button"
-            className="w-full sm:w-auto group flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold transition-all active:scale-95 whitespace-nowrap shadow-sm"
-          >
-            혜택받기
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-          </button>
-        </Link>
+          {/* 화살표 버튼 */}
+          <div className={`w-9 h-9 rounded-full ${bannerData.buttonBg} flex items-center justify-center shadow-md shrink-0`}>
+            <ArrowRight className="w-4 h-4 text-white" />
+          </div>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }

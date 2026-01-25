@@ -1,6 +1,20 @@
 import type { NextAuthConfig } from "next-auth";
 import type { JWT } from "next-auth/jwt";
+import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
+
+/**
+ * 테스트 계정 설정 (Google Play Store 심사용)
+ * - 실제 스프레드시트 연동 없이 데모 데이터 표시
+ * - 배너/광고 숨김
+ */
+const TEST_ACCOUNT = {
+  email: "reviewer@seodaeri.com",
+  password: process.env.TEST_ACCOUNT_PASSWORD || "PlayStoreReview2026!",
+  id: "test-reviewer-account",
+  name: "Play Store Reviewer",
+  image: null,
+};
 
 /**
  * Google OAuth access token 갱신
@@ -62,6 +76,31 @@ export const authConfig: NextAuthConfig = {
         },
       },
     }),
+    // 테스트 계정용 Credentials Provider (Google Play Store 심사용)
+    Credentials({
+      id: "test-credentials",
+      name: "Test Account",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const email = credentials?.email as string;
+        const password = credentials?.password as string;
+
+        // 테스트 계정만 허용
+        if (email === TEST_ACCOUNT.email && password === TEST_ACCOUNT.password) {
+          return {
+            id: TEST_ACCOUNT.id,
+            email: TEST_ACCOUNT.email,
+            name: TEST_ACCOUNT.name,
+            image: TEST_ACCOUNT.image,
+          };
+        }
+
+        return null;
+      },
+    }),
   ],
   pages: {
     signIn: "/login",
@@ -70,6 +109,12 @@ export const authConfig: NextAuthConfig = {
   callbacks: {
     async signIn({ user, account, profile }) {
       if (!user.email || !user.id) return false;
+
+      // 테스트 계정은 바로 통과 (Supabase 저장 없음)
+      if (account?.provider === "test-credentials") {
+        console.log("[Auth] Test account login:", user.email);
+        return true;
+      }
 
       // Google 로그인 시 drive.file 스코프 필수 체크
       if (account?.provider === "google") {
@@ -114,16 +159,27 @@ export const authConfig: NextAuthConfig = {
     async jwt({ token, user, account }) {
       // 첫 로그인 시 토큰 저장
       if (account && user) {
+        // 테스트 계정인 경우 isDemo 플래그 설정
+        const isDemo = account.provider === "test-credentials";
+
         return {
           ...token,
-          accessToken: account.access_token,
-          refreshToken: account.refresh_token,
-          accessTokenExpires: account.expires_at
-            ? account.expires_at * 1000
-            : Date.now() + 3600 * 1000,
+          accessToken: isDemo ? undefined : account.access_token,
+          refreshToken: isDemo ? undefined : account.refresh_token,
+          accessTokenExpires: isDemo
+            ? Date.now() + 30 * 24 * 60 * 60 * 1000 // 30일
+            : account.expires_at
+              ? account.expires_at * 1000
+              : Date.now() + 3600 * 1000,
           provider: account.provider,
           id: user.id,
+          isDemo,
         };
+      }
+
+      // 테스트 계정은 토큰 갱신 불필요
+      if (token.isDemo) {
+        return token;
       }
 
       // 토큰이 아직 유효하면 그대로 반환
@@ -140,6 +196,7 @@ export const authConfig: NextAuthConfig = {
         session.user.id = token.id as string;
         session.accessToken = token.accessToken as string;
         session.refreshToken = token.refreshToken as string;
+        session.isDemo = token.isDemo as boolean;
       }
       return session;
     },
@@ -168,6 +225,8 @@ declare module "next-auth" {
     };
     accessToken?: string;
     refreshToken?: string;
+    /** 테스트 계정 여부 (Play Store 심사용) */
+    isDemo?: boolean;
   }
 }
 
@@ -179,5 +238,7 @@ declare module "next-auth/jwt" {
     accessTokenExpires?: number;
     provider?: string;
     error?: string;
+    /** 테스트 계정 여부 (Play Store 심사용) */
+    isDemo?: boolean;
   }
 }

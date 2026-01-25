@@ -8,6 +8,7 @@ import { getDashboardData } from "../actions/dashboard";
 import { checkSheetConnection } from "../actions/onboarding";
 import { BottomNav } from "../dashboard/components/BottomNav";
 import { SyncButton } from "../dashboard/components/SyncButton";
+import { BenefitBanner } from "./components/BenefitBanner";
 import { PortfolioClient } from "./components/PortfolioClient";
 
 function formatCurrency(amount: number, compact = false): string {
@@ -32,15 +33,19 @@ export default async function PortfolioPage() {
     redirect("/login");
   }
 
-  const { connected, sheetId, userExists } = await checkSheetConnection();
-  if (!userExists) {
-    redirect("/onboarding");
+  // 데모 계정은 시트 연동 체크 스킵 (Play Store 심사용)
+  let sheetUrl: string | null = null;
+  if (!session.isDemo) {
+    const { connected, sheetId } = await checkSheetConnection();
+    if (!connected) {
+      redirect("/onboarding");
+    }
+    sheetUrl = sheetId
+      ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit`
+      : null;
   }
 
   const data = await getDashboardData();
-  const sheetUrl = sheetId
-    ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit`
-    : null;
 
   const portfolio = data?.portfolio || [];
   const totalAsset = data?.totalAsset || 0;
@@ -135,9 +140,8 @@ export default async function PortfolioPage() {
           )}
         </section>
 
-        {/* TODO: 배너 추가 */}
         {/* Account Opening Banner */}
-        {/* <BenefitBanner /> */}
+        <BenefitBanner />
 
         {/* Portfolio Content (List or Chart) */}
         {portfolio.length === 0 ? (

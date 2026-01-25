@@ -1,15 +1,10 @@
-import { AppleLogin, GoogleLogin } from "@repo/auth/components";
-import { auth } from "@repo/auth/server";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/design-system";
-import { AlertCircle } from "lucide-react";
-import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { AppleLogin, GoogleLogin } from '@repo/auth/components'
+import { auth } from '@repo/auth/server'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/design-system'
+import { AlertCircle } from 'lucide-react'
+import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
+import { TestLoginForm } from './TestLoginForm'
 
 export const metadata: Metadata = {
   title: "로그인",
@@ -71,15 +66,19 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             callbackUrl="/dashboard"
             className="flex w-full items-center justify-center gap-2 rounded-md border bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
           />
-          <AppleLogin className="flex w-full items-center justify-center gap-2 rounded-md bg-background px-4 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-900" />
+          <AppleLogin
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-black px-4 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-gray-900"
+          />
 
-          {error === "scope_denied" && (
+          {error === 'scope_denied' && (
             <p className="text-xs text-muted-foreground text-center mt-4">
-              💡 굴림은 Google 스프레드시트에 투자 기록을 저장합니다.
-              <br />
+              굴림은 Google 스프레드시트에 투자 기록을 저장합니다.<br />
               서비스 이용을 위해 Google Drive 권한이 필요합니다.
             </p>
           )}
+
+          {/* 테스트 로그인 폼 (앱스토어 심사용) */}
+          <TestLoginForm />
         </CardContent>
       </Card>
     </main>

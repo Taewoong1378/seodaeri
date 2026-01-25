@@ -75,15 +75,77 @@ export async function handleAppleLogin(messageId: string, webViewRef: WebViewRef
     }
 
     // WebView로 성공 응답 전송
+    console.log('[AppleAuth] Sending success response to WebView')
+    console.log('[AppleAuth] Response data:', JSON.stringify(response))
+    console.log('[AppleAuth] WebView ref exists:', !!webViewRef.current)
+    
     const script = `
       (function() {
-        window.dispatchEvent(new CustomEvent('Bridge.AppleLogin', {
-          detail: { id: ${JSON.stringify(messageId)}, data: ${JSON.stringify(response)} }
+        var messageId = ${JSON.stringify(messageId)};
+        var responseData = ${JSON.stringify(response)};
+        var callbackName = '__appleLoginCallback_' + messageId;
+        
+        // 디버그 정보
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'Debug.AppleLogin',
+          step: 'script_executed',
+          url: window.location.href,
+          callbackName: callbackName,
+          callbackExists: typeof window[callbackName] === 'function'
         }));
+        
+        // 방법 1: 전역 콜백 함수 호출 (더 안정적)
+        if (typeof window[callbackName] === 'function') {
+          try {
+            window[callbackName]({ id: messageId, data: responseData });
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'Debug.AppleLogin',
+              step: 'callback_called',
+              callbackName: callbackName
+            }));
+          } catch(e) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'Debug.AppleLogin',
+              step: 'callback_error',
+              error: e.message || String(e)
+            }));
+          }
+        } else {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'Debug.AppleLogin',
+            step: 'callback_not_found',
+            callbackName: callbackName
+          }));
+        }
+        
+        // 방법 2: 이벤트 디스패치 (백업)
+        try {
+          var event = new CustomEvent('Bridge.AppleLogin', {
+            detail: { id: messageId, data: responseData }
+          });
+          window.dispatchEvent(event);
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'Debug.AppleLogin',
+            step: 'event_dispatched'
+          }));
+        } catch (e) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'Debug.AppleLogin',
+            step: 'event_error',
+            error: e.message || String(e)
+          }));
+        }
+        
         return true;
       })();
     `
-    webViewRef.current?.injectJavaScript(script)
+    
+    if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(script)
+      console.log('[AppleAuth] Script injected')
+    } else {
+      console.error('[AppleAuth] WebView ref is null!')
+    }
   } catch (error: unknown) {
     let errorMessage = 'APPLE_LOGIN_FAILED'
 
@@ -102,17 +164,24 @@ export async function handleAppleLogin(messageId: string, webViewRef: WebViewRef
     }
 
     console.error('[AppleAuth] Apple login error:', error)
+    console.error('[AppleAuth] Error message:', errorMessage)
 
     // WebView로 에러 응답 전송
     const script = `
       (function() {
+        console.log('[AppleAuth WebView] Received Apple login error:', ${JSON.stringify(errorMessage)});
         window.dispatchEvent(new CustomEvent('Bridge.AppleLogin', {
           detail: { id: ${JSON.stringify(messageId)}, error: ${JSON.stringify(errorMessage)} }
         }));
         return true;
       })();
     `
-    webViewRef.current?.injectJavaScript(script)
+    
+    if (webViewRef.current) {
+      webViewRef.current.injectJavaScript(script)
+    } else {
+      console.error('[AppleAuth] WebView ref is null for error response!')
+    }
   }
 }
 

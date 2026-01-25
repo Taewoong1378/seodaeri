@@ -1,9 +1,13 @@
 "use client";
 
 import { Card, CardContent } from "@repo/design-system/components/card";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useMemo } from "react";
 import { useDashboard } from "../../../hooks";
+import { getSmallBanners } from "../../../lib/banner-data";
 import { AccountTrendChart } from "./AccountTrendChart";
+import { BannerCarousel } from "./BannerCarousel";
 import { CumulativeDividendChart } from "./CumulativeDividendChart";
 import { DashboardTabs } from "./DashboardTabs";
 import { DividendByYearChart } from "./DividendByYearChart";
@@ -17,6 +21,7 @@ import { PerformanceComparisonChart } from "./PerformanceComparisonChart";
 import { PortfolioDonutChart } from "./PortfolioDonutChart";
 import { PortfolioHoldingsChart } from "./PortfolioHoldingsChart";
 import { RollingAverageDividendChart } from "./RollingAverageDividendChart";
+import { SmallBanner } from "./SmallBanner";
 import { YearlyDividendChart } from "./YearlyDividendChart";
 import { YieldComparisonChart } from "./YieldComparisonChart";
 import { YieldComparisonDollarChart } from "./YieldComparisonDollarChart";
@@ -153,7 +158,14 @@ function DashboardSkeleton() {
 }
 
 export function DashboardContent() {
+  const { data: session } = useSession();
   const { data, isPending, error } = useDashboard();
+
+  // 데모 모드에서는 배너 숨김 (Play Store 심사용)
+  const smallBanners = useMemo(() => {
+    if (session?.isDemo) return [];
+    return getSmallBanners();
+  }, [session?.isDemo]);
 
   // 로딩 중이거나 데이터가 아직 없으면 스켈레톤 표시
   // data가 있으면 바로 컨텐츠를 보여줌 (백그라운드 refetch 중에도)
@@ -178,8 +190,8 @@ export function DashboardContent() {
     <div className="space-y-6">
       {/* Hero Section */}
       <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        {/* TODO: 배너 캐러셀 추가 */}
-        {/* <BannerCarousel /> */}
+        {/* 배너 캐러셀 */}
+        <BannerCarousel />
         {displayData.totalAsset > 0 && (
           <HeroCard
             totalAsset={displayData.totalAsset}
@@ -231,15 +243,16 @@ export function DashboardContent() {
                 </div>
               )}
 
-              {/* TODO: 배너 추가 */}
               {/* Small Banner 1 */}
-              {/* <SmallBanner
-                title="SOL 미국배당다우존스"
-                description="한국판 SCHD의 대명사"
-                image="/images/banners/banner-sol-etf.png"
-                link="#"
-                gradient="from-blue-600 to-cyan-600"
-              /> */}
+              {smallBanners[0] && (
+                <SmallBanner
+                  title={smallBanners[0].title}
+                  description={smallBanners[0].description}
+                  image={smallBanners[0].image}
+                  link={smallBanners[0].link}
+                  gradient={smallBanners[0].gradient}
+                />
+              )}
 
               {/* Yield Comparison Bar Chart */}
               {displayData.yieldComparison && (
@@ -261,15 +274,16 @@ export function DashboardContent() {
                 </Card>
               )}
 
-              {/* TODO: 배너 추가 */}
               {/* Small Banner 2 */}
-              {/* <SmallBanner
-                title="TIGER 미국테크TOP10"
-                description="미국 빅테크 상위 10개 종목 집중 투자"
-                image="/images/banners/banner-tiger-etf.png"
-                link="#"
-                gradient="from-orange-500 to-amber-500"
-              /> */}
+              {smallBanners[1] && (
+                <SmallBanner
+                  title={smallBanners[1].title}
+                  description={smallBanners[1].description}
+                  image={smallBanners[1].image}
+                  link={smallBanners[1].link}
+                  gradient={smallBanners[1].gradient}
+                />
+              )}
 
               {/* Portfolio Charts */}
               {displayData.portfolio.length > 0 && (

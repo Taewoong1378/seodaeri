@@ -63,38 +63,49 @@ export async function POST(request: NextRequest) {
       // 유저 저장 실패해도 로그인은 진행
     }
 
+    // 세션 쿠키 이름 결정 (NextAuth v5 규칙)
+    // NextAuth v5는 프로덕션(HTTPS)에서 __Secure- 접두사를 사용
+    const isProduction = process.env.NODE_ENV === "production";
+    const cookieName = isProduction
+      ? "__Secure-authjs.session-token"
+      : "authjs.session-token";
+
     // next-auth 호환 JWT 토큰 생성
+    // ⚠️ 중요: salt는 쿠키 이름과 반드시 동일해야 함!
     const token = await encode({
       token: {
+        sub: user, // NextAuth는 'sub' 클레임을 사용
         id: user,
         email: userEmail,
         name: userName,
         provider: "apple",
         accessToken: identityToken,
         accessTokenExpires: Date.now() + 30 * 24 * 60 * 60 * 1000, // 30일
+        isAppleUser: true,
+        // Apple 로그인 사용자는 Google accessToken이 없어서 스프레드시트 사용 불가
+        // 데모 모드로 설정하여 데모 데이터 표시 (앱스토어 심사용)
+        isDemo: true,
       },
       secret: process.env.AUTH_SECRET!,
-      salt: "authjs.session-token",
+      salt: cookieName, // 쿠키 이름과 동일하게!
       maxAge: 30 * 24 * 60 * 60, // 30일
     });
 
-    // 세션 쿠키 설정 - NextResponse로 직접 설정 (iOS WebView 호환)
-    const response = NextResponse.json({ success: true });
-    
-    const isProduction = process.env.NODE_ENV === "production";
-    const cookieOptions = [
-      `authjs.session-token=${token}`,
-      "Path=/",
-      `Max-Age=${30 * 24 * 60 * 60}`,
-      "HttpOnly",
-      isProduction ? "Secure" : "",
-      "SameSite=Lax",
-    ].filter(Boolean).join("; ");
-    
-    response.headers.set("Set-Cookie", cookieOptions);
-    
-    console.log("[Apple Auth] Cookie set successfully for user:", user);
-    
+    // NextResponse를 통해 직접 쿠키 설정 (더 확실한 방법)
+    const response = NextResponse.json({
+      success: true,
+      // WebView에서 쿠키가 안 될 경우를 대비해 토큰도 반환
+      token: token,
+      cookieName: cookieName,
+    });
+    response.cookies.set(cookieName, token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax", // WebView 호환성
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60, // 30일
+    });
+
     return response;
   } catch (error) {
     console.error("Apple auth error:", error);

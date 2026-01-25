@@ -1,0 +1,3 @@
+# apps/mobile/.gitignore에 추가
+/ios
+/android

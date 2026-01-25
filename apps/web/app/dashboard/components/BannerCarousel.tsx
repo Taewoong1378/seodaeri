@@ -1,60 +1,33 @@
 "use client";
 
-import Autoplay from "embla-carousel-autoplay";
-import useEmblaCarousel from "embla-carousel-react";
-import { ArrowRight, Building2, TrendingUp, Wallet } from "lucide-react";
-import Image from "next/image";
-import type { ReactElement } from "react";
-import { useCallback, useEffect, useState } from "react";
+import Autoplay from 'embla-carousel-autoplay';
+import useEmblaCarousel from 'embla-carousel-react';
+import { ArrowRight } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import Image from 'next/image';
+import Link from 'next/link';
+import type { ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { getCarouselBanners, getIconElement } from '../../../lib/banner-data';
 
-const BANNERS = [
-  {
-    id: 1,
-    title: "KODEX 미국배당프리미엄",
-    description: "매월 받는 월배당 ETF의 정석",
-    subtext: "S&P500 상승분과 배당수익을 동시에",
-    bgGradient: "from-blue-700 to-slate-900",
-    image: "/images/banners/banner-kodex-etf.png",
-    icon: <TrendingUp className="w-12 h-12 text-white/90" />,
-    action: "상품 확인하기",
-  },
-  {
-    id: 2,
-    title: "키움증권 X 서대리",
-    description: "서대리 구독자 전용 특별 혜택",
-    subtext: "해외주식 환전 우대 95% + $40 즉시 지급",
-    bgGradient: "from-pink-600 to-rose-900",
-    image: "/images/banners/banner-kiwoom-event.png",
-    icon: <TrendingUp className="w-12 h-12 text-white/90" />,
-    action: "이벤트 확인",
-  },
-  {
-    id: 3,
-    title: "토스증권 주식 모으기",
-    description: "매일 커피 한 잔 값으로 시작하는 투자",
-    subtext: "서대리 추천 포트폴리오 원클릭 매수",
-    bgGradient: "from-emerald-600 to-teal-900",
-    image: "/images/banners/banner-toss-collection.png",
-    icon: <Wallet className="w-12 h-12 text-white/90" />,
-    action: "시작하기",
-  },
-  {
-    id: 4,
-    title: "미래에셋증권 연금저축",
-    description: "노후 준비는 서대리와 함께",
-    subtext: "개인연금/IRP 이전 시 신세계 상품권 증정",
-    bgGradient: "from-orange-500 to-amber-800",
-    image: "/images/banners/banner-mirae-pension.png",
-    icon: <Building2 className="w-12 h-12 text-white/90" />,
-    action: "자세히 보기",
-  },
-];
+export function BannerCarousel(): ReactElement | null {
+  const { data: session } = useSession();
 
-export function BannerCarousel(): ReactElement {
+  // 데모 모드에서는 배너 숨김 (Play Store 심사용)
+  const BANNERS = useMemo(() => {
+    if (session?.isDemo) return [];
+    return getCarouselBanners();
+  }, [session?.isDemo]);
+
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [
     Autoplay({ delay: 5000, stopOnInteraction: false }),
   ]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // 배너가 없으면 렌더링 안함
+  if (BANNERS.length === 0) {
+    return null;
+  }
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
@@ -119,18 +92,30 @@ export function BannerCarousel(): ReactElement {
                     </p>
                   </div>
                   <div className="hidden sm:flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 shadow-inner">
-                    {banner.icon}
+                    {getIconElement(banner.iconName)}
                   </div>
                 </div>
 
                 <div className="mt-6 sm:mt-0 sm:absolute sm:bottom-8 sm:right-8 relative z-20 self-end">
-                  <button
-                    type="button"
-                    className="group flex items-center gap-2 px-4 py-2 rounded-full bg-white text-slate-900 text-sm font-bold shadow-lg hover:bg-slate-50 transition-all active:scale-95"
-                  >
-                    {banner.action}
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                  </button>
+                  {banner.link ? (
+                    <Link href={banner.link} target="_blank">
+                      <button
+                        type="button"
+                        className="group flex items-center gap-2 px-4 py-2 rounded-full bg-white text-slate-900 text-sm font-bold shadow-lg hover:bg-slate-50 transition-all active:scale-95"
+                      >
+                        {banner.action}
+                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                      </button>
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      className="group flex items-center gap-2 px-4 py-2 rounded-full bg-white text-slate-900 text-sm font-bold shadow-lg hover:bg-slate-50 transition-all active:scale-95"
+                    >
+                      {banner.action}
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

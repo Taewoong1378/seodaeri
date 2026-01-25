@@ -10,6 +10,7 @@ import {
   handleAppleLogin,
   handleCheckAppleAvailable,
 } from './handlers/appleAuthHandler'
+import { handleSetCookie } from './handlers/cookieHandler'
 
 export function createMessageHandler(webViewRef: WebViewRef) {
   return async (event: WebViewMessageEvent) => {
@@ -18,6 +19,20 @@ export function createMessageHandler(webViewRef: WebViewRef) {
         event.nativeEvent.data
       ) as BridgeMessage<BridgeMessageType>
       console.log('Bridge message:', message)
+
+      // 디버그 메시지 처리
+      if (message.type === 'Debug.AppleLogin') {
+        console.log('🔍 [Debug.AppleLogin]', JSON.stringify(message, null, 2))
+        return
+      }
+      if (message.type === 'Debug.Bridge') {
+        console.log('🌉 [Debug.Bridge]', JSON.stringify(message, null, 2))
+        return
+      }
+      if (message.type === 'Debug.AppleLogin.Component') {
+        console.log('🍎 [AppleLogin]', JSON.stringify(message, null, 2))
+        return
+      }
 
       switch (message.type) {
         case 'UI.Share':
@@ -30,6 +45,14 @@ export function createMessageHandler(webViewRef: WebViewRef) {
 
         case 'Auth.Apple.CheckAvailable':
           await handleCheckAppleAvailable(message.id || '', webViewRef)
+          break
+
+        case 'Auth.SetCookie':
+          await handleSetCookie(
+            message.id || '',
+            webViewRef,
+            message.payload as { token: string; cookieName: string; domain: string }
+          )
           break
 
         default:

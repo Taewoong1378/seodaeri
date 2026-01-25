@@ -18,7 +18,9 @@ import {
   TrendingDown,
   Wallet,
 } from "lucide-react";
-import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useMemo, useState } from "react";
+import { getTransactionBannerByTab } from "../../../lib/banner-data";
 import { queryKeys } from "../../../lib/query-client";
 import {
   type AccountBalanceRecord,
@@ -26,6 +28,7 @@ import {
 } from "../../actions/account-balance";
 import { deleteDeposit } from "../../actions/deposit";
 import { deleteDividend } from "../../actions/dividend";
+import { SmallBanner } from "../../dashboard/components/SmallBanner";
 import { AlertDialog, ConfirmDialog } from "./ConfirmDialog";
 import { EditTransactionModal, type EditType } from "./EditTransactionModal";
 
@@ -100,6 +103,7 @@ export function TransactionsClient({
   activeTab,
   onTabChange,
 }: TransactionsClientProps) {
+  const { data: session } = useSession();
   const queryClient = useQueryClient();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
@@ -125,6 +129,20 @@ export function TransactionsClient({
     useState<AccountBalanceRecord | null>(null);
   const [editTransactionTarget, setEditTransactionTarget] =
     useState<Transaction | null>(null);
+
+  // 탭별 배너 데이터 (데모 모드에서는 숨김 - Play Store 심사용)
+  const dividendBanner = useMemo(
+    () => (session?.isDemo ? null : getTransactionBannerByTab("dividend")),
+    [session?.isDemo]
+  );
+  const depositBanner = useMemo(
+    () => (session?.isDemo ? null : getTransactionBannerByTab("deposit")),
+    [session?.isDemo]
+  );
+  const balanceBanner = useMemo(
+    () => (session?.isDemo ? null : getTransactionBannerByTab("balance")),
+    [session?.isDemo]
+  );
 
   const getTypeText = (type: Transaction["type"]) => {
     switch (type) {
@@ -452,18 +470,25 @@ export function TransactionsClient({
           </div>
         )}
 
-        {/* TODO: 배너 추가 */}
-        {/* SCHD Banner for Dividend Tab */}
-        {/* {activeTab === "dividend" && (
+        {/* Transaction Banners for each Tab */}
+        {activeTab === "balance" && balanceBanner && (
           <SmallBanner
-            title="SOL 미국배당다우존스"
-            description="한국판 SCHD로 시작하는 월배당 투자"
-            image="/images/banners/banner-sol-etf.png"
-            link="https://www.shinhansec.com"
-            gradient="from-blue-600 to-indigo-900"
+            title={balanceBanner.title}
+            description={balanceBanner.description}
+            image={balanceBanner.image}
+            link={balanceBanner.link}
+            gradient={balanceBanner.gradient}
           />
-        )} */}
-
+        )}
+        {activeTab === "dividend" && dividendBanner && (
+          <SmallBanner
+            title={dividendBanner.title}
+            description={dividendBanner.description}
+            image={dividendBanner.image}
+            link={dividendBanner.link}
+            gradient={dividendBanner.gradient}
+          />
+        )}
         {activeTab === "deposit" && depositTransactions.length > 0 && (
           <div className="bg-gradient-to-br from-purple-600/20 to-purple-800/10 rounded-2xl p-5 border border-purple-500/20">
             <div className="flex items-center justify-between">
@@ -485,6 +510,15 @@ export function TransactionsClient({
               </div>
             </div>
           </div>
+        )}
+        {activeTab === "deposit" && depositBanner && (
+          <SmallBanner
+            title={depositBanner.title}
+            description={depositBanner.description}
+            image={depositBanner.image}
+            link={depositBanner.link}
+            gradient={depositBanner.gradient}
+          />
         )}
 
         {/* Content */}

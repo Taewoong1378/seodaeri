@@ -54,9 +54,16 @@ export default async function SettingsPage() {
                 </div>
               )}
               <div>
-                <h2 className="text-lg font-bold text-foreground">
-                  {session.user.name}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-foreground">
+                    {session.user.name}
+                  </h2>
+                  {session.isDemo && (
+                    <span className="px-2 py-0.5 text-xs font-medium bg-blue-500/10 text-blue-500 rounded-full">
+                      데모
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-muted-foreground">
                   {session.user.email}
                 </p>
@@ -68,25 +75,28 @@ export default async function SettingsPage() {
         {/* Settings Menu */}
         <Card className="border-border bg-card shadow-none rounded-[24px] overflow-hidden">
           <CardContent className="p-0">
-            <Link
-              href="/settings/sheet"
-              className="flex items-center justify-between p-4 border-b border-border hover:bg-muted transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <ExternalLink size={20} className="text-blue-500" />
+            {/* 데모 계정은 시트 연동 메뉴 숨김 (Play Store 심사용) */}
+            {!session.isDemo && (
+              <Link
+                href="/settings/sheet"
+                className="flex items-center justify-between p-4 border-b border-border hover:bg-muted transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <ExternalLink size={20} className="text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      시트 연동 관리
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Google 스프레드시트 연결 설정
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    시트 연동 관리
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Google 스프레드시트 연결 설정
-                  </p>
-                </div>
-              </div>
-              <ChevronRight size={20} className="text-muted-foreground" />
-            </Link>
+                <ChevronRight size={20} className="text-muted-foreground" />
+              </Link>
+            )}
             <Link
               href="/privacy"
               className="flex items-center justify-between p-4 hover:bg-muted transition-colors"
