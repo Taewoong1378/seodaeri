@@ -1,13 +1,16 @@
 import { Button } from '@repo/design-system/components/button'
 import {
   ArrowRight,
+  Camera,
   Check,
   ChevronRight,
+  FileSpreadsheet,
   LayoutDashboard,
   LineChart,
   Lock,
   Rocket,
   Smartphone,
+  Sparkles,
   TrendingUp,
   Zap
 } from 'lucide-react'
@@ -216,15 +219,73 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Feature 3: Dividend Analysis */}
+        {/* Feature 3: OCR Auto Recognition */}
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-            <div className="order-2 lg:order-1 bg-slate-50 rounded-3xl p-6 md:p-12 border border-slate-100">
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-8 overflow-hidden">
-                <LandingDividendChart />
+            <div className="order-2 lg:order-1 bg-gradient-to-br from-violet-50 to-blue-50 rounded-3xl p-6 md:p-12 border border-violet-100/50 relative overflow-hidden">
+              <div className="absolute top-4 right-4 w-20 h-20 bg-violet-200/30 rounded-full blur-2xl" />
+              <div className="absolute bottom-8 left-8 w-32 h-32 bg-blue-200/30 rounded-full blur-3xl" />
+              <div className="relative z-10 bg-white rounded-2xl shadow-lg border border-slate-100 p-6 max-w-[280px] mx-auto">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center">
+                    <Camera className="w-5 h-5 text-violet-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">배당금 입금 알림</div>
+                    <div className="text-xs text-slate-500">이미지를 분석했습니다</div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                    <span className="text-sm text-slate-600">AAPL</span>
+                    <span className="text-sm font-medium text-emerald-600">$24.50</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                    <span className="text-sm text-slate-600">MSFT</span>
+                    <span className="text-sm font-medium text-emerald-600">$18.75</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-sm text-slate-600">삼성전자</span>
+                    <span className="text-sm font-medium text-emerald-600">₩1,444</span>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-center gap-2 py-2 bg-violet-50 rounded-lg">
+                  <Sparkles className="w-4 h-4 text-violet-600" />
+                  <span className="text-sm font-medium text-violet-700">AI가 자동으로 입력했습니다</span>
+                </div>
               </div>
             </div>
             <div className="order-1 lg:order-2">
+              <h2 className="font-serif text-4xl font-medium mb-6 leading-tight">
+                사진 한 장으로<br />
+                배당금 자동 입력.
+              </h2>
+              <p className="text-lg text-slate-500 mb-8 leading-relaxed">
+                배당금 입금 알림을 캡처하면, AI가 자동으로 분석해서 입력합니다.
+                종목명, 금액, 날짜까지 한 번에. 여러 건의 배당금도 동시에 인식합니다.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-3 text-slate-700">
+                  <Camera className="w-5 h-5 text-violet-500" />
+                  <span>배당금 알림 스크린샷 인식</span>
+                </li>
+                <li className="flex items-center gap-3 text-slate-700">
+                  <Sparkles className="w-5 h-5 text-amber-500" />
+                  <span>AI가 종목, 금액, 날짜 자동 추출</span>
+                </li>
+                <li className="flex items-center gap-3 text-slate-700">
+                  <Check className="w-5 h-5 text-emerald-500" />
+                  <span>여러 건도 한 번에 입력</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature 4: Dividend Analysis */}
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+            <div>
               <h2 className="font-serif text-4xl font-medium mb-6 leading-tight">
                 배당금이 늘어나는<br />
                 즐거움을 시각적으로.
@@ -238,6 +299,74 @@ export default function Home() {
                 <LineChart className="w-4 h-4 mr-2" />
                 분석 기능 더보기
               </Button>
+            </div>
+            <div className="bg-slate-50 rounded-3xl p-6 md:p-12 border border-slate-100">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-8 overflow-hidden">
+                <LandingDividendChart />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature 5: Sheet Integration */}
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+            <div className="order-2 lg:order-1 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl p-6 md:p-12 border border-emerald-100/50 relative overflow-hidden">
+              <div className="absolute top-8 right-8 w-24 h-24 bg-emerald-200/30 rounded-full blur-2xl" />
+              <div className="relative z-10 flex flex-col items-center gap-6">
+                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-6 w-full max-w-[300px]">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
+                      <FileSpreadsheet className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-slate-900">서대리 투자 템플릿</div>
+                      <div className="text-xs text-slate-500">Google Sheets</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-emerald-600 font-medium">
+                    <Check className="w-4 h-4" />
+                    연동 완료
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-slate-500">
+                  <div className="w-8 h-[2px] bg-slate-200" />
+                  <span className="text-xs">실시간 동기화</span>
+                  <div className="w-8 h-[2px] bg-slate-200" />
+                </div>
+                <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-4 w-full max-w-[300px]">
+                  <div className="text-xs text-slate-500 mb-2">앱에서 바로 확인</div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-700">총 자산</span>
+                    <span className="text-lg font-medium text-slate-900">₩ 124,500,000</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="order-1 lg:order-2">
+              <h2 className="font-serif text-4xl font-medium mb-6 leading-tight">
+                서대리 시트 사용자라면<br />
+                그대로 연동하세요.
+              </h2>
+              <p className="text-lg text-slate-500 mb-8 leading-relaxed">
+                이미 서대리TV의 투자 템플릿을 사용하고 계신가요?
+                기존 데이터를 그대로 연동해서 모바일에서도 확인할 수 있습니다.
+                시트와 앱을 병행해서 사용해도 문제없습니다.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-3 text-slate-700">
+                  <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
+                  <span>기존 서대리 시트 자동 연동</span>
+                </li>
+                <li className="flex items-center gap-3 text-slate-700">
+                  <Zap className="w-5 h-5 text-amber-500" />
+                  <span>새 시트 원클릭 생성 지원</span>
+                </li>
+                <li className="flex items-center gap-3 text-slate-700">
+                  <Lock className="w-5 h-5 text-blue-500" />
+                  <span>내 Google Drive에 안전하게 보관</span>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
@@ -304,7 +433,7 @@ export default function Home() {
             </div>
           </div>
           <div className="mt-16 pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-400">
-            <p>© 2024 Gulim. All rights reserved.</p>
+            <p>© 2025 Gulim. All rights reserved.</p>
             <p>Made in Seoul, Korea</p>
           </div>
         </div>

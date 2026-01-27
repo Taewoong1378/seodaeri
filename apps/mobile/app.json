@@ -2,7 +2,7 @@
   "expo": {
     "name": "굴림(Gulim)",
     "slug": "gulim-app",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "gulim",
@@ -21,7 +21,8 @@
           }
         },
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "buildNumber": "2"
     },
     "android": {
       "adaptiveIcon": {
@@ -39,7 +40,10 @@
               "scheme": "gulim"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },

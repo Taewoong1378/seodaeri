@@ -1,3 +1,4 @@
 # apps/mobile/.gitignore에 추가
 /ios
 /android
+google-play-service-account.json
