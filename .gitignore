@@ -57,3 +57,4 @@ dist/
 *.log
 
 packages/database/*
+.omc/*

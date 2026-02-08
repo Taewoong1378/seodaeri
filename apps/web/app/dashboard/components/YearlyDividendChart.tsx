@@ -149,16 +149,16 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
           opacity: 0,
           width: '800px',
           height: '450px',
-          backgroundColor: '#020617',
+          backgroundColor: '#ffffff',
           padding: '20px',
           pointerEvents: 'none',
         }}
       >
-        <div className="mb-4">
-          <h3 className="text-xl font-bold text-white">연도별 배당금 현황</h3>
-          <p className="text-sm text-slate-400">연도별 배당금 추이</p>
+        <div style={{ marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>연도별 배당금 현황</h3>
+          <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>연도별 배당금 추이</p>
         </div>
-        <div className="w-full h-[350px]">
+        <div style={{ width: '100%', height: '350px' }}>
           <ResponsiveContainer width="100%" height="100%">
             {renderChart(true)}
           </ResponsiveContainer>

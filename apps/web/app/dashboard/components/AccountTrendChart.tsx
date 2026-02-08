@@ -388,18 +388,18 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
           pointerEvents: 'none',
         }}
       >
-        <div className="mb-4">
-          <h3 className="text-xl font-bold text-foreground">월별 계좌추세</h3>
-          <p className="text-sm text-muted-foreground">누적입금액 vs 계좌총액</p>
+        <div style={{ marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>월별 계좌추세</h3>
+          <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>누적입금액 vs 계좌총액</p>
         </div>
-        <div className="flex items-center justify-start gap-6 mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-sm bg-emerald-600/70" />
-            <span className="text-sm text-muted-foreground">누적입금액</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '24px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '16px', height: '16px', borderRadius: '2px', backgroundColor: 'rgba(5, 150, 105, 0.7)' }} />
+            <span style={{ fontSize: '14px', color: '#64748b' }}>누적입금액</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-sm bg-lime-400/70" />
-            <span className="text-sm text-muted-foreground">계좌총액</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '16px', height: '16px', borderRadius: '2px', backgroundColor: 'rgba(163, 230, 53, 0.7)' }} />
+            <span style={{ fontSize: '14px', color: '#64748b' }}>계좌총액</span>
           </div>
         </div>
         <div className="w-full h-[350px]">

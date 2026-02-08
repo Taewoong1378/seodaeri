@@ -6,7 +6,44 @@ interface HeroCardProps {
   totalInvested: number;
   totalProfit: number;
   totalYield: number;
+  thisMonthProfit?: number;
+  thisMonthYield?: number;
+  thisYearProfit?: number;
+  thisYearYield?: number;
   investmentDays?: number;
+}
+
+function StatItem({ label, amount, yield: yieldPercent }: { label: string; amount: number; yield?: number }) {
+  const isPositive = amount >= 0;
+  const hasYield = yieldPercent !== undefined && yieldPercent !== null;
+
+  return (
+    <div className="space-y-1.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      {label === '원금' ? (
+        <p className="text-sm font-semibold text-foreground">{amount.toLocaleString()}원</p>
+      ) : (
+        <div className="space-y-1">
+          <p className={cn(
+            "text-sm font-bold whitespace-nowrap",
+            isPositive ? "text-emerald-600" : "text-red-600"
+          )}>
+            {isPositive ? '+' : ''}{amount.toLocaleString()}원
+          </p>
+          {hasYield && (
+            <span className={cn(
+              "inline-block text-xs px-1.5 py-0.5 rounded-[6px] font-medium",
+              isPositive
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-red-50 text-red-700"
+            )}>
+              {isPositive ? '+' : ''}{yieldPercent.toFixed(1)}%
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function HeroCard({
@@ -14,10 +51,12 @@ export function HeroCard({
   totalInvested,
   totalProfit,
   totalYield,
+  thisMonthProfit,
+  thisMonthYield,
+  thisYearProfit,
+  thisYearYield,
   investmentDays = 0,
 }: HeroCardProps) {
-  const isPositive = totalProfit >= 0;
-
   return (
     <div className="relative overflow-hidden rounded-[24px] shadow-sm border border-border bg-card group">
       <div className="relative z-10 p-6 space-y-6">
@@ -35,31 +74,16 @@ export function HeroCard({
           </h2>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - 2x2 */}
         <div className="grid grid-cols-2 gap-4 pt-6 border-t border-border/50">
-          <div className="space-y-1">
-            <span className="text-xs text-muted-foreground">투자 원금</span>
-            <p className="text-sm font-semibold text-foreground">{totalInvested.toLocaleString()}원</p>
-          </div>
-          <div className="space-y-1">
-            <span className="text-xs text-muted-foreground">평가 손익</span>
-             <div className="flex items-center gap-1.5 flex-wrap">
-              <p className={cn(
-                "text-sm font-bold whitespace-nowrap",
-                isPositive ? "text-emerald-600" : "text-red-600"
-              )}>
-                {isPositive ? '+' : ''}{totalProfit.toLocaleString()}원
-              </p>
-              <span className={cn(
-                "text-xs px-1.5 py-0.5 rounded-[6px] font-medium",
-                isPositive 
-                  ? "bg-emerald-50 text-emerald-700" 
-                  : "bg-red-50 text-red-700"
-              )}>
-                {isPositive ? '+' : ''}{totalYield.toFixed(1)}%
-              </span>
-            </div>
-          </div>
+          <StatItem label="원금" amount={totalInvested} />
+          <StatItem label="누적손익" amount={totalProfit} yield={totalYield} />
+          {thisMonthProfit !== undefined && (
+            <StatItem label="이번달 손익" amount={thisMonthProfit} yield={thisMonthYield} />
+          )}
+          {thisYearProfit !== undefined && (
+            <StatItem label="올해손익" amount={thisYearProfit} yield={thisYearYield} />
+          )}
         </div>
 
         {/* Investment Days Badge (Bottom) */}

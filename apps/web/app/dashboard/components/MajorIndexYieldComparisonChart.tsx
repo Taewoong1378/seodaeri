@@ -259,19 +259,34 @@ export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparis
           opacity: 0,
           width: '800px',
           height: '450px',
-          backgroundColor: '#020617',
+          backgroundColor: '#ffffff',
           padding: '20px',
           pointerEvents: 'none',
         }}
       >
-        <div className="mb-4">
-          <h3 className="text-xl font-bold text-white">{currentYear}년 주요지수 수익률 비교</h3>
-          <p className="text-sm text-slate-400">vs S&P500, NASDAQ, KOSPI</p>
+        <div style={{ marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>{currentYear}년 주요지수 수익률 비교</h3>
+          <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>vs S&P500, NASDAQ, KOSPI</p>
         </div>
-        <div className="mb-4">
-          <CustomLegend isModal />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '16px', height: '2px', borderRadius: '2px', backgroundColor: COLORS.sp500 }} />
+            <span style={{ fontSize: '14px', color: '#64748b' }}>S&P500</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '16px', height: '2px', borderRadius: '2px', backgroundColor: COLORS.nasdaq }} />
+            <span style={{ fontSize: '14px', color: '#64748b' }}>나스닥</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '16px', height: '2px', borderRadius: '2px', backgroundColor: COLORS.kospi }} />
+            <span style={{ fontSize: '14px', color: '#64748b' }}>코스피</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '16px', height: '2px', borderRadius: '2px', backgroundColor: COLORS.account }} />
+            <span style={{ fontSize: '14px', color: '#64748b' }}>투자</span>
+          </div>
         </div>
-        <div className="w-full h-[350px]">
+        <div style={{ width: '100%', height: '350px' }}>
           <ResponsiveContainer width="100%" height="100%">
             {renderChart(true)}
           </ResponsiveContainer>

@@ -186,18 +186,18 @@ export function DividendChart({ data }: DividendChartProps) {
           opacity: 0,
           width: '800px',
           height: '450px',
-          backgroundColor: '#020617',
+          backgroundColor: '#ffffff',
           padding: '20px',
           pointerEvents: 'none',
         }}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h3 className="text-xl font-bold text-white">{selectedYear}년 월별 배당금</h3>
-            <p className="text-sm text-slate-400">총 {yearTotal.toLocaleString()}원</p>
+            <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>{selectedYear}년 월별 배당금</h3>
+            <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>총 {yearTotal.toLocaleString()}원</p>
           </div>
         </div>
-        <div className="w-full h-[350px]">
+        <div style={{ width: '100%', height: '350px' }}>
           {renderChart("100%", true)}
         </div>
       </div>

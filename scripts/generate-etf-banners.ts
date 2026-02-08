@@ -104,6 +104,19 @@ const BRAND_STYLES = {
 - **Text Style**: 3D metallic WHITE/PINK text with rose glow effect
 `,
   },
+
+  // 서대리증권 (가상 증권사) - 에메랄드/틸 + 다크 슬레이트
+  seodaeri: {
+    colors: "BRIGHT EMERALD/TEAL GREEN to DEEP DARK SLATE/CHARCOAL",
+    accent: "emerald/mint green",
+    style: `
+- **Background**: Smart, modern gradient from BRIGHT EMERALD/TEAL GREEN on the LEFT to DEEP DARK SLATE/CHARCOAL on the RIGHT
+- **Atmosphere**: Clean, intelligent, professional with subtle floating particles and soft lens flares
+- **Design Elements**: Minimalist geometric patterns, hexagonal grids, clean data visualizations, abstract financial flow lines
+- **Text Style**: 3D metallic EMERALD/MINT GREEN text with subtle glow, clean and modern sans-serif
+- **Brand Feel**: "Smart office worker's investment partner" - clean, trustworthy, approachable yet professional
+`,
+  },
 };
 
 // =============================================================================
@@ -431,6 +444,49 @@ const BANNERS: BannerConfig[] = [
     theme: "Kiwoom Securities brand icon - investment benefits",
     types: ["benefit"],
   },
+
+  // ===== 서대리증권 (가상 증권사) =====
+  {
+    slug: "seodaeri-savings",
+    title: "서대리 적립식 플랜",
+    brand: "seodaeri",
+    elements: "Stacking coins with green glow, calendar with checkmarks, piggy bank, ascending bar chart",
+    theme: "Automatic monthly ETF savings plan - start from 100K KRW per month, smart DCA investing",
+    types: ["carousel", "small"],
+  },
+  {
+    slug: "seodaeri-dividend",
+    title: "서대리 배당 캘린더",
+    brand: "seodaeri",
+    elements: "Calendar with dollar coins dropping monthly, passive income flow, dividend tree with green leaves and golden fruits",
+    theme: "Monthly dividend portfolio design - cash flow every month from dividend ETFs",
+    types: ["carousel", "small"],
+  },
+  {
+    slug: "seodaeri-global",
+    title: "서대리 글로벌 분산투자",
+    brand: "seodaeri",
+    elements: "Glowing globe with connection lines, pie chart showing allocation, US/Korea flags, diversified asset icons",
+    theme: "Global diversified portfolio - optimal mix of S&P500, NASDAQ, dividend, and Korean stocks",
+    types: ["carousel", "small"],
+  },
+  {
+    slug: "seodaeri-pension",
+    title: "서대리 연금저축 가이드",
+    brand: "seodaeri",
+    elements: "Retirement nest egg with golden glow, tax shield icon, growing retirement fund graph, comfortable armchair",
+    theme: "Pension savings ETF portfolio - tax deduction benefits + retirement preparation",
+    types: ["carousel", "small"],
+  },
+  // 서대리증권 benefit icon
+  {
+    slug: "seodaeri-benefit",
+    title: "서대리증권",
+    brand: "seodaeri",
+    elements: "Briefcase with tie icon, emerald gem, smart chart symbol",
+    theme: "서대리증권 brand icon - smart office worker investment partner",
+    types: ["benefit"],
+  },
 ];
 
 // =============================================================================
@@ -461,7 +517,7 @@ async function generateBanner(
 
   try {
     const response = await ai.models.generateContentStream({
-      model: "gemini-2.0-flash-exp-image-generation",
+        model: "gemini-3-pro-image-preview",
       config: {
         responseModalities: ["IMAGE", "TEXT"],
         imageConfig: {
@@ -533,7 +589,7 @@ async function main(): Promise<void> {
   }
 
   // 브랜드별 폴더 생성
-  const brands = ["tiger", "sol", "kodex", "rise", "kiwoom", "all"];
+  const brands = ["tiger", "sol", "kodex", "rise", "kiwoom", "seodaeri", "all"];
   for (const brand of brands) {
     const brandDir = path.join(OUTPUT_DIR, brand);
     if (!existsSync(brandDir)) {
@@ -550,7 +606,7 @@ async function main(): Promise<void> {
   let targetType: BannerType | undefined;
 
   for (const arg of args) {
-    if (["tiger", "sol", "kodex", "rise", "kiwoom"].includes(arg)) {
+    if (["tiger", "sol", "kodex", "rise", "kiwoom", "seodaeri"].includes(arg)) {
       targetBrand = arg as keyof typeof BRAND_STYLES;
     } else if (["carousel", "small", "benefit"].includes(arg)) {
       targetType = arg as BannerType;

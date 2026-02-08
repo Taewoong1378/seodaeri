@@ -316,21 +316,22 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
           pointerEvents: 'none',
         }}
       >
-        <div className="mb-4">
-          <h3 className="text-xl font-bold text-foreground">수익률 비교</h3>
-          <p className="text-sm text-muted-foreground">vs 주요 지수</p>
+        <div style={{ marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>수익률 비교</h3>
+          <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>vs 주요 지수</p>
         </div>
-        <div className="flex flex-wrap items-center justify-start gap-x-6 gap-y-2 mb-4">
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-start', columnGap: '24px', rowGap: '8px', marginBottom: '16px' }}>
           {LINES.map((line) => (
-            <div key={line.dataKey} className="flex items-center gap-2">
+            <div key={line.dataKey} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div
-                className="w-6 h-0.5"
                 style={{
+                  width: '24px',
+                  height: '2px',
                   backgroundColor: line.color,
                   backgroundImage: line.strokeDasharray ? 'none' : undefined,
                 }}
               />
-              <span className="text-sm text-muted-foreground">{line.name}</span>
+              <span style={{ fontSize: '14px', color: '#64748b' }}>{line.name}</span>
             </div>
           ))}
         </div>

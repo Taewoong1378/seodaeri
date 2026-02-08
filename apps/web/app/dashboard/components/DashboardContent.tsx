@@ -193,15 +193,43 @@ export function DashboardContent() {
       <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* 배너 캐러셀 */}
         <BannerCarousel />
-        {displayData.totalAsset > 0 && (
-          <HeroCard
-            totalAsset={displayData.totalAsset}
-            totalInvested={displayData.totalInvested}
-            totalProfit={displayData.totalProfit}
-            totalYield={displayData.totalYield}
-            investmentDays={displayData.investmentDays}
-          />
-        )}
+        {displayData.totalAsset > 0 && (() => {
+          // 이번달 손익 계산
+          const currentMonth = new Date().getMonth() + 1; // 1-12
+          const thisMonthData = displayData.monthlyProfitLoss.find(
+            (m) => m.month === `${currentMonth}월`
+          );
+          const thisMonthProfit = thisMonthData
+            ? thisMonthData.profit - thisMonthData.loss
+            : undefined;
+          const thisMonthYield = thisMonthProfit !== undefined && displayData.totalInvested > 0
+            ? (thisMonthProfit / displayData.totalInvested) * 100
+            : undefined;
+
+          // 올해 손익 계산 (모든 월 합산)
+          const thisYearProfit = displayData.monthlyProfitLoss.length > 0
+            ? displayData.monthlyProfitLoss.reduce(
+                (sum, m) => sum + m.profit - m.loss, 0
+              )
+            : undefined;
+          const thisYearYield = thisYearProfit !== undefined && displayData.totalInvested > 0
+            ? (thisYearProfit / displayData.totalInvested) * 100
+            : undefined;
+
+          return (
+            <HeroCard
+              totalAsset={displayData.totalAsset}
+              totalInvested={displayData.totalInvested}
+              totalProfit={displayData.totalProfit}
+              totalYield={displayData.totalYield}
+              thisMonthProfit={thisMonthProfit}
+              thisMonthYield={thisMonthYield}
+              thisYearProfit={thisYearProfit}
+              thisYearYield={thisYearYield}
+              investmentDays={displayData.investmentDays}
+            />
+          );
+        })()}
       </section>
 
       {/* Tabbed Content */}

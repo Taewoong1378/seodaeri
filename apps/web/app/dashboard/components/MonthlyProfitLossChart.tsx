@@ -246,28 +246,28 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
             opacity: 0,
             width: '800px',
             height: '450px',
-            backgroundColor: '#020617',
+            backgroundColor: '#ffffff',
             padding: '20px',
             pointerEvents: 'none',
           }}
         >
-          <div className="mb-4 flex items-center justify-between">
+          <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h3 className="text-xl font-bold text-white">월별 손익</h3>
-              <p className="text-sm text-slate-400">순손익 {netTotal >= 0 ? '+' : ''}{netTotal.toLocaleString()}원</p>
+              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>월별 손익</h3>
+              <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>순손익 {netTotal >= 0 ? '+' : ''}{netTotal.toLocaleString()}원</p>
             </div>
           </div>
-          <div className="flex items-center justify-start gap-6 mb-4">
-            <div className="flex items-center gap-2">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '24px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div className={`w-4 h-4 rounded-sm ${profitBg}`} />
-              <span className="text-sm text-slate-400">수익</span>
+              <span style={{ fontSize: '14px', color: '#64748b' }}>수익</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-sm bg-slate-600" />
-              <span className="text-sm text-slate-400">손실</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '16px', height: '16px', borderRadius: '2px', backgroundColor: '#475569' }} />
+              <span style={{ fontSize: '14px', color: '#64748b' }}>손실</span>
             </div>
           </div>
-          <div className="w-full h-[350px]">
+          <div style={{ width: '100%', height: '350px' }}>
             {renderChart("100%")}
           </div>
         </div>

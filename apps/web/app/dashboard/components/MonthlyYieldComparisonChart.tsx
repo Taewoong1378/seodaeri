@@ -237,37 +237,37 @@ export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChar
           opacity: 0,
           width: '800px',
           height: '450px',
-          backgroundColor: '#020617',
+          backgroundColor: '#ffffff',
           padding: '20px',
           pointerEvents: 'none',
         }}
       >
-        <div className="mb-4">
-          <h3 className="text-xl font-bold text-white">{currentYear}년 {data.currentMonth}, 누적 수익률 현황</h3>
-          <p className="text-sm text-slate-400">vs 주요 지수</p>
+        <div style={{ marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>{currentYear}년 {data.currentMonth}, 누적 수익률 현황</h3>
+          <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>vs 주요 지수</p>
         </div>
-        <div className="flex items-center justify-start gap-6 mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: COLORS.currentMonth }} />
-            <span className="text-sm text-slate-400">{data.currentMonth} 수익률</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '24px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '16px', height: '16px', borderRadius: '2px', backgroundColor: COLORS.currentMonth }} />
+            <span style={{ fontSize: '14px', color: '#64748b' }}>{data.currentMonth} 수익률</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: COLORS.thisYear }} />
-            <span className="text-sm text-slate-400">올해 수익률</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '16px', height: '16px', borderRadius: '2px', backgroundColor: COLORS.thisYear }} />
+            <span style={{ fontSize: '14px', color: '#64748b' }}>올해 수익률</span>
           </div>
         </div>
-        <div className="w-full h-[350px]">
+        <div style={{ width: '100%', height: '350px' }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
               <XAxis
                 dataKey="name"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: '#94a3b8', fontSize: 14 }}
+                tick={{ fill: '#64748b', fontSize: 14 }}
               />
               <YAxis
                 axisLine={false}
@@ -277,13 +277,13 @@ export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChar
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1e293b',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '12px',
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                   padding: '12px',
                 }}
-                labelStyle={{ color: '#94a3b8', fontSize: 13, marginBottom: 8 }}
+                labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
                 formatter={(value: number, name: string) => {
                   const label = name === 'currentMonth' ? `${data.currentMonth} 수익률` : '올해 수익률';
                   return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
