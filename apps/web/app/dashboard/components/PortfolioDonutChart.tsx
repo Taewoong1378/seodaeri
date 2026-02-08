@@ -182,7 +182,7 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
       </div>
 
 
-      {/* Hidden Chart for Capture */}
+      {/* Hidden Chart for Capture - 인라인 스타일 사용 (html-to-image의 backgroundColor: #ffffff에 맞춤) */}
       <div
         ref={hiddenChartRef}
         style={{
@@ -193,7 +193,7 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
           opacity: 0,
           width: '800px',
           height: '450px',
-          backgroundColor: '#020617',
+          backgroundColor: '#ffffff',
           padding: '20px',
           display: 'flex',
           alignItems: 'center',
@@ -201,8 +201,8 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
           pointerEvents: 'none',
         }}
       >
-        <div className="w-full h-full max-w-[700px] max-h-[400px] flex items-center gap-12">
-          <div className="relative flex-1 aspect-square max-h-[350px]">
+        <div style={{ width: '100%', height: '100%', maxWidth: '700px', maxHeight: '400px', display: 'flex', alignItems: 'center', gap: '48px' }}>
+          <div style={{ position: 'relative', flex: 1, aspectRatio: '1', maxHeight: '350px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -223,27 +223,31 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
                     />
                   ))}
                 </Pie>
-                {/* Tooltip removed for static capture, or can be kept if needed but won't show on hover */}
               </PieChart>
             </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-lg text-slate-500">총 자산</span>
-              <span className="text-3xl font-bold text-white">{formatCurrency(totalAsset)}</span>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '18px', color: '#94a3b8' }}>총 자산</span>
+              <span style={{ fontSize: '30px', fontWeight: 700, color: '#1e293b' }}>{formatCurrency(totalAsset)}</span>
             </div>
           </div>
-          <div className="flex-1 space-y-4">
-            <div className="mb-6">
-              <h3 className="text-2xl font-bold text-white">포트폴리오 비중</h3>
-              <p className="text-slate-400">자산 구성 현황</p>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '24px', fontWeight: 700, color: '#1e293b', margin: 0 }}>포트폴리오 비중</h3>
+              <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>자산 구성 현황</p>
             </div>
             {chartData.map((item, index) => (
-              <div key={item.name} className="flex items-center gap-4">
+              <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div
-                  className="w-4 h-4 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                    backgroundColor: COLORS[index % COLORS.length],
+                  }}
                 />
-                <span className="text-lg text-slate-300 truncate flex-1">{item.name}</span>
-                <span className="text-lg font-bold text-white">{item.weight.toFixed(1)}%</span>
+                <span style={{ fontSize: '18px', color: '#475569', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
+                <span style={{ fontSize: '18px', fontWeight: 700, color: '#1e293b' }}>{item.weight.toFixed(1)}%</span>
               </div>
             ))}
           </div>
