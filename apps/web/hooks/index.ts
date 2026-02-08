@@ -28,6 +28,13 @@ export {
   useSaveAutoDepositSetting,
 } from './use-deposit';
 
+// Goal settings hooks
+export {
+  useGoalSettings,
+  useSaveGoal,
+} from './use-goal-settings';
+export type { GoalSettings } from './use-goal-settings';
+
 // Re-export types
 export type { AccountBalanceRecord, Transaction, TransactionsResult } from './use-transactions';
 export type { DashboardData } from '../app/actions/dashboard';

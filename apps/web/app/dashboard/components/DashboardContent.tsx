@@ -4,8 +4,8 @@ import { Card, CardContent } from "@repo/design-system/components/card";
 import { BarChart3, Coins } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useMemo } from "react";
-import { useDashboard } from "../../../hooks";
+import { useMemo, useState } from "react";
+import { useDashboard, useGoalSettings } from "../../../hooks";
 import { getSmallBanners } from "../../../lib/banner-data";
 import { AccountTrendChart } from "./AccountTrendChart";
 import { BannerCarousel } from "./BannerCarousel";
@@ -25,7 +25,7 @@ import { RollingAverageDividendChart } from "./RollingAverageDividendChart";
 import { SmallBanner } from "./SmallBanner";
 import { YearlyDividendChart } from "./YearlyDividendChart";
 import { YieldComparisonChart } from "./YieldComparisonChart";
-import { YieldComparisonDollarChart } from "./YieldComparisonDollarChart";
+import { GoalSettingModal } from "./GoalSettingModal";
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("ko-KR").format(Math.round(amount));
@@ -161,6 +161,9 @@ function DashboardSkeleton() {
 export function DashboardContent() {
   const { data: session } = useSession();
   const { data, isPending, error } = useDashboard();
+  const { data: goalSettings } = useGoalSettings();
+  const [goalModalType, setGoalModalType] = useState<'yearly' | 'monthly'>('yearly');
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
 
   // 데모 모드에서는 배너 숨김 (Play Store 심사용)
   const smallBanners = useMemo(() => {
@@ -227,6 +230,10 @@ export function DashboardContent() {
               thisYearProfit={thisYearProfit}
               thisYearYield={thisYearYield}
               investmentDays={displayData.investmentDays}
+              yearlyGoal={goalSettings?.yearlyGoal}
+              monthlyGoal={goalSettings?.monthlyGoal}
+              onEditYearlyGoal={() => { setGoalModalType('yearly'); setIsGoalModalOpen(true); }}
+              onEditMonthlyGoal={() => { setGoalModalType('monthly'); setIsGoalModalOpen(true); }}
             />
           );
         })()}
@@ -320,21 +327,13 @@ export function DashboardContent() {
                 />
               )}
 
-              {/* Yield Comparison Bar Chart */}
+              {/* Yield Comparison Bar Chart (원화 + 달러환율 통합) */}
               {displayData.yieldComparison && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-6">
-                    <YieldComparisonChart data={displayData.yieldComparison} />
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Yield Comparison Dollar Bar Chart (달러환율 적용) */}
-              {displayData.yieldComparisonDollar && (
-                <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
-                  <CardContent className="p-6">
-                    <YieldComparisonDollarChart
-                      data={displayData.yieldComparisonDollar}
+                    <YieldComparisonChart
+                      data={displayData.yieldComparison}
+                      dollarData={displayData.yieldComparisonDollar}
                     />
                   </CardContent>
                 </Card>
@@ -562,6 +561,14 @@ export function DashboardContent() {
           ),
         }}
       </DashboardTabs>
+
+      {/* Goal Setting Modal */}
+      <GoalSettingModal
+        open={isGoalModalOpen}
+        onOpenChange={setIsGoalModalOpen}
+        type={goalModalType}
+        currentGoal={goalModalType === 'yearly' ? goalSettings?.yearlyGoal : goalSettings?.monthlyGoal}
+      />
     </div>
   );
 }

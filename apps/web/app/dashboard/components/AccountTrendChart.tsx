@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactElement, useEffect, useRef } from 'react';
+import { type ReactElement, useRef } from 'react';
 import {
     Area,
     AreaChart,
@@ -40,7 +40,6 @@ function formatCurrency(amount: number): string {
 }
 
 export function AccountTrendChart({ data, currentTotalAsset, currentTotalInvested }: AccountTrendChartProps): ReactElement {
-  const scrollRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
   const hiddenChartRef = useRef<HTMLDivElement>(null);
 
@@ -114,30 +113,16 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
     return result;
   });
 
-  // 현재 날짜에 해당하는 위치로 스크롤
-  useEffect(() => {
-    if (scrollRef.current && displayData.length > 0) {
-      let targetIndex = displayData.length - 1;
-      for (let i = 0; i < displayData.length; i++) {
-        const item = displayData[i];
-        if (item && item.date >= currentDateStr) {
-          targetIndex = i;
-          break;
-        }
-      }
-
-      const scrollPosition = Math.max(0, targetIndex * 40 - scrollRef.current.clientWidth / 2);
-      scrollRef.current.scrollLeft = scrollPosition;
-    }
-  }, [displayData, currentDateStr]);
-
   // Y축 범위 계산
   const allValues = displayData.flatMap(d => [d.cumulativeDeposit, d.totalAccount]);
   const maxValue = Math.max(...allValues);
   const yMax = Math.ceil(maxValue / 10000000) * 10000000 + 5000000;
 
-  // 차트 너비 계산 (데이터 포인트당 40px)
-  const chartWidth = Math.max(displayData.length * 40, 400);
+  // X축 interval 계산 - 전체 기간을 한눈에 보여주되 라벨이 겹치지 않도록
+  const tickInterval = displayData.length <= 12 ? 0
+    : displayData.length <= 24 ? 2
+    : displayData.length <= 36 ? 3
+    : Math.floor(displayData.length / 10);
 
   return (
     <div ref={chartRef} className="space-y-4">
@@ -159,12 +144,12 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
           <LandscapeChartModal title="월별 계좌추세">
           <div className="flex items-center justify-center gap-6 mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-sm bg-blue-500/70" />
-              <span className="text-sm text-slate-400">누적입금액</span>
+              <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: 'rgba(5, 150, 105, 0.7)' }} />
+              <span className="text-sm text-muted-foreground">누적입금액</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-sm bg-rose-400/70" />
-              <span className="text-sm text-slate-400">계좌총액</span>
+              <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: 'rgba(163, 230, 53, 0.7)' }} />
+              <span className="text-sm text-muted-foreground">계좌총액</span>
             </div>
           </div>
           <div className="w-full h-full">
@@ -254,21 +239,12 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
         </div>
       </div>
 
-      {/* Scrollable Chart Container */}
-      <div
-        ref={scrollRef}
-        className="overflow-x-auto overflow-y-hidden pb-2 -mx-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
-        style={{
-          scrollbarWidth: 'thin',
-          WebkitOverflowScrolling: 'touch',
-        }}
-      >
-        <div style={{ width: chartWidth, height: 220, minWidth: '100%' }}>
+      {/* Chart - 전체 기간 한눈에 표시 */}
+      <div className="h-[220px]">
+        <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={displayData}
-            width={chartWidth}
-            height={220}
-            margin={{ top: 10, right: 20, left: 10, bottom: 20 }}
+            margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
           >
             <defs>
               <linearGradient id="depositGradient" x1="0" y1="0" x2="0" y2="1">
@@ -295,8 +271,8 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                   position: 'insideTopLeft',
                   angle: -90,
                   fill: '#475569',
-                  fontSize: 12,
-                  dy: 30,
+                  fontSize: 10,
+                  dy: 20,
                 }}
               />
             ))}
@@ -304,17 +280,23 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
               dataKey="date"
               axisLine={{ stroke: '#cbd5e1' }}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10 }}
-              interval={2}
-              tickFormatter={(value) => `${Number.parseInt(value.split('.')[1])}월`}
+              tick={{ fill: '#64748b', fontSize: 9 }}
+              interval={tickInterval}
+              tickFormatter={(value) => {
+                const parts = value.split('.');
+                const month = Number.parseInt(parts[1]);
+                // 1월이면 연도도 표시
+                if (month === 1) return `'${parts[0]}`;
+                return `${month}월`;
+              }}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10 }}
+              tick={{ fill: '#64748b', fontSize: 9 }}
               tickFormatter={(value) => formatCurrency(value)}
               domain={[0, yMax]}
-              width={55}
+              width={45}
             />
             <Tooltip
               contentStyle={{
@@ -332,45 +314,27 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
               }}
               labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
             />
-            {/* 누적입금액 (아래 레이어) */}
             <Area
               type="monotone"
               dataKey="cumulativeDeposit"
               stroke="#059669"
-              strokeWidth={2}
+              strokeWidth={1.5}
               fill="url(#depositGradient)"
               dot={false}
-              activeDot={{
-                r: 4,
-                fill: '#059669',
-                stroke: '#020617',
-                strokeWidth: 2,
-              }}
+              activeDot={{ r: 4, fill: '#059669', stroke: '#ffffff', strokeWidth: 2 }}
             />
-            {/* 계좌총액 (위 레이어) */}
             <Area
               type="monotone"
               dataKey="totalAccount"
               stroke="#a3e635"
-              strokeWidth={2}
+              strokeWidth={1.5}
               fill="url(#accountGradient)"
               dot={false}
-              activeDot={{
-                r: 4,
-                fill: '#a3e635',
-                stroke: '#020617',
-                strokeWidth: 2,
-              }}
+              activeDot={{ r: 4, fill: '#a3e635', stroke: '#ffffff', strokeWidth: 2 }}
             />
           </AreaChart>
-        </div>
+        </ResponsiveContainer>
       </div>
-
-      {displayData.length > 12 && (
-        <p className="text-[10px] text-slate-600 text-center">
-          ← 좌우로 스크롤하여 전체 기간 보기 →
-        </p>
-      )}
 
       {/* Hidden Chart for Capture */}
       <div

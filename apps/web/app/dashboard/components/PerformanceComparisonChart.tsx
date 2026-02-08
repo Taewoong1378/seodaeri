@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import {
     CartesianGrid,
     Line,
@@ -34,7 +34,6 @@ const LINES = [
 ];
 
 export function PerformanceComparisonChart({ data }: PerformanceComparisonChartProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
   const hiddenChartRef = useRef<HTMLDivElement>(null);
 
@@ -68,15 +67,6 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
     return result;
   });
 
-  // 현재 날짜 위치로 스크롤 (마지막 데이터가 보이도록)
-  useEffect(() => {
-    if (scrollRef.current && displayData.length > 0) {
-      // 마지막 데이터가 보이도록 스크롤
-      const scrollPosition = Math.max(0, displayData.length * 40 - scrollRef.current.clientWidth + 40);
-      scrollRef.current.scrollLeft = scrollPosition;
-    }
-  }, [displayData]);
-
   // Y축 범위 계산
   const allValues = displayData.flatMap(d => [d.portfolio, d.kospi, d.sp500, d.nasdaq]);
   const minValue = Math.min(...allValues);
@@ -84,8 +74,11 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
   const yMin = Math.floor(minValue / 20) * 20 - 20;
   const yMax = Math.ceil(maxValue / 20) * 20 + 20;
 
-  // 차트 너비 계산 (데이터 포인트당 40px)
-  const chartWidth = Math.max(displayData.length * 40, 400);
+  // X축 interval 계산 - 전체 기간을 한눈에
+  const tickInterval = displayData.length <= 12 ? 0
+    : displayData.length <= 24 ? 2
+    : displayData.length <= 36 ? 3
+    : Math.floor(displayData.length / 10);
 
   return (
     <div ref={chartRef} className="space-y-4">
@@ -202,29 +195,14 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
         </div>
       </div>
 
-      {/* Scrollable Chart Container */}
-      <div
-        ref={scrollRef}
-        className="overflow-x-auto overflow-y-hidden pb-2 -mx-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
-        style={{
-          scrollbarWidth: 'thin',
-          WebkitOverflowScrolling: 'touch',
-        }}
-      >
-        <div style={{ width: chartWidth, height: 220, minWidth: '100%' }}>
+      {/* Chart - 전체 기간 한눈에 표시 */}
+      <div className="h-[240px]">
+        <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={displayData}
-            width={chartWidth}
-            height={220}
-            margin={{ top: 10, right: 20, left: 10, bottom: 20 }}
+            margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
           >
-            <defs>
-              <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity={0.1} />
-                <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-              vertical={false}
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
             {displayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
               <ReferenceLine
                 key={marker.date}
@@ -235,8 +213,8 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                   position: 'insideTopLeft',
                   angle: -90,
                   fill: '#475569',
-                  fontSize: 12,
-                  dy: 30,
+                  fontSize: 10,
+                  dy: 20,
                 }}
               />
             ))}
@@ -244,17 +222,22 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
               dataKey="date"
               axisLine={{ stroke: '#cbd5e1' }}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10 }}
-              interval={2}
-              tickFormatter={(value) => `${Number.parseInt(value.split('.')[1])}월`}
+              tick={{ fill: '#64748b', fontSize: 9 }}
+              interval={tickInterval}
+              tickFormatter={(value) => {
+                const parts = value.split('.');
+                const month = Number.parseInt(parts[1]);
+                if (month === 1) return `'${parts[0]}`;
+                return `${month}월`;
+              }}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 10 }}
+              tick={{ fill: '#64748b', fontSize: 9 }}
               tickFormatter={(value) => `${value}%`}
               domain={[yMin, yMax]}
-              width={45}
+              width={40}
             />
             <Tooltip
               contentStyle={{
@@ -283,22 +266,12 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                 strokeWidth={line.strokeWidth || 1.5}
                 strokeDasharray={line.strokeDasharray}
                 dot={false}
-                activeDot={{
-                  r: 4,
-                  fill: line.color,
-                  stroke: '#020617',
-                  strokeWidth: 2,
-                }}
+                activeDot={{ r: 4, fill: line.color, stroke: '#ffffff', strokeWidth: 2 }}
               />
             ))}
           </LineChart>
-        </div>
+        </ResponsiveContainer>
       </div>
-
-      {/* Scroll hint */}
-      {displayData.length > 12 && (
-        <p className="text-[10px] text-slate-600 text-center">← 좌우로 스크롤하여 전체 기간 보기 →</p>
-      )}
 
       {/* Hidden Chart for Capture */}
       <div
