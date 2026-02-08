@@ -78,7 +78,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           )}
 
           {/* 테스트 로그인 폼 (앱스토어 심사용) */}
-          <TestLoginForm />
+          {process.env.SHOW_TEST_LOGIN === 'true' && <TestLoginForm />}
         </CardContent>
       </Card>
     </main>
