@@ -1,11 +1,19 @@
-'use client';
+"use client";
 
-import { Card, CardContent } from '@repo/design-system/components/card';
-import { cn } from '@repo/design-system/lib/utils';
-import { BarChart3, List, Pencil, PieChart, Plus, TrendingDown, TrendingUp } from 'lucide-react';
-import { useState } from 'react';
-import { HoldingInputModal, type HoldingEditData } from './HoldingInputModal';
-import { PortfolioTreemap } from './PortfolioTreemap';
+import { Card, CardContent } from "@repo/design-system/components/card";
+import { cn } from "@repo/design-system/lib/utils";
+import {
+  BarChart3,
+  List,
+  Pencil,
+  PieChart,
+  Plus,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
+import { useState } from "react";
+import { type HoldingEditData, HoldingInputModal } from "./HoldingInputModal";
+import { PortfolioTreemap } from "./PortfolioTreemap";
 
 interface PortfolioItem {
   ticker: string;
@@ -32,23 +40,26 @@ function formatCurrency(amount: number, compact = false): string {
   if (compact && amount >= 10000) {
     return `${(amount / 10000).toFixed(0)}만`;
   }
-  return new Intl.NumberFormat('ko-KR').format(Math.round(amount));
+  return new Intl.NumberFormat("ko-KR").format(Math.round(amount));
 }
 
 function formatPercent(value: number): string {
-  const prefix = value >= 0 ? '+' : '';
+  const prefix = value >= 0 ? "+" : "";
   return `${prefix}${value.toFixed(2)}%`;
 }
 
-export function PortfolioClient({ portfolio, isStandalone = false }: PortfolioClientProps) {
-  const [view, setView] = useState<'list' | 'chart'>('list');
+export function PortfolioClient({
+  portfolio,
+  isStandalone = false,
+}: PortfolioClientProps) {
+  const [view, setView] = useState<"list" | "chart">("list");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editData, setEditData] = useState<HoldingEditData | undefined>(undefined);
+  const [editData, setEditData] = useState<HoldingEditData | undefined>(
+    undefined
+  );
 
   // 비중 순으로 정렬 (높은 비중부터)
-  const sortedPortfolio = [...portfolio].sort(
-    (a, b) => b.weight - a.weight
-  );
+  const sortedPortfolio = [...portfolio].sort((a, b) => b.weight - a.weight);
 
   const handleAddNew = () => {
     setEditData(undefined);
@@ -61,7 +72,7 @@ export function PortfolioClient({ portfolio, isStandalone = false }: PortfolioCl
       name: item.name,
       quantity: item.quantity,
       avgPrice: item.avgPrice,
-      country: item.country || '한국',
+      country: item.country || "한국",
     });
     setIsModalOpen(true);
   };
@@ -79,11 +90,11 @@ export function PortfolioClient({ portfolio, isStandalone = false }: PortfolioCl
         <div className="flex items-center bg-muted p-1 rounded-full border border-border">
           <button
             type="button"
-            onClick={() => setView('list')}
+            onClick={() => setView("list")}
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
-              view === 'list' 
-                ? "bg-primary text-primary-foreground shadow-sm" 
+              view === "list"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
             )}
           >
@@ -92,11 +103,11 @@ export function PortfolioClient({ portfolio, isStandalone = false }: PortfolioCl
           </button>
           <button
             type="button"
-            onClick={() => setView('chart')}
+            onClick={() => setView("chart")}
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
-              view === 'chart' 
-                ? "bg-primary text-primary-foreground shadow-sm" 
+              view === "chart"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-background/50"
             )}
           >
@@ -135,34 +146,60 @@ export function PortfolioClient({ portfolio, isStandalone = false }: PortfolioCl
             </h3>
             <p className="text-sm text-muted-foreground max-w-[280px] mb-6">
               {isStandalone ? (
-                <>위의 '종목 추가' 버튼을 눌러<br />보유 종목을 추가해보세요.</>
+                <>
+                  위의 '종목 추가' 버튼을 눌러
+                  <br />
+                  보유 종목을 추가해보세요.
+                </>
               ) : (
-                <>시트의 '3. 종목현황' 탭에 데이터를 입력하거나<br />위의 버튼을 눌러 종목을 추가해보세요.</>
+                <>
+                  시트의 '3. 종목현황' 탭에 데이터를 입력하거나
+                  <br />
+                  위의 버튼을 눌러 종목을 추가해보세요.
+                </>
               )}
             </p>
           </div>
-        ) : view === 'chart' ? (
+        ) : view === "chart" ? (
           <div className="space-y-4">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-sm font-medium text-muted-foreground">포트폴리오 비중</h3>
-              <span className="text-xs text-muted-foreground">평가금액 기준</span>
+              <h3 className="text-sm font-medium text-muted-foreground">
+                포트폴리오 비중
+              </h3>
+              <span className="text-xs text-muted-foreground">
+                평가금액 기준
+              </span>
             </div>
             <PortfolioTreemap data={portfolio} />
-            
+
             {/* Legend / Top Holdings */}
             <div className="grid grid-cols-2 gap-3 mt-4">
               {portfolio
                 .sort((a, b) => b.weight - a.weight)
                 .slice(0, 4)
                 .map((item, index) => (
-                  <div key={item.ticker} className="bg-card rounded-xl p-3 flex items-center gap-3 border border-border">
-                    <div 
-                      className="w-2 h-8 rounded-full" 
-                      style={{ backgroundColor: ['#059669', '#a3e635', '#10b981', '#ef4444'][index % 4] }} 
+                  <div
+                    key={item.ticker}
+                    className="bg-card rounded-xl p-3 flex items-center gap-3 border border-border"
+                  >
+                    <div
+                      className="w-2 h-8 rounded-full"
+                      style={{
+                        backgroundColor: [
+                          "#059669",
+                          "#a3e635",
+                          "#10b981",
+                          "#ef4444",
+                        ][index % 4],
+                      }}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground truncate">{item.name}</p>
-                      <p className="text-sm font-bold text-foreground">{Math.round(item.weight)}%</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {item.name}
+                      </p>
+                      <p className="text-sm font-bold text-foreground">
+                        {Math.round(item.weight)}%
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -170,7 +207,9 @@ export function PortfolioClient({ portfolio, isStandalone = false }: PortfolioCl
           </div>
         ) : (
           <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground px-1">보유 종목</h3>
+            <h3 className="text-sm font-medium text-muted-foreground px-1">
+              보유 종목
+            </h3>
             <div className="space-y-2">
               {sortedPortfolio.map((item) => (
                 <Card
@@ -178,7 +217,7 @@ export function PortfolioClient({ portfolio, isStandalone = false }: PortfolioCl
                   className="bg-card border-border shadow-sm rounded-[24px] overflow-hidden hover:bg-muted/50 transition-colors cursor-pointer active:scale-[0.99]"
                   onClick={() => handleEdit(item)}
                 >
-                  <CardContent className="p-5">
+                  <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -193,7 +232,9 @@ export function PortfolioClient({ portfolio, isStandalone = false }: PortfolioCl
                           <span className="text-xs text-muted-foreground">
                             {item.quantity.toLocaleString()}주
                           </span>
-                          <span className="text-xs text-muted-foreground">·</span>
+                          <span className="text-xs text-muted-foreground">
+                            ·
+                          </span>
                           <span className="text-xs text-muted-foreground">
                             평단 {formatCurrency(item.avgPrice)}원
                           </span>
@@ -206,7 +247,9 @@ export function PortfolioClient({ portfolio, isStandalone = false }: PortfolioCl
                           </div>
                           <div
                             className={`flex items-center justify-end gap-1 text-xs ${
-                              item.yieldPercent >= 0 ? 'text-emerald-600' : 'text-red-500'
+                              item.yieldPercent >= 0
+                                ? "text-emerald-600"
+                                : "text-red-500"
                             }`}
                           >
                             {item.yieldPercent >= 0 ? (
@@ -226,8 +269,12 @@ export function PortfolioClient({ portfolio, isStandalone = false }: PortfolioCl
                     {/* Weight bar */}
                     <div className="mt-3 pt-3 border-t border-border">
                       <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="text-muted-foreground">포트폴리오 비중</span>
-                        <span className="text-muted-foreground">{Math.round(item.weight)}%</span>
+                        <span className="text-muted-foreground">
+                          포트폴리오 비중
+                        </span>
+                        <span className="text-muted-foreground">
+                          {Math.round(item.weight)}%
+                        </span>
                       </div>
                       <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                         <div

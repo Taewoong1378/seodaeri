@@ -6,6 +6,7 @@
 export type BridgeMessageType =
   | "Navigation.GoBack"
   | "UI.Share"
+  | "UI.ShareImage"
   | "Auth.Apple.Request"
   | "Auth.Apple.CheckAvailable"
   | "Auth.SetCookie";
@@ -13,6 +14,11 @@ export type BridgeMessageType =
 export interface BridgePayloads {
   "Navigation.GoBack": undefined;
   "UI.Share": { title: string; url: string; message?: string };
+  "UI.ShareImage": {
+    title: string;
+    imageBase64: string;
+    mimeType?: string;
+  };
   "Auth.Apple.Request": undefined;
   "Auth.Apple.CheckAvailable": undefined;
   "Auth.SetCookie": { token: string; cookieName: string; domain: string };
@@ -85,6 +91,14 @@ export class RNBridge {
    */
   share(data: BridgePayloads["UI.Share"]): void {
     this.postMessage("UI.Share", data);
+  }
+
+  /**
+   * 이미지 공유 기능 호출
+   * base64 인코딩된 이미지를 네이티브 공유 시트로 전달
+   */
+  shareImage(data: BridgePayloads["UI.ShareImage"]): void {
+    this.postMessage("UI.ShareImage", data);
   }
 
   /**

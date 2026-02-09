@@ -5,7 +5,7 @@ import type {
   BridgePayloads,
 } from './shared-types'
 import type { WebViewRef } from './handlers/types'
-import { handleShare } from './handlers'
+import { handleShare, handleShareImage } from './handlers'
 import {
   handleAppleLogin,
   handleCheckAppleAvailable,
@@ -37,6 +37,12 @@ export function createMessageHandler(webViewRef: WebViewRef) {
       switch (message.type) {
         case 'UI.Share':
           await handleShare(message.payload as BridgePayloads['UI.Share'])
+          break
+
+        case 'UI.ShareImage':
+          await handleShareImage(
+            message.payload as BridgePayloads['UI.ShareImage']
+          )
           break
 
         case 'Auth.Apple.Request':

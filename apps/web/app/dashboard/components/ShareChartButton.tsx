@@ -1,5 +1,6 @@
 "use client";
 
+import { bridge } from "@repo/shared-utils/bridge";
 import { toast } from "@repo/design-system";
 import { Button } from "@repo/design-system/components/button";
 import {
@@ -17,30 +18,99 @@ interface ShareChartButtonProps {
   title: string;
 }
 
+/**
+ * 차트를 이미지로 캡처하는 공통 함수
+ */
+async function captureChart(element: HTMLDivElement): Promise<string> {
+  return toPng(element, {
+    backgroundColor: "#ffffff",
+    pixelRatio: 2,
+    cacheBust: true,
+    style: {
+      opacity: "1",
+      visibility: "visible",
+      position: "static",
+      transform: "none",
+      left: "auto",
+      top: "auto",
+    },
+  });
+}
+
+/**
+ * 가로 이미지를 세로로 회전하는 함수 (data URL → 회전된 data URL)
+ */
+async function rotateImage(dataUrl: string): Promise<string> {
+  const img = new Image();
+  img.src = dataUrl;
+
+  await new Promise((resolve) => {
+    img.onload = resolve;
+  });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = img.height;
+  canvas.height = img.width;
+
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((90 * Math.PI) / 180);
+    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+  }
+
+  return canvas.toDataURL("image/png");
+}
+
 export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const isNativeApp = bridge.isReactNative();
 
-  const handleShare = async (mode: "landscape" | "vertical") => {
+  /**
+   * 네이티브 앱에서의 공유 처리
+   * base64 이미지를 네이티브 브릿지를 통해 공유 시트로 전달
+   */
+  const handleNativeShare = async (mode: "landscape" | "vertical") => {
     if (!chartRef.current || isCapturing) return;
 
     setIsCapturing(true);
 
     try {
-      // 차트를 이미지로 캡처 (html-to-image 사용)
-      const dataUrl = await toPng(chartRef.current, {
-        backgroundColor: "#ffffff", // 배경색
-        pixelRatio: 2, // 고해상도
-        cacheBust: true,
-        style: {
-          opacity: "1",
-          visibility: "visible",
-          position: "static",
-          transform: "none",
-          left: "auto",
-          top: "auto",
-        },
+      let dataUrl = await captureChart(chartRef.current);
+
+      // 세로 모드일 경우 회전
+      if (mode === "vertical") {
+        dataUrl = await rotateImage(dataUrl);
+      }
+
+      // 네이티브 브릿지를 통해 이미지 공유
+      bridge.shareImage({
+        title: `Gulim_${title}`,
+        imageBase64: dataUrl,
+        mimeType: "image/png",
       });
+
+      setIsOpen(false);
+    } catch (error) {
+      console.error("Native share failed:", error);
+      toast.error("공유에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
+  /**
+   * 웹 브라우저에서의 공유 처리
+   * Web Share API 또는 다운로드 fallback
+   */
+  const handleWebShare = async (mode: "landscape" | "vertical") => {
+    if (!chartRef.current || isCapturing) return;
+
+    setIsCapturing(true);
+
+    try {
+      const dataUrl = await captureChart(chartRef.current);
 
       // DataURL을 Blob으로 변환
       const res = await fetch(dataUrl);
@@ -50,31 +120,9 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
 
       // Vertical 모드일 경우 회전 처리
       if (mode === "vertical") {
-        const img = new Image();
-        img.src = URL.createObjectURL(blob);
-
-        await new Promise((resolve) => {
-          img.onload = resolve;
-        });
-
-        // 캔버스를 사용하여 90도 회전
-        const canvas = document.createElement("canvas");
-        canvas.width = img.height;
-        canvas.height = img.width;
-
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.translate(canvas.width / 2, canvas.height / 2);
-          ctx.rotate((90 * Math.PI) / 180);
-          ctx.drawImage(img, -img.width / 2, -img.height / 2);
-        }
-
-        // 회전된 이미지를 Blob으로 변환
-        finalBlob = await new Promise<Blob>((resolve) => {
-          canvas.toBlob((b) => {
-            resolve(b!);
-          }, "image/png");
-        });
+        const rotatedDataUrl = await rotateImage(dataUrl);
+        const rotatedRes = await fetch(rotatedDataUrl);
+        finalBlob = await rotatedRes.blob();
       }
 
       const file = new File([finalBlob], `${title}.png`, { type: "image/png" });
@@ -110,6 +158,8 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
       setIsCapturing(false);
     }
   };
+
+  const handleShare = isNativeApp ? handleNativeShare : handleWebShare;
 
   return (
     <>
@@ -183,7 +233,7 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
             <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center rounded-lg z-50">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm font-medium text-white">
+                <span className="text-sm font-medium text-foreground">
                   이미지 생성 중...
                 </span>
               </div>

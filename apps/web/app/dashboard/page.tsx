@@ -1,20 +1,20 @@
-import { auth } from '@repo/auth/server';
-import { Button } from '@repo/design-system/components/button';
-import { ExternalLink } from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { checkSheetConnection } from '../actions/onboarding';
-import { BottomNav } from './components/BottomNav';
-import { DashboardContent } from './components/DashboardContent';
-import { SyncButton } from './components/SyncButton';
+import { auth } from "@repo/auth/server";
+import { Button } from "@repo/design-system/components/button";
+import { ExternalLink } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { checkSheetConnection } from "../actions/onboarding";
+import { BottomNav } from "./components/BottomNav";
+import { DashboardContent } from "./components/DashboardContent";
+import { SyncButton } from "./components/SyncButton";
 
 export default async function DashboardPage() {
   const session = await auth();
 
   // 로그인 체크
   if (!session?.user) {
-    redirect('/login');
+    redirect("/login");
   }
 
   // 데모 계정은 시트 연동 체크 스킵 (Play Store 심사용)
@@ -23,16 +23,20 @@ export default async function DashboardPage() {
     // 시트 연동 체크 - 연동 안 되어 있고 standalone도 아니면 온보딩으로
     const { connected, sheetId, isStandalone } = await checkSheetConnection();
     if (!connected && !isStandalone) {
-      redirect('/onboarding');
+      redirect("/onboarding");
     }
-    sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : null;
+    sheetUrl = sheetId
+      ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit`
+      : null;
   }
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-24">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border px-5 h-14 flex items-center justify-between">
-        <span className="font-bold text-lg tracking-tight text-foreground">굴림</span>
+        <span className="font-bold text-lg tracking-tight text-foreground">
+          굴림
+        </span>
         <div className="flex items-center gap-3">
           {sheetUrl && (
             <Link href={sheetUrl} target="_blank">
@@ -50,7 +54,7 @@ export default async function DashboardPage() {
           {session.user.image && (
             <Image
               src={session.user.image}
-              alt={session.user.name || '프로필'}
+              alt={session.user.name || "프로필"}
               width={32}
               height={32}
               className="rounded-full border border-border ring-2 ring-background"
@@ -59,7 +63,7 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <main className="p-5">
+      <main className="p-4">
         <DashboardContent />
       </main>
 

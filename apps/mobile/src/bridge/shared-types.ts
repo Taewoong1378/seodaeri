@@ -6,12 +6,18 @@
 export type BridgeMessageType =
   | 'Navigation.GoBack'
   | 'UI.Share'
+  | 'UI.ShareImage'
   | 'Auth.Apple.Request'
   | 'Auth.Apple.CheckAvailable'
 
 export interface BridgePayloads {
   'Navigation.GoBack': undefined
   'UI.Share': { title: string; url: string; message?: string }
+  'UI.ShareImage': {
+    title: string
+    imageBase64: string
+    mimeType?: string
+  }
   'Auth.Apple.Request': undefined
   'Auth.Apple.CheckAvailable': undefined
 }

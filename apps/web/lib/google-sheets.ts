@@ -1819,6 +1819,10 @@ export interface MajorIndexYieldComparisonData {
   nasdaq: number[]; // 각 월의 NASDAQ 수익률
   kospi: number[]; // 각 월의 KOSPI 수익률
   account: (number | null)[]; // 각 월의 계좌 수익률 (데이터 없으면 null)
+  // 환율 적용 데이터 (선택)
+  sp500Dollar?: number[];
+  nasdaqDollar?: number[];
+  dollar?: number[]; // 달러 환율 수익률
 }
 
 /**
@@ -2761,13 +2765,18 @@ export function parseMajorIndexYieldComparison(rows: any[]): MajorIndexYieldComp
   const COL_KOSPI_IDX = 9; // P열 - 코스피 지수
   const COL_SP500_IDX = 10; // Q열 - S&P500 지수
   const COL_NASDAQ_IDX = 11; // R열 - NASDAQ 지수
+  // 환율 적용 컬럼
+  const COL_DOLLAR_IDX = 33; // AN열 - 달러환율 지수
+  const COL_SP500_DOLLAR_IDX = 34; // AO열 - S&P500 달러환율 지수
+  const COL_NASDAQ_DOLLAR_IDX = 35; // AP열 - NASDAQ 달러환율 지수
 
   // 작년 12월 데이터 (기준점)
   const prevYearDateStr = `${String(currentYear - 1).slice(2)}.12`;
 
   // 데이터 수집을 위한 맵
-  const monthlyData: Map<string, { account: number; kospi: number; sp500: number; nasdaq: number }> = new Map();
-  let baselineData: { account: number; kospi: number; sp500: number; nasdaq: number } | null = null;
+  interface MonthData { account: number; kospi: number; sp500: number; nasdaq: number; dollarIdx: number; sp500Dollar: number; nasdaqDollar: number; }
+  const monthlyData: Map<string, MonthData> = new Map();
+  let baselineData: MonthData | null = null;
 
   for (const row of rows) {
     if (!row || !Array.isArray(row) || row.length === 0) continue;
@@ -2779,17 +2788,25 @@ export function parseMajorIndexYieldComparison(rows: any[]): MajorIndexYieldComp
     const kospiIdx = parseNumber(row[COL_KOSPI_IDX]);
     const sp500Idx = parseNumber(row[COL_SP500_IDX]);
     const nasdaqIdx = parseNumber(row[COL_NASDAQ_IDX]);
+    const dollarIdx = parseNumber(row[COL_DOLLAR_IDX]);
+    const sp500DollarIdx = parseNumber(row[COL_SP500_DOLLAR_IDX]);
+    const nasdaqDollarIdx = parseNumber(row[COL_NASDAQ_DOLLAR_IDX]);
+
+    const rowData: MonthData = {
+      account: accountIdx, kospi: kospiIdx, sp500: sp500Idx, nasdaq: nasdaqIdx,
+      dollarIdx, sp500Dollar: sp500DollarIdx, nasdaqDollar: nasdaqDollarIdx,
+    };
 
     // 작년 12월 = 기준점
     if (dateCell === prevYearDateStr) {
-      baselineData = { account: accountIdx, kospi: kospiIdx, sp500: sp500Idx, nasdaq: nasdaqIdx };
+      baselineData = rowData;
     }
 
     // 올해 데이터만 수집
     const [yy, mm] = dateCell.split('.').map(Number);
     const fullYear = 2000 + (yy || 0);
     if (fullYear === currentYear && mm && mm >= 1 && mm <= currentMonth) {
-      monthlyData.set(dateCell, { account: accountIdx, kospi: kospiIdx, sp500: sp500Idx, nasdaq: nasdaqIdx });
+      monthlyData.set(dateCell, rowData);
     }
   }
 
@@ -2804,30 +2821,40 @@ export function parseMajorIndexYieldComparison(rows: any[]): MajorIndexYieldComp
   const nasdaq: number[] = [0];
   const kospi: number[] = [0];
   const account: (number | null)[] = [0];
+  const sp500Dollar: number[] = [0];
+  const nasdaqDollar: number[] = [0];
+  const dollar: number[] = [0];
 
   const round = (n: number) => Math.round(n * 10) / 10;
+
+  // 환율 데이터 유무 확인
+  const hasDollarData = baselineData.sp500Dollar > 0 || baselineData.nasdaqDollar > 0 || baselineData.dollarIdx > 0;
 
   // 1월부터 현재 월까지 데이터 추가
   for (let m = 1; m <= currentMonth; m++) {
     const dateStr = `${String(currentYear).slice(2)}.${String(m).padStart(2, '0')}`;
     const data = monthlyData.get(dateStr);
 
-    months.push(`${m}`);
+    months.push(`${m}월`);
 
     if (data) {
       sp500.push(baselineData.sp500 > 0 ? round((data.sp500 / baselineData.sp500 - 1) * 100) : 0);
       nasdaq.push(baselineData.nasdaq > 0 ? round((data.nasdaq / baselineData.nasdaq - 1) * 100) : 0);
       kospi.push(baselineData.kospi > 0 ? round((data.kospi / baselineData.kospi - 1) * 100) : 0);
-      // 투자(account)는 데이터가 있고 유효한 값(0이 아닌)일 때만 표시
       const accountYield = baselineData.account > 0 ? round((data.account / baselineData.account - 1) * 100) : null;
       account.push(data.account > 0 ? accountYield : null);
+      // 환율 적용
+      sp500Dollar.push(baselineData.sp500Dollar > 0 ? round((data.sp500Dollar / baselineData.sp500Dollar - 1) * 100) : 0);
+      nasdaqDollar.push(baselineData.nasdaqDollar > 0 ? round((data.nasdaqDollar / baselineData.nasdaqDollar - 1) * 100) : 0);
+      dollar.push(baselineData.dollarIdx > 0 ? round((data.dollarIdx / baselineData.dollarIdx - 1) * 100) : 0);
     } else {
-      // 지수 데이터는 이전 값 유지
       sp500.push(sp500[sp500.length - 1] || 0);
       nasdaq.push(nasdaq[nasdaq.length - 1] || 0);
       kospi.push(kospi[kospi.length - 1] || 0);
-      // 투자 데이터 없으면 null (라인 끊김)
       account.push(null);
+      sp500Dollar.push(sp500Dollar[sp500Dollar.length - 1] || 0);
+      nasdaqDollar.push(nasdaqDollar[nasdaqDollar.length - 1] || 0);
+      dollar.push(dollar[dollar.length - 1] || 0);
     }
   }
 
@@ -2837,6 +2864,7 @@ export function parseMajorIndexYieldComparison(rows: any[]): MajorIndexYieldComp
     nasdaq,
     kospi,
     account,
+    ...(hasDollarData ? { sp500Dollar, nasdaqDollar, dollar } : {}),
   };
 
   console.log('[parseMajorIndexYieldComparison] Result:', JSON.stringify(result));

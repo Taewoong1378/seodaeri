@@ -1,16 +1,16 @@
-import { auth } from '@repo/auth/server';
-import { ChevronLeft } from 'lucide-react';
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { checkSheetConnection } from '../../actions/onboarding';
-import { BottomNav } from '../../dashboard/components/BottomNav';
-import { SheetManageClient } from './SheetManageClient';
+import { auth } from "@repo/auth/server";
+import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { checkSheetConnection } from "../../actions/onboarding";
+import { BottomNav } from "../../dashboard/components/BottomNav";
+import { SheetManageClient } from "./SheetManageClient";
 
 export default async function SheetManagePage() {
   const session = await auth();
 
   if (!session?.user) {
-    redirect('/login');
+    redirect("/login");
   }
 
   const { connected, sheetId } = await checkSheetConnection();
@@ -25,10 +25,12 @@ export default async function SheetManagePage() {
         >
           <ChevronLeft size={24} className="text-muted-foreground" />
         </Link>
-        <span className="font-bold text-lg tracking-tight text-foreground">시트 연동 관리</span>
+        <span className="font-bold text-lg tracking-tight text-foreground">
+          시트 연동 관리
+        </span>
       </header>
 
-      <main className="p-5">
+      <main className="p-4">
         <SheetManageClient
           connected={connected}
           currentSheetId={sheetId}
