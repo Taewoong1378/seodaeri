@@ -9,6 +9,7 @@ export type BridgeMessageType =
   | 'UI.ShareImage'
   | 'Auth.Apple.Request'
   | 'Auth.Apple.CheckAvailable'
+  | 'Auth.Logout'
 
 export interface BridgePayloads {
   'Navigation.GoBack': undefined
@@ -20,6 +21,7 @@ export interface BridgePayloads {
   }
   'Auth.Apple.Request': undefined
   'Auth.Apple.CheckAvailable': undefined
+  'Auth.Logout': undefined
 }
 
 export interface AppleLoginResponse {

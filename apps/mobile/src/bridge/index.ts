@@ -11,6 +11,7 @@ import {
   handleCheckAppleAvailable,
 } from './handlers/appleAuthHandler'
 import { handleSetCookie } from './handlers/cookieHandler'
+import { handleLogout } from './handlers/logoutHandler'
 
 export function createMessageHandler(webViewRef: WebViewRef) {
   return async (event: WebViewMessageEvent) => {
@@ -61,6 +62,10 @@ export function createMessageHandler(webViewRef: WebViewRef) {
           )
           break
 
+        case 'Auth.Logout':
+          await handleLogout(message.id || '', webViewRef)
+          break
+
         default:
           console.log('Unhandled message type:', message.type)
       }
@@ -76,3 +81,4 @@ export {
   handleAppleLogin,
   handleCheckAppleAvailable,
 } from './handlers/appleAuthHandler'
+export { handleLogout } from './handlers/logoutHandler'

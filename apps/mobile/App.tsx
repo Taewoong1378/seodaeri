@@ -125,10 +125,23 @@ function AppContent() {
         source={{ uri: WEB_URL }}
         style={styles.webView}
         onNavigationStateChange={onNav}
-        onMessage={handleMessage}
-        onLoadEnd={() => {
-          console.log("[WebView] Load completed - hiding splash");
-          hideSplash();
+        onMessage={(event) => {
+          try {
+            const msg = JSON.parse(event.nativeEvent.data);
+            if (msg.type === "App.Ready") {
+              console.log("[WebView] App.Ready received - hiding splash");
+              hideSplash();
+              return;
+            }
+          } catch {}
+          handleMessage(event);
+        }}
+        onLoadEnd={(event) => {
+          const url = (event.nativeEvent as any)?.url || "";
+          if (!url.includes("/dashboard")) {
+            console.log("[WebView] Non-dashboard page loaded - hiding splash");
+            hideSplash();
+          }
         }}
         onError={(e) =>
           console.log("[WebView] Error:", e.nativeEvent.description)

@@ -9,7 +9,8 @@ export type BridgeMessageType =
   | "UI.ShareImage"
   | "Auth.Apple.Request"
   | "Auth.Apple.CheckAvailable"
-  | "Auth.SetCookie";
+  | "Auth.SetCookie"
+  | "Auth.Logout";
 
 export interface BridgePayloads {
   "Navigation.GoBack": undefined;
@@ -22,6 +23,7 @@ export interface BridgePayloads {
   "Auth.Apple.Request": undefined;
   "Auth.Apple.CheckAvailable": undefined;
   "Auth.SetCookie": { token: string; cookieName: string; domain: string };
+  "Auth.Logout": undefined;
 }
 
 export interface AppleLoginResponse {
