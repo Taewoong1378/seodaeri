@@ -10,9 +10,13 @@ import {
 } from "react-native";
 import {
   SafeAreaProvider,
-  SafeAreaView,
+  SafeAreaView as _SafeAreaView,
+  type SafeAreaViewProps,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+
+// React 19 타입 호환성 우회
+const SafeAreaView = _SafeAreaView as unknown as React.FC<SafeAreaViewProps>;
 import { WebView } from "react-native-webview";
 
 console.log("[App] Module loaded");
@@ -52,22 +56,28 @@ function AppContent() {
     []
   );
 
+  const splashHidden = useRef(false);
+
   const hideSplash = useCallback(async () => {
+    if (splashHidden.current) return;
+    splashHidden.current = true;
     try {
       await SplashScreen?.hideAsync();
     } catch {}
   }, []);
 
-  // 마운트 후 WebView 표시
+  // 마운트 시 WebView를 스플래시 뒤에서 즉시 렌더링 시작
   useEffect(() => {
-    console.log("[AppContent] Mounted");
-    hideSplash();
-    // 약간의 지연 후 WebView 표시
-    const timer = setTimeout(() => {
-      console.log("[AppContent] Showing WebView");
-      setShowWebView(true);
-    }, 100);
-    return () => clearTimeout(timer);
+    console.log("[AppContent] Mounted - WebView loading behind splash");
+    setShowWebView(true);
+
+    // 안전 타임아웃: 네트워크 실패 시 앱이 멈춘 것처럼 보이지 않도록
+    const safetyTimer = setTimeout(() => {
+      console.log("[AppContent] Safety timeout (7s) - forcing splash hide");
+      hideSplash();
+    }, 7000);
+
+    return () => clearTimeout(safetyTimer);
   }, [hideSplash]);
 
   useEffect(() => {
@@ -116,7 +126,10 @@ function AppContent() {
         style={styles.webView}
         onNavigationStateChange={onNav}
         onMessage={handleMessage}
-        onLoadEnd={hideSplash}
+        onLoadEnd={() => {
+          console.log("[WebView] Load completed - hiding splash");
+          hideSplash();
+        }}
         onError={(e) =>
           console.log("[WebView] Error:", e.nativeEvent.description)
         }
