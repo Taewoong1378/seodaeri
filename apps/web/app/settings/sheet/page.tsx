@@ -13,6 +13,11 @@ export default async function SheetManagePage() {
     redirect("/login");
   }
 
+  // 토큰 갱신 실패 시 재로그인 유도
+  if (session.error === "RefreshAccessTokenError") {
+    redirect("/login?error=token_expired");
+  }
+
   const { connected, sheetId } = await checkSheetConnection();
 
   return (

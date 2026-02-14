@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 const errorMessages: Record<string, string> = {
   scope_denied:
     "Google Drive 권한이 필요합니다. 로그인 시 모든 권한을 허용해주세요.",
+  token_expired: "세션이 만료되었습니다. 다시 로그인해주세요.",
   OAuthSignin: "로그인 중 오류가 발생했습니다. 다시 시도해주세요.",
   OAuthCallback: "로그인 처리 중 오류가 발생했습니다.",
   default: "로그인에 실패했습니다. 다시 시도해주세요.",
@@ -34,8 +35,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const error = params.error;
 
-  // 이미 로그인된 경우 대시보드로 리다이렉트
-  if (session?.user) {
+  // 이미 로그인된 경우 대시보드로 리다이렉트 (토큰 에러 시 제외)
+  if (session?.user && !session.error) {
     redirect("/dashboard");
   }
 

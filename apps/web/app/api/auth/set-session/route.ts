@@ -75,10 +75,7 @@ export async function GET(request: NextRequest) {
         
         // 2. 일반 버전 (항상)
         document.cookie = 'authjs.session-token=' + encodeURIComponent(token) + '; path=/; expires=' + expires + '; samesite=lax';
-        
-        // 3. 추가 폴백 - secure 없이
-        document.cookie = 'authjs.session-token=' + encodeURIComponent(token) + '; path=/; expires=' + expires;
-        
+
         console.log('[SetSession] Cookies set, current cookies:', document.cookie.substring(0, 100));
         
         // 약간의 딜레이 후 리다이렉트 (쿠키 저장 대기)

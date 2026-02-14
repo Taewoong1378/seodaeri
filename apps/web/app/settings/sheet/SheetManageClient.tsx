@@ -108,7 +108,7 @@ export function SheetManageClient({
   }, []);
 
   // Google Picker 열기
-  const openGooglePicker = useCallback(() => {
+  const openGooglePicker = useCallback(async () => {
     if (!pickerReady) {
       setError("Google Picker를 로드하는 중입니다. 잠시 후 다시 시도해주세요.");
       return;
@@ -121,6 +121,24 @@ export function SheetManageClient({
 
     if (!GOOGLE_API_KEY) {
       setError("Google API Key가 설정되지 않았습니다.");
+      return;
+    }
+
+    // 토큰 유효성 사전검증
+    try {
+      const tokenCheck = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?access_token=${accessToken}`
+      );
+      if (!tokenCheck.ok) {
+        setError(
+          "Google 인증이 만료되었습니다. 설정 > 로그아웃 후 다시 로그인해주세요."
+        );
+        return;
+      }
+    } catch {
+      setError(
+        "Google 인증 확인에 실패했습니다. 네트워크 연결을 확인해주세요."
+      );
       return;
     }
 

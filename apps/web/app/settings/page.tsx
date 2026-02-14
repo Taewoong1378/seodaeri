@@ -1,12 +1,12 @@
-import { auth, signOut } from "@repo/auth/server";
-import { Button } from "@repo/design-system/components/button";
+import { auth } from "@repo/auth/server";
 import { Card, CardContent } from "@repo/design-system/components/card";
-import { ChevronRight, ExternalLink, LogOut, Shield, User } from "lucide-react";
+import { ChevronRight, ExternalLink, Shield, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BottomNav } from "../dashboard/components/BottomNav";
 import { DeleteAccountButton } from "./DeleteAccountButton";
+import { LogoutButton } from "./LogoutButton";
 import { StockSyncButton } from "./StockSyncButton";
 
 export default async function SettingsPage() {
@@ -130,21 +130,7 @@ export default async function SettingsPage() {
         )}
 
         {/* Logout */}
-        <form
-          action={async () => {
-            "use server";
-            await signOut({ redirectTo: "/login" });
-          }}
-        >
-          <Button
-            type="submit"
-            variant="ghost"
-            className="w-full h-14 rounded-[16px] bg-destructive/10 hover:bg-destructive/20 text-destructive hover:text-destructive gap-2"
-          >
-            <LogOut size={20} />
-            로그아웃
-          </Button>
-        </form>
+        <LogoutButton />
 
         {/* Delete Account */}
         <div className="pt-2">

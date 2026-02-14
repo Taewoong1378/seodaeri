@@ -194,9 +194,15 @@ export const authConfig: NextAuthConfig = {
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id as string;
-        session.accessToken = token.accessToken as string;
-        session.refreshToken = token.refreshToken as string;
         session.isDemo = token.isDemo as boolean;
+        if (token.error === "RefreshAccessTokenError") {
+          session.error = "RefreshAccessTokenError";
+          session.accessToken = undefined;
+          session.refreshToken = undefined;
+        } else {
+          session.accessToken = token.accessToken as string;
+          session.refreshToken = token.refreshToken as string;
+        }
       }
       return session;
     },
@@ -227,6 +233,8 @@ declare module "next-auth" {
     refreshToken?: string;
     /** 테스트 계정 여부 (Play Store 심사용) */
     isDemo?: boolean;
+    /** 토큰 갱신 실패 등 에러 */
+    error?: string;
   }
 }
 
