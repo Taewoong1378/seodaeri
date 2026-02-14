@@ -681,6 +681,8 @@ const KIWOOM_TRANSACTION_BANNERS: TransactionBannerItem[] = [
 // 서대리증권 (가상 증권사 - 특정 운용사에 종속되지 않는 자체 브랜드)
 // =============================================================================
 
+const SEODAERI_YOUTUBE_URL = "https://www.youtube.com/@%EC%84%9C%EB%8C%80%EB%A6%ACTV";
+
 const SEODAERI_CAROUSEL_BANNERS: BannerItem[] = [
   {
     id: 1,
@@ -691,7 +693,7 @@ const SEODAERI_CAROUSEL_BANNERS: BannerItem[] = [
     image: "/images/banners/seodaeri/banner-seodaeri-savings.jpeg",
     iconName: "Wallet",
     action: "적립 시작하기",
-    link: "#",
+    link: SEODAERI_YOUTUBE_URL,
   },
   {
     id: 2,
@@ -702,7 +704,7 @@ const SEODAERI_CAROUSEL_BANNERS: BannerItem[] = [
     image: "/images/banners/seodaeri/banner-seodaeri-dividend.jpeg",
     iconName: "DollarSign",
     action: "배당 플랜 보기",
-    link: "#",
+    link: SEODAERI_YOUTUBE_URL,
   },
   {
     id: 3,
@@ -713,7 +715,7 @@ const SEODAERI_CAROUSEL_BANNERS: BannerItem[] = [
     image: "/images/banners/seodaeri/banner-seodaeri-global.jpeg",
     iconName: "TrendingUp",
     action: "포트폴리오 보기",
-    link: "#",
+    link: SEODAERI_YOUTUBE_URL,
   },
   {
     id: 4,
@@ -724,7 +726,7 @@ const SEODAERI_CAROUSEL_BANNERS: BannerItem[] = [
     image: "/images/banners/seodaeri/banner-seodaeri-pension.jpeg",
     iconName: "Building2",
     action: "가이드 확인",
-    link: "#",
+    link: SEODAERI_YOUTUBE_URL,
   },
 ];
 
@@ -734,7 +736,7 @@ const SEODAERI_SMALL_BANNERS: SmallBannerItem[] = [
     title: "서대리 적립식 플랜",
     description: "월 10만원부터 자동 적립",
     image: "/images/banners/seodaeri/banner-seodaeri-savings.jpeg",
-    link: "#",
+    link: SEODAERI_YOUTUBE_URL,
     gradient: "from-emerald-500 to-teal-600",
   },
   {
@@ -742,7 +744,7 @@ const SEODAERI_SMALL_BANNERS: SmallBannerItem[] = [
     title: "서대리 배당 캘린더",
     description: "매달 배당 받는 포트폴리오",
     image: "/images/banners/seodaeri/banner-seodaeri-dividend.jpeg",
-    link: "#",
+    link: SEODAERI_YOUTUBE_URL,
     gradient: "from-emerald-500 to-teal-600",
   },
 ];
@@ -753,7 +755,7 @@ const SEODAERI_TRANSACTION_BANNERS: TransactionBannerItem[] = [
     title: "서대리 배당 캘린더",
     description: "매달 배당이 들어오는 포트폴리오 설계",
     image: "/images/banners/seodaeri/banner-seodaeri-dividend.jpeg",
-    link: "#",
+    link: SEODAERI_YOUTUBE_URL,
     gradient: "from-emerald-600 to-slate-900",
     tabType: "dividend",
   },
@@ -762,7 +764,7 @@ const SEODAERI_TRANSACTION_BANNERS: TransactionBannerItem[] = [
     title: "서대리 적립식 플랜",
     description: "월급날마다 자동으로 ETF 적립",
     image: "/images/banners/seodaeri/banner-seodaeri-savings.jpeg",
-    link: "#",
+    link: SEODAERI_YOUTUBE_URL,
     gradient: "from-emerald-600 to-slate-900",
     tabType: "deposit",
   },
@@ -771,7 +773,7 @@ const SEODAERI_TRANSACTION_BANNERS: TransactionBannerItem[] = [
     title: "서대리 글로벌 분산투자",
     description: "최적 배분 전략으로 자산 관리",
     image: "/images/banners/seodaeri/banner-seodaeri-global.jpeg",
-    link: "#",
+    link: SEODAERI_YOUTUBE_URL,
     gradient: "from-emerald-600 to-slate-900",
     tabType: "balance",
   },
@@ -969,7 +971,7 @@ export function getBenefitBanner(
         highlight: "서대리증권",
         subtitle: "적립식 투자 · 배당 캘린더 · 글로벌 분산 · 연금저축",
         image: "/images/banners/seodaeri/banner-seodaeri-benefit.jpeg",
-        link: "#",
+        link: SEODAERI_YOUTUBE_URL,
         buttonText: "서비스 둘러보기",
         // 서대리: 에메랄드/틸 테마
         bgGradient: "from-emerald-100 via-teal-50 to-emerald-50",

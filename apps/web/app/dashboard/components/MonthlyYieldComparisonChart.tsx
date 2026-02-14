@@ -60,9 +60,9 @@ export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChar
 
   const currentYear = new Date().getFullYear();
 
-  // 바 색상 결정 (양수: 해당 색상, 음수: 회색 계열)
-  const getBarColor = (value: number, baseColor: string) => {
-    return value >= 0 ? baseColor : '#64748b';
+  // 바 색상 결정 (항상 고유 색상 유지 — 양수/음수는 바 방향으로 구분)
+  const getBarColor = (_value: number, baseColor: string) => {
+    return baseColor;
   };
 
   return (

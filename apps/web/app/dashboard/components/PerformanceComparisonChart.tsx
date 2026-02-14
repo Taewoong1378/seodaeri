@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import {
     CartesianGrid,
     Line,
@@ -33,9 +33,22 @@ const LINES = [
   { dataKey: 'nasdaq', name: '나스닥', color: '#3b82f6', strokeDasharray: '5 5' },
 ];
 
+type IndexKey = 'all' | 'kospi' | 'sp500' | 'nasdaq';
+
+const INDEX_OPTIONS: { key: IndexKey; label: string; color: string }[] = [
+  { key: 'all', label: '전체', color: '#6366f1' },
+  { key: 'kospi', label: '코스피', color: '#ef4444' },
+  { key: 'sp500', label: 'S&P500', color: '#f59e0b' },
+  { key: 'nasdaq', label: '나스닥', color: '#3b82f6' },
+];
+
 export function PerformanceComparisonChart({ data }: PerformanceComparisonChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const hiddenChartRef = useRef<HTMLDivElement>(null);
+
+  const [selectedIndex, setSelectedIndex] = useState<IndexKey>('all');
+  const [showSelector, setShowSelector] = useState(false);
+  const selectedOption = INDEX_OPTIONS.find((o) => o.key === selectedIndex)!;
 
   // 현재 연월 계산
   const now = new Date();
@@ -67,8 +80,15 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
     return result;
   });
 
+  // 선택된 지수에 따라 표시할 라인 결정
+  const visibleLines = selectedIndex === 'all'
+    ? LINES
+    : LINES.filter(l => l.dataKey === 'portfolio' || l.dataKey === selectedIndex);
+
   // Y축 범위 계산
-  const allValues = displayData.flatMap(d => [d.portfolio, d.kospi, d.sp500, d.nasdaq]);
+  const allValues = displayData.flatMap(d =>
+    visibleLines.map(l => d[l.dataKey as keyof typeof d] as number)
+  );
   const minValue = Math.min(...allValues);
   const maxValue = Math.max(...allValues);
   const yMin = Math.floor(minValue / 20) * 20 - 20;
@@ -82,24 +102,67 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
 
   return (
     <div ref={chartRef} className="space-y-4">
-      <div className="flex items-center justify-between">
-        {/* Legend */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          {LINES.map((line) => (
-            <div key={line.dataKey} className="flex items-center gap-1.5">
-              <div
-                className="w-4 h-0.5"
-                style={{
-                  backgroundColor: line.color,
-                  backgroundImage: line.strokeDasharray ? 'none' : undefined,
-                }}
-              />
-              <span className="text-[11px] text-muted-foreground">{line.name}</span>
-            </div>
-          ))}
-        </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          {/* 비교지수 선택 드롭다운 */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowSelector(!showSelector)}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-lg bg-muted/50 text-foreground hover:bg-muted transition-colors"
+            >
+              <span>{selectedIndex === 'all' ? '전체 지수' : `vs ${selectedOption.label}`}</span>
+              <svg
+                className={`w-3 h-3 transition-transform ${showSelector ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <title>펼치기</title>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showSelector && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowSelector(false)}
+                  onKeyDown={() => {}}
+                />
+                <div className="absolute top-full left-0 mt-1 z-50 bg-background border border-border rounded-xl shadow-lg overflow-hidden min-w-[140px]">
+                  {INDEX_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => {
+                        setSelectedIndex(opt.key);
+                        setShowSelector(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 text-xs transition-colors ${
+                        selectedIndex === opt.key
+                          ? 'bg-muted text-foreground font-medium'
+                          : 'text-muted-foreground hover:bg-muted/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-0.5 rounded" style={{ backgroundColor: opt.color }} />
+                        <span>{opt.label}</span>
+                      </div>
+                      {selectedIndex === opt.key && (
+                        <svg className="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                          <title>선택됨</title>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
-        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
           <ShareChartButton chartRef={hiddenChartRef} title="수익률 비교" />
           <LandscapeChartModal title="수익률 비교">
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-4">
@@ -193,6 +256,20 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
           </div>
           </LandscapeChartModal>
         </div>
+        </div>
+
+        {/* Legend - 별도 줄 */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {visibleLines.map((line) => (
+            <div key={line.dataKey} className="flex items-center gap-1.5">
+              <div
+                className="w-3 h-0.5 rounded"
+                style={{ backgroundColor: line.color }}
+              />
+              <span className="text-[10px] text-muted-foreground">{line.name}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Chart - 전체 기간 한눈에 표시 */}
@@ -256,7 +333,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
               }}
               labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
             />
-            {LINES.map((line) => (
+            {visibleLines.map((line) => (
               <Line
                 key={line.dataKey}
                 type="monotone"
@@ -294,7 +371,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
           <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>vs 주요 지수</p>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-start', columnGap: '24px', rowGap: '8px', marginBottom: '16px' }}>
-          {LINES.map((line) => (
+          {visibleLines.map((line) => (
             <div key={line.dataKey} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div
                 style={{
@@ -350,7 +427,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                 tickFormatter={(value) => `${value}%`}
                 domain={[yMin, yMax]}
               />
-              {LINES.map((line) => (
+              {visibleLines.map((line) => (
                 <Line
                   key={line.dataKey}
                   type="monotone"

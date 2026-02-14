@@ -4,7 +4,7 @@ import { Card, CardContent } from "@repo/design-system/components/card";
 import { BarChart3, Coins } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDashboard, useGoalSettings } from "../../../hooks";
 import { getSmallBanners } from "../../../lib/banner-data";
 import { AccountTrendChart } from "./AccountTrendChart";
@@ -25,7 +25,10 @@ import { PortfolioHoldingsChart } from "./PortfolioHoldingsChart";
 import { RollingAverageDividendChart } from "./RollingAverageDividendChart";
 import { SmallBanner } from "./SmallBanner";
 import { YearlyDividendChart } from "./YearlyDividendChart";
-import { YieldComparisonChart } from "./YieldComparisonChart";
+import {
+  AnnualizedYieldComparisonChart,
+  CumulativeYieldComparisonChart,
+} from "./YieldComparisonChart";
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("ko-KR").format(Math.round(amount));
@@ -162,8 +165,8 @@ export function DashboardContent() {
   const { data: session } = useSession();
   const { data, isPending, error } = useDashboard();
   const { data: goalSettings } = useGoalSettings();
-  const [goalModalType, setGoalModalType] = useState<"yearly" | "monthly">(
-    "yearly"
+  const [goalModalType, setGoalModalType] = useState<"finalAsset" | "annualDeposit">(
+    "finalAsset"
   );
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
 
@@ -172,6 +175,15 @@ export function DashboardContent() {
     if (session?.isDemo) return [];
     return getSmallBanners();
   }, [session?.isDemo]);
+
+  // 데이터 로드 완료 시 네이티브 앱에 알림 (스플래시 해제용)
+  useEffect(() => {
+    if (!isPending && data && typeof window !== "undefined") {
+      (window as any).ReactNativeWebView?.postMessage(
+        JSON.stringify({ type: "App.Ready" })
+      );
+    }
+  }, [isPending, data]);
 
   // 로딩 중이거나 데이터가 아직 없으면 스켈레톤 표시
   // data가 있으면 바로 컨텐츠를 보여줌 (백그라운드 refetch 중에도)
@@ -237,14 +249,14 @@ export function DashboardContent() {
                 thisYearProfit={thisYearProfit}
                 thisYearYield={thisYearYield}
                 investmentDays={displayData.investmentDays}
-                yearlyGoal={goalSettings?.yearlyGoal}
-                monthlyGoal={goalSettings?.monthlyGoal}
-                onEditYearlyGoal={() => {
-                  setGoalModalType("yearly");
+                finalAssetGoal={goalSettings?.finalAssetGoal}
+                annualDepositGoal={goalSettings?.annualDepositGoal}
+                onEditFinalAssetGoal={() => {
+                  setGoalModalType("finalAsset");
                   setIsGoalModalOpen(true);
                 }}
-                onEditMonthlyGoal={() => {
-                  setGoalModalType("monthly");
+                onEditAnnualDepositGoal={() => {
+                  setGoalModalType("annualDeposit");
                   setIsGoalModalOpen(true);
                 }}
               />
@@ -340,11 +352,23 @@ export function DashboardContent() {
                   />
                 )}
 
-                {/* Yield Comparison Bar Chart (원화 + 달러환율 통합) */}
+                {/* 누적수익률 비교 차트 */}
                 {displayData.yieldComparison && (
                   <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                     <CardContent className="p-4">
-                      <YieldComparisonChart
+                      <CumulativeYieldComparisonChart
+                        data={displayData.yieldComparison}
+                        dollarData={displayData.yieldComparisonDollar}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* 연평균 수익률 비교 차트 */}
+                {displayData.yieldComparison && (
+                  <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
+                    <CardContent className="p-4">
+                      <AnnualizedYieldComparisonChart
                         data={displayData.yieldComparison}
                         dollarData={displayData.yieldComparisonDollar}
                       />
@@ -581,9 +605,9 @@ export function DashboardContent() {
         onOpenChange={setIsGoalModalOpen}
         type={goalModalType}
         currentGoal={
-          goalModalType === "yearly"
-            ? goalSettings?.yearlyGoal
-            : goalSettings?.monthlyGoal
+          goalModalType === "finalAsset"
+            ? goalSettings?.finalAssetGoal
+            : goalSettings?.annualDepositGoal
         }
       />
     </div>

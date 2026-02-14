@@ -21,7 +21,7 @@ export function useGoalSettings() {
 export function useSaveGoal() {
   const queryClient = useQueryClient();
 
-  return useMutation<SaveGoalResult, Error, { type: 'yearly' | 'monthly'; amount: number }>({
+  return useMutation<SaveGoalResult, Error, { type: 'finalAsset' | 'annualDeposit'; amount: number }>({
     mutationFn: ({ type, amount }) => saveGoal(type, amount),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.goalSettings });

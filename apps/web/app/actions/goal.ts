@@ -3,18 +3,18 @@
 import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
 
-// V2 저장 구조: 연도별/월별 목표 기록
+// V3 저장 구조: 최종 총자산 목표 / 연간 입금액 목표
 export interface GoalSettingsData {
-  yearlyGoals: Record<string, number>;  // { "2025": 100000000, "2026": 120000000 }
-  monthlyGoals: Record<string, number>; // { "2025-01": 5000000, "2025-02": 6000000 }
+  finalAssetGoals: Record<string, number>;  // { "2025": 100000000, "2026": 120000000 }
+  annualDepositGoals: Record<string, number>; // { "2025": 5000000, "2026": 6000000 }
 }
 
 // 클라이언트에서 사용하는 현재 목표 + 전체 기록
 export interface GoalSettings {
-  yearlyGoal: number | null;
-  monthlyGoal: number | null;
-  yearlyGoals: Record<string, number>;
-  monthlyGoals: Record<string, number>;
+  finalAssetGoal: number | null;
+  annualDepositGoal: number | null;
+  finalAssetGoals: Record<string, number>;
+  annualDepositGoals: Record<string, number>;
 }
 
 export interface SaveGoalResult {
@@ -41,36 +41,51 @@ async function findUser(supabase: any, sessionUserId: string, sessionEmail?: str
   return user;
 }
 
-// V1 → V2 마이그레이션: 기존 { yearlyGoal, monthlyGoal } → { yearlyGoals, monthlyGoals }
+// V1 → V3 마이그레이션: 기존 { yearlyGoal, monthlyGoal } → { finalAssetGoals, annualDepositGoals }
 function migrateGoalSettings(raw: any): GoalSettingsData {
-  if (raw?.yearlyGoals || raw?.monthlyGoals) {
-    // 이미 V2 형식
+  // 이미 V3 형식
+  if (raw?.finalAssetGoals || raw?.annualDepositGoals) {
     return {
-      yearlyGoals: raw.yearlyGoals || {},
-      monthlyGoals: raw.monthlyGoals || {},
+      finalAssetGoals: raw.finalAssetGoals || {},
+      annualDepositGoals: raw.annualDepositGoals || {},
+    };
+  }
+
+  // V2 형식: { yearlyGoals, monthlyGoals } → V3
+  if (raw?.yearlyGoals || raw?.monthlyGoals) {
+    // monthlyGoals (YYYY-MM keyed) → annualDepositGoals (YYYY keyed): 각 연도의 마지막 값 사용
+    const annualDepositGoals: Record<string, number> = {};
+    if (raw.monthlyGoals) {
+      for (const [yearMonth, value] of Object.entries(raw.monthlyGoals)) {
+        const year = yearMonth.split('-')[0];
+        if (year) annualDepositGoals[year] = value as number;
+      }
+    }
+    return {
+      finalAssetGoals: raw.yearlyGoals || {},
+      annualDepositGoals,
     };
   }
 
   // V1 형식: { yearlyGoal, monthlyGoal }
   const now = new Date();
   const year = String(now.getFullYear());
-  const yearMonth = `${year}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  const yearlyGoals: Record<string, number> = {};
-  const monthlyGoals: Record<string, number> = {};
+  const finalAssetGoals: Record<string, number> = {};
+  const annualDepositGoals: Record<string, number> = {};
 
   if (raw?.yearlyGoal && raw.yearlyGoal > 0) {
-    yearlyGoals[year] = raw.yearlyGoal;
+    finalAssetGoals[year] = raw.yearlyGoal;
   }
   if (raw?.monthlyGoal && raw.monthlyGoal > 0) {
-    monthlyGoals[yearMonth] = raw.monthlyGoal;
+    annualDepositGoals[year] = raw.monthlyGoal;
   }
 
-  return { yearlyGoals, monthlyGoals };
+  return { finalAssetGoals, annualDepositGoals };
 }
 
 export async function saveGoal(
-  type: 'yearly' | 'monthly',
+  type: 'finalAsset' | 'annualDeposit',
   amount: number
 ): Promise<SaveGoalResult> {
   const session = await auth();
@@ -89,20 +104,19 @@ export async function saveGoal(
 
     const existing = migrateGoalSettings(user.goal_settings);
     const now = new Date();
+    const year = String(now.getFullYear());
 
-    if (type === 'yearly') {
-      const year = String(now.getFullYear());
+    if (type === 'finalAsset') {
       if (amount > 0) {
-        existing.yearlyGoals[year] = amount;
+        existing.finalAssetGoals[year] = amount;
       } else {
-        delete existing.yearlyGoals[year];
+        delete existing.finalAssetGoals[year];
       }
     } else {
-      const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       if (amount > 0) {
-        existing.monthlyGoals[yearMonth] = amount;
+        existing.annualDepositGoals[year] = amount;
       } else {
-        delete existing.monthlyGoals[yearMonth];
+        delete existing.annualDepositGoals[year];
       }
     }
 
@@ -161,20 +175,19 @@ export async function getGoalSettings(): Promise<GoalSettings | null> {
 
     const now = new Date();
     const currentYear = String(now.getFullYear());
-    const currentYearMonth = `${currentYear}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    const yearlyGoal = data.yearlyGoals[currentYear] ?? null;
-    const monthlyGoal = data.monthlyGoals[currentYearMonth] ?? null;
+    const finalAssetGoal = data.finalAssetGoals[currentYear] ?? null;
+    const annualDepositGoal = data.annualDepositGoals[currentYear] ?? null;
 
-    if (!yearlyGoal && !monthlyGoal && Object.keys(data.yearlyGoals).length === 0 && Object.keys(data.monthlyGoals).length === 0) {
+    if (!finalAssetGoal && !annualDepositGoal && Object.keys(data.finalAssetGoals).length === 0 && Object.keys(data.annualDepositGoals).length === 0) {
       return null;
     }
 
     return {
-      yearlyGoal,
-      monthlyGoal,
-      yearlyGoals: data.yearlyGoals,
-      monthlyGoals: data.monthlyGoals,
+      finalAssetGoal,
+      annualDepositGoal,
+      finalAssetGoals: data.finalAssetGoals,
+      annualDepositGoals: data.annualDepositGoals,
     };
   } catch (error) {
     console.error('getGoalSettings error:', error);

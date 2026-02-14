@@ -18,13 +18,13 @@ import { useSaveGoal } from "../../../hooks";
 interface GoalSettingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  type: 'yearly' | 'monthly';
+  type: 'finalAsset' | 'annualDeposit';
   currentGoal?: number | null;
 }
 
 const LABELS = {
-  yearly: { title: '연간 목표 설정', label: '연간 목표 금액', description: '올해 달성하고 싶은 총 자산 목표를 설정하세요' },
-  monthly: { title: '월간 목표 설정', label: '이번 달 목표 금액', description: '이번 달 달성하고 싶은 총 자산 목표를 설정하세요' },
+  finalAsset: { title: '최종 총자산 목표 설정', label: '최종 총자산 목표 금액', description: '최종적으로 달성하고 싶은 총 자산 목표를 설정하세요' },
+  annualDeposit: { title: '연간 입금액 목표 설정', label: '연간 입금액 목표 금액', description: '올해 입금하고 싶은 목표 금액을 설정하세요' },
 };
 
 export function GoalSettingModal({
