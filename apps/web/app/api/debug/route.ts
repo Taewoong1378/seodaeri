@@ -29,7 +29,7 @@ export async function GET() {
           const dividendRows = await fetchSheetData(
             session.accessToken,
             user.spreadsheet_id,
-            "'7. 배당내역'!A:J"
+            "'7. 배당내역'!A:K"
           );
 
           const dividends = parseDividendData(dividendRows || []);
