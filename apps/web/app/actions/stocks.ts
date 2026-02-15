@@ -2,7 +2,7 @@
 
 import { createServiceClient } from "@repo/database/server";
 import { type KRXStock, fetchAllStocks } from "../../lib/krx-api";
-import { type USStock, fetchUSStocks } from "../../lib/us-stocks-api";
+import { type USStock, fetchUSStocks, downloadUSStockCSVs } from "../../lib/us-stocks-api";
 
 export interface SyncStocksResult {
   success: boolean;
@@ -196,6 +196,56 @@ export async function syncUSStocks(): Promise<SyncStocksResult> {
     return {
       success: false,
       message: "미국 종목 동기화 중 오류가 발생했습니다.",
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * NASDAQ에서 최신 CSV를 다운로드한 후 Supabase에 동기화
+ * - 관리자 전용
+ * - 1) NASDAQ API에서 CSV 다운로드 → data/ 폴더에 저장
+ * - 2) 저장된 CSV를 읽어서 Supabase에 upsert
+ */
+export async function downloadAndSyncUSStocks(): Promise<SyncStocksResult> {
+  try {
+    console.log("[downloadAndSync] Step 1: Downloading CSVs from NASDAQ API...");
+    
+    // Step 1: CSV 다운로드
+    const downloadResult = await downloadUSStockCSVs();
+    
+    if (!downloadResult.success) {
+      return {
+        success: false,
+        message: `CSV 다운로드 실패: ${downloadResult.message}`,
+        error: downloadResult.error,
+      };
+    }
+
+    console.log(`[downloadAndSync] Download complete: ${downloadResult.message}`);
+    console.log("[downloadAndSync] Step 2: Syncing to Supabase...");
+
+    // Step 2: 다운로드된 CSV로 DB 동기화
+    const syncResult = await syncUSStocks();
+
+    if (!syncResult.success) {
+      return {
+        success: false,
+        message: `CSV 다운로드 완료, DB 동기화 실패: ${syncResult.message}`,
+        error: syncResult.error,
+      };
+    }
+
+    return {
+      success: true,
+      message: `CSV 다운로드 + DB 동기화 완료 (${syncResult.count}개 종목)`,
+      count: syncResult.count,
+    };
+  } catch (error) {
+    console.error("[downloadAndSync] Error:", error);
+    return {
+      success: false,
+      message: "CSV 다운로드 + 동기화 중 오류가 발생했습니다.",
       error: error instanceof Error ? error.message : String(error),
     };
   }

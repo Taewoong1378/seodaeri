@@ -8,6 +8,7 @@ import {
   type AccountTrendData,
   type CumulativeDividendData,
   type DepositRecord,
+  type DividendAccountData,
   type DividendByYearData,
   type DividendRecord,
   type RollingAverageDividendData,
@@ -26,6 +27,7 @@ import {
   aggregateYearlyDividends,
   calculateCumulativeDividend,
   calculateRollingAverageDividend,
+  computeDividendAccountData,
   fetchSheetData,
   parseAccountSummary,
   parseAccountTrendData,
@@ -42,6 +44,8 @@ import {
 } from '../../lib/google-sheets';
 import { StandaloneDataProvider } from '../../lib/data-provider';
 import { getUSDKRWRate } from '../../lib/exchange-rate-api';
+import { getHistoricalExchangeRates, getHistoricalMarketData } from '../../lib/historical-exchange-rate';
+import { enrichRowsWithExchangeRates, calculateMarketYields } from '../../lib/exchange-rate-enrichment';
 
 // 사용자별 캐시 태그 생성
 function getDashboardCacheTag(userId: string) {
@@ -112,6 +116,11 @@ export interface DashboardData {
   investmentDays: number;
   // 마지막 동기화 시간
   lastSyncAt: string | null;
+  // 계좌 유형별 배당 데이터
+  dividendByAccount?: {
+    general: DividendAccountData;   // 일반 계좌
+    taxSaving: DividendAccountData; // 절세 계좌
+  };
 }
 
 /**
@@ -192,22 +201,28 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
   try {
     // 시트에서 데이터 읽기 (병렬 처리, 60초 캐시)
-    const [accountRows, dividendRows, portfolioRows, performanceRows, profitLossRows, dollarYieldRows, depositDateRows, accountHistoryRows] = await Promise.all([
+    const [accountRows, dividendRows, portfolioRows, performanceRows, profitLossRows, depositDateRows, accountHistoryRows, historicalRates, marketData] = await Promise.all([
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'1. 계좌현황(누적)'!A:K", user.id),
-      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!A:J", user.id),
+      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!A:K", user.id),
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'3. 종목현황'!A:P", user.id),
       // 수익률 비교 데이터는 "5. 계좌내역(누적)" 시트에 있음 (행 범위 확장: 78 -> 200)
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AB200", user.id),
       // 월별 손익 데이터는 "5. 계좌내역(누적)" 시트 원본 입력 데이터 (E:J열)
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!E:J", user.id),
-      // 수익률 비교(달러환율 적용) 데이터 - "5. 계좌내역(누적)" 시트의 AI~AM 컬럼 (달러환율 적용 지수) (행 범위 확장: 78 -> 200)
-      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!G17:AQ200", user.id),
       // 투자 일수 계산용 - 6. 입금내역의 B열 (날짜)
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'6. 입금내역'!B:B", user.id),
       // 총자산/원금/수익률 계산용 - 5. 계좌내역(누적)의 E:Y열
       // E=연도, F=월, H=계좌총액, I=입금액, Y=누적수익률
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!E:Y", user.id),
+      // 과거 월별 환율 데이터 (공개 스프레드시트)
+      getHistoricalExchangeRates(),
+      // 시장 데이터 (금, 비트코인, 부동산)
+      getHistoricalMarketData(),
     ]);
+
+    // 현재 환율 + performanceRows에 달러환율 적용 값 주입
+    const currentRate = await getUSDKRWRate();
+    const enrichedRows = performanceRows ? enrichRowsWithExchangeRates(performanceRows, historicalRates, currentRate) : null;
 
     // 계좌 요약 파싱
     const accountSummary: AccountSummary = accountRows
@@ -224,6 +239,14 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     const yearlyDividendSummary = aggregateYearlyDividends(dividends);
     const rollingAverageDividend = calculateRollingAverageDividend(dividends);
     const cumulativeDividend = calculateCumulativeDividend(dividends);
+
+    // 계좌 유형별 배당 집계
+    const generalDividends = dividends.filter(d => !d.account || d.account === '일반 계좌');
+    const taxSavingDividends = dividends.filter(d => d.account === '절세 계좌');
+    const dividendByAccount = (generalDividends.length > 0 || taxSavingDividends.length > 0) ? {
+      general: computeDividendAccountData(generalDividends),
+      taxSaving: computeDividendAccountData(taxSavingDividends),
+    } : undefined;
 
     // 이번 달 배당금 계산
     const now = new Date();
@@ -399,6 +422,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
               amount_krw: d.amountKRW,
               amount_usd: d.amountUSD,
               dividend_date: d.date,
+              account: d.account || '일반 계좌',
               sheet_synced: true,
               updated_at: now,
             }));
@@ -438,24 +462,43 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       : null;
 
     // 수익률 비교 달러환율 적용 파싱 (확장된 범위에서 달러 컬럼 포함)
-    const yieldComparisonDollar: YieldComparisonDollarData | null = dollarYieldRows
-      ? parseYieldComparisonDollarData(dollarYieldRows)
+    const yieldComparisonDollar: YieldComparisonDollarData | null = enrichedRows
+      ? parseYieldComparisonDollarData(enrichedRows)
       : null;
 
     // 월별 수익률 비교 파싱 (이번 달 + 올해 수익률, DOLLAR 포함)
-    const monthlyYieldComparison: MonthlyYieldComparisonData | null = dollarYieldRows
-      ? parseMonthlyYieldComparisonWithDollar(dollarYieldRows)
+    const monthlyYieldComparison: MonthlyYieldComparisonData | null = enrichedRows
+      ? parseMonthlyYieldComparisonWithDollar(enrichedRows)
       : null;
 
     // 월별 수익률 비교 - 환율 반영 파싱 (S&P500, NASDAQ 달러환율 적용)
-    const monthlyYieldComparisonDollarApplied: MonthlyYieldComparisonDollarAppliedData | null = dollarYieldRows
-      ? parseMonthlyYieldComparisonDollarApplied(dollarYieldRows)
+    const monthlyYieldComparisonDollarApplied: MonthlyYieldComparisonDollarAppliedData | null = enrichedRows
+      ? parseMonthlyYieldComparisonDollarApplied(enrichedRows)
       : null;
 
     // 주요지수 수익률 비교 라인차트 파싱
-    const majorIndexYieldComparison: MajorIndexYieldComparisonData | null = dollarYieldRows
-      ? parseMajorIndexYieldComparison(dollarYieldRows)
+    let majorIndexYieldComparison: MajorIndexYieldComparisonData | null = enrichedRows
+      ? parseMajorIndexYieldComparison(enrichedRows)
       : null;
+
+    // 추가 시장 지표 수익률 병합 (금, 비트코인, 부동산)
+    if (majorIndexYieldComparison && marketData) {
+      const marketYields = calculateMarketYields(
+        majorIndexYieldComparison.months,
+        marketData,
+        new Date().getFullYear()
+      );
+      majorIndexYieldComparison = {
+        ...majorIndexYieldComparison,
+        gold: marketYields.gold,
+        bitcoin: marketYields.bitcoin,
+        realEstate: marketYields.realEstate,
+      };
+      // dollar 수익률도 marketYields에서 가져옴 (기존 dollar 없는 경우)
+      if (!majorIndexYieldComparison.dollar) {
+        majorIndexYieldComparison.dollar = marketYields.dollar;
+      }
+    }
 
     // 투자 일수 계산: TODAY() - MIN(B:B) + 1
     let investmentDays = 0;
@@ -520,6 +563,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       majorIndexYieldComparison,
       investmentDays,
       lastSyncAt: new Date().toISOString(),
+      dividendByAccount,
     };
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
@@ -618,7 +662,7 @@ export async function syncPortfolio() {
   // 시트에서 모든 데이터 병렬로 읽기
   const [portfolioRows, dividendRows, depositRows] = await Promise.all([
     fetchSheetData(accessToken, spreadsheetId, "'3. 종목현황'!A:P"),
-    fetchSheetData(accessToken, spreadsheetId, "'7. 배당내역'!A:J"),
+    fetchSheetData(accessToken, spreadsheetId, "'7. 배당내역'!A:K"),
     fetchSheetData(accessToken, spreadsheetId, "'6. 입금내역'!A:J"), // A:F -> A:J로 확장 (금액 컬럼 포함)
   ]);
 
@@ -676,6 +720,7 @@ export async function syncPortfolio() {
         amount_krw: d.amountKRW,
         amount_usd: d.amountUSD,
         dividend_date: d.date,
+        account: d.account || '일반 계좌',
         sheet_synced: true,
         updated_at: new Date().toISOString(),
       }));
@@ -796,6 +841,8 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
   try {
     // 환율 조회
     const exchangeRate = await getUSDKRWRate();
+    const historicalRates = await getHistoricalExchangeRates();
+    const marketData = await getHistoricalMarketData();
 
     // 1. 포트폴리오 조회 (현재가 API 포함)
     const portfolioItems = await provider.getPortfolio(userId);
@@ -828,6 +875,7 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       amountKRW: d.amountKRW,
       amountUSD: d.amountUSD,
       totalKRW: d.amountKRW + (d.amountUSD * exchangeRate), // 원화 환산
+      account: d.account || undefined,
     }));
 
     // 배당금 집계
@@ -837,8 +885,16 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
     const rollingAverageDividend = calculateRollingAverageDividend(dividendRecords);
     const cumulativeDividend = calculateCumulativeDividend(dividendRecords);
 
+    // 계좌 유형별 배당 집계
+    const generalDividends = dividendRecords.filter(d => !d.account || d.account === '일반 계좌');
+    const taxSavingDividends = dividendRecords.filter(d => d.account === '절세 계좌');
+    const dividendByAccount = (generalDividends.length > 0 || taxSavingDividends.length > 0) ? {
+      general: computeDividendAccountData(generalDividends),
+      taxSaving: computeDividendAccountData(taxSavingDividends),
+    } : undefined;
+
     // 4. 주요 지수 수익률 비교 데이터 조회
-    const majorIndexYieldComparison = await provider.getMajorIndexYieldComparison(userId);
+    const majorIndexYieldComparison = await provider.getMajorIndexYieldComparison(userId, historicalRates, marketData);
 
     return {
       totalAsset: summary.totalAsset,
@@ -863,6 +919,7 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       majorIndexYieldComparison,
       investmentDays: summary.investmentDays,
       lastSyncAt: new Date().toISOString(),
+      dividendByAccount,
     };
   } catch (error) {
     console.error('[getStandaloneDashboardData] Error:', error);

@@ -279,7 +279,7 @@ export async function getTransactions(): Promise<TransactionsResult> {
                 source: 'sheet' as const,
                 amountKRW: d.amountKRW, // 원화 배당금 (삭제 시 사용)
                 amountUSD: d.amountUSD, // 외화 배당금 (삭제 시 사용)
-                account: d.account, // 계좌 유형
+                account: d.account || '일반 계좌', // 계좌 유형 (기본값: 일반 계좌)
               };
             }
           );
