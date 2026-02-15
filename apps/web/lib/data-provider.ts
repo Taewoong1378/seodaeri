@@ -16,6 +16,8 @@ import {
   type IndexData,
 } from './index-data-api';
 import type { MajorIndexYieldComparisonData } from './google-sheets';
+import type { HistoricalMarketData } from './historical-exchange-rate';
+import { calculateMarketYields } from './exchange-rate-enrichment';
 
 // ============================================
 // 공통 타입 정의
@@ -51,6 +53,7 @@ export interface DividendRecord {
   amountKRW: number;
   amountUSD: number;
   date: string;
+  account?: string;
 }
 
 export interface DepositRecord {
@@ -281,6 +284,7 @@ export class StandaloneDataProvider implements DataProvider {
       amountKRW: d.amount_krw || 0,
       amountUSD: d.amount_usd || 0,
       date: d.dividend_date,
+      account: d.account || undefined,
     }));
   }
 
@@ -392,7 +396,7 @@ export class StandaloneDataProvider implements DataProvider {
    * - KOSPI, S&P500 (SPY), NASDAQ (QQQ) 지수 데이터
    * - 포트폴리오 스냅샷 기반 계좌 수익률 계산
    */
-  async getMajorIndexYieldComparison(userId: string): Promise<MajorIndexYieldComparisonData | null> {
+  async getMajorIndexYieldComparison(userId: string, historicalRates?: Map<string, number>, marketData?: HistoricalMarketData): Promise<MajorIndexYieldComparisonData | null> {
     const supabase = createServiceClient();
 
     try {
@@ -459,12 +463,80 @@ export class StandaloneDataProvider implements DataProvider {
         return null;
       }
 
+      // 6. 환율 적용 데이터 계산 (historicalRates가 있는 경우)
+      if (historicalRates && historicalRates.size > 0) {
+        // 올해 1월의 환율을 기준율로 설정
+        const janKey = `${String(currentYear).slice(2)}.01`;
+        const baseRate = historicalRates.get(janKey);
+
+        if (baseRate && baseRate > 0) {
+          const dollarYields: number[] = [0]; // 시작점 0%
+          const sp500DollarYields: number[] = [0];
+          const nasdaqDollarYields: number[] = [0];
+
+          for (let m = 1; m <= currentMonth; m++) {
+            const monthKey = `${String(currentYear).slice(2)}.${String(m).padStart(2, '0')}`;
+            const rate = historicalRates.get(monthKey);
+
+            if (rate && rate > 0) {
+              // 환율 변동률 (%)
+              const dollarYield = ((rate / baseRate) - 1) * 100;
+              dollarYields.push(Number(dollarYield.toFixed(1)));
+
+              // S&P500 달러환율 적용: (1 + sp500수익률/100) * (1 + 환율변동률/100) - 1
+              const sp500Return = (sp500Yields[m] ?? 0) / 100;
+              const dollarReturn = dollarYield / 100;
+              const sp500DollarReturn = ((1 + sp500Return) * (1 + dollarReturn) - 1) * 100;
+              sp500DollarYields.push(Number(sp500DollarReturn.toFixed(1)));
+
+              // NASDAQ 달러환율 적용
+              const nasdaqReturn = (nasdaqYields[m] ?? 0) / 100;
+              const nasdaqDollarReturn = ((1 + nasdaqReturn) * (1 + dollarReturn) - 1) * 100;
+              nasdaqDollarYields.push(Number(nasdaqDollarReturn.toFixed(1)));
+            } else {
+              // 환율 데이터 없으면 이전 값 유지
+              dollarYields.push(dollarYields[dollarYields.length - 1] ?? 0);
+              sp500DollarYields.push(sp500DollarYields[sp500DollarYields.length - 1] ?? 0);
+              nasdaqDollarYields.push(nasdaqDollarYields[nasdaqDollarYields.length - 1] ?? 0);
+            }
+          }
+
+          // 추가 시장 지표 수익률 계산
+          const marketYieldsData = marketData ? calculateMarketYields(months, marketData, currentYear) : null;
+
+          return {
+            months,
+            sp500: sp500Yields,
+            nasdaq: nasdaqYields,
+            kospi: kospiYields,
+            account: accountYields,
+            sp500Dollar: sp500DollarYields,
+            nasdaqDollar: nasdaqDollarYields,
+            dollar: dollarYields,
+            ...(marketYieldsData ? {
+              gold: marketYieldsData.gold,
+              bitcoin: marketYieldsData.bitcoin,
+              realEstate: marketYieldsData.realEstate,
+            } : {}),
+          };
+        }
+      }
+
+      // 추가 시장 지표 수익률 계산
+      const marketYieldsData = marketData ? calculateMarketYields(months, marketData, currentYear) : null;
+
       return {
         months,
         sp500: sp500Yields,
         nasdaq: nasdaqYields,
         kospi: kospiYields,
         account: accountYields,
+        ...(marketYieldsData ? {
+          gold: marketYieldsData.gold,
+          bitcoin: marketYieldsData.bitcoin,
+          realEstate: marketYieldsData.realEstate,
+          dollar: marketYieldsData.dollar,
+        } : {}),
       };
     } catch (error) {
       console.error('[StandaloneProvider] getMajorIndexYieldComparison error:', error);

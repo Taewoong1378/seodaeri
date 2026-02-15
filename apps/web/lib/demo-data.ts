@@ -8,6 +8,7 @@ import type { DashboardData } from '../app/actions/dashboard';
 import type {
   AccountTrendData,
   CumulativeDividendData,
+  DividendAccountData,
   DividendByYearData,
   MajorIndexYieldComparisonData,
   MonthlyDividend,
@@ -343,6 +344,11 @@ export const DEMO_MAJOR_INDEX_YIELD_COMPARISON: MajorIndexYieldComparisonData = 
   kospi: [0, ...DEMO_PERFORMANCE_COMPARISON.map((d) => d.kospi)],
   sp500: [0, ...DEMO_PERFORMANCE_COMPARISON.map((d) => d.sp500)],
   nasdaq: [0, ...DEMO_PERFORMANCE_COMPARISON.map((d) => d.nasdaq)],
+  // 추가 시장 지표 데모 데이터
+  gold: [0, 2.1, 4.5, 7.2, 5.8, 8.3, 10.1, 9.5, 12.8, 11.2, 14.5, 13.8, 15.2],
+  bitcoin: [0, 5.2, -3.1, 12.5, 8.7, 15.3, 22.1, 18.5, 25.8, 20.3, 28.5, 35.2, 30.1],
+  realEstate: [0, 0.2, 0.5, 0.8, 1.0, 1.3, 1.5, 1.8, 2.0, 2.2, 2.5, 2.8, 3.0],
+  dollar: [0, 1.2, 2.5, 1.8, 3.2, 2.8, 4.1, 3.5, 5.2, 4.8, 3.9, 4.5, 5.0],
 };
 
 // =============================================================================
@@ -442,6 +448,88 @@ const yearlyDividend = DEMO_MONTHLY_DIVIDENDS.filter((d) =>
   d.year === currentYear
 ).reduce((acc, d) => acc + d.amount, 0);
 
+// =============================================================================
+// 계좌 유형별 배당금 데이터
+// =============================================================================
+const DEMO_GENERAL_MONTHLY_DIVIDENDS: MonthlyDividend[] = DEMO_MONTHLY_DIVIDENDS.map(d => ({
+  ...d,
+  amount: Math.round(d.amount * 0.6),
+}));
+
+const DEMO_TAXSAVING_MONTHLY_DIVIDENDS: MonthlyDividend[] = DEMO_MONTHLY_DIVIDENDS.map(d => ({
+  ...d,
+  amount: Math.round(d.amount * 0.4),
+}));
+
+const DEMO_DIVIDEND_BY_ACCOUNT: { general: DividendAccountData; taxSaving: DividendAccountData } = {
+  general: {
+    thisMonthDividend: Math.round((DEMO_MONTHLY_DIVIDENDS[DEMO_MONTHLY_DIVIDENDS.length - 1]?.amount || 0) * 0.6),
+    yearlyDividend: Math.round(yearlyDividend * 0.6),
+    monthlyDividends: DEMO_GENERAL_MONTHLY_DIVIDENDS,
+    dividendByYear: {
+      years: DEMO_DIVIDEND_BY_YEAR.years,
+      data: DEMO_DIVIDEND_BY_YEAR.data.map(d => {
+        const scaled: { [year: string]: string | number; month: string } = { month: d.month };
+        for (const year of DEMO_DIVIDEND_BY_YEAR.years) {
+          scaled[String(year)] = Math.round(((d as any)[String(year)] || 0) * 0.6);
+        }
+        return scaled;
+      }),
+    },
+    yearlyDividendSummary: {
+      data: DEMO_YEARLY_DIVIDEND_SUMMARY.data.map(d => ({
+        year: d.year,
+        amount: Math.round(d.amount * 0.6),
+      })),
+    },
+    rollingAverageDividend: {
+      data: DEMO_ROLLING_AVERAGE_DIVIDEND.data.map(d => ({
+        month: d.month,
+        average: Math.round(d.average * 0.6),
+      })),
+    },
+    cumulativeDividend: {
+      data: DEMO_CUMULATIVE_DIVIDEND.data.map(d => ({
+        month: d.month,
+        cumulative: Math.round(d.cumulative * 0.6),
+      })),
+    },
+  },
+  taxSaving: {
+    thisMonthDividend: Math.round((DEMO_MONTHLY_DIVIDENDS[DEMO_MONTHLY_DIVIDENDS.length - 1]?.amount || 0) * 0.4),
+    yearlyDividend: Math.round(yearlyDividend * 0.4),
+    monthlyDividends: DEMO_TAXSAVING_MONTHLY_DIVIDENDS,
+    dividendByYear: {
+      years: DEMO_DIVIDEND_BY_YEAR.years,
+      data: DEMO_DIVIDEND_BY_YEAR.data.map(d => {
+        const scaled: { [year: string]: string | number; month: string } = { month: d.month };
+        for (const year of DEMO_DIVIDEND_BY_YEAR.years) {
+          scaled[String(year)] = Math.round(((d as any)[String(year)] || 0) * 0.4);
+        }
+        return scaled;
+      }),
+    },
+    yearlyDividendSummary: {
+      data: DEMO_YEARLY_DIVIDEND_SUMMARY.data.map(d => ({
+        year: d.year,
+        amount: Math.round(d.amount * 0.4),
+      })),
+    },
+    rollingAverageDividend: {
+      data: DEMO_ROLLING_AVERAGE_DIVIDEND.data.map(d => ({
+        month: d.month,
+        average: Math.round(d.average * 0.4),
+      })),
+    },
+    cumulativeDividend: {
+      data: DEMO_CUMULATIVE_DIVIDEND.data.map(d => ({
+        month: d.month,
+        cumulative: Math.round(d.cumulative * 0.4),
+      })),
+    },
+  },
+};
+
 // 투자 일수 (첫 입금일로부터 계산)
 const firstDepositDate = new Date(DEMO_DEPOSITS[0]?.date || new Date());
 const investmentDays = Math.floor(
@@ -467,6 +555,7 @@ export const DEMO_DASHBOARD_DATA: DashboardData = {
   yearlyDividendSummary: DEMO_YEARLY_DIVIDEND_SUMMARY,
   rollingAverageDividend: DEMO_ROLLING_AVERAGE_DIVIDEND,
   cumulativeDividend: DEMO_CUMULATIVE_DIVIDEND,
+  dividendByAccount: DEMO_DIVIDEND_BY_ACCOUNT,
 
   // 포트폴리오
   portfolio: DEMO_PORTFOLIO,

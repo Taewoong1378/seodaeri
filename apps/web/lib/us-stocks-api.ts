@@ -2,9 +2,10 @@
  * 미국 주식 데이터 (NASDAQ CSV 기반)
  * - NASDAQ 공식 Stock Screener에서 다운로드한 CSV 파일 사용
  * - https://www.nasdaq.com/market-activity/stocks/screener
+ * - downloadUSStockCSVs()로 최신 CSV를 NASDAQ API에서 다운로드 가능
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 export interface USStock {
@@ -123,6 +124,129 @@ export async function fetchUSStocks(): Promise<USStock[]> {
 
   console.log(`[US Stocks] Total unique stocks: ${allStocks.length}`);
   return allStocks;
+}
+
+/**
+ * NASDAQ API에서 최신 주식 데이터를 다운로드하여 CSV 파일로 저장
+ * - NASDAQ Stock Screener의 내부 API 사용
+ * - NASDAQ, NYSE, AMEX 3개 거래소 데이터 다운로드
+ * 
+ * @returns 다운로드 결과 (거래소별 종목 수)
+ */
+export async function downloadUSStockCSVs(): Promise<{
+  success: boolean;
+  message: string;
+  counts: { nasdaq: number; nyse: number; amex: number };
+  error?: string;
+}> {
+  const exchanges = [
+    { name: "nasdaq", label: "NASDAQ" },
+    { name: "nyse", label: "NYSE" },
+    { name: "amex", label: "AMEX" },
+  ] as const;
+
+  const dataDir = join(process.cwd(), "data");
+  
+  // data 디렉토리가 없으면 생성
+  if (!existsSync(dataDir)) {
+    mkdirSync(dataDir, { recursive: true });
+  }
+
+  const counts: { nasdaq: number; nyse: number; amex: number } = {
+    nasdaq: 0,
+    nyse: 0,
+    amex: 0,
+  };
+
+  const errors: string[] = [];
+
+  for (const exchange of exchanges) {
+    try {
+      console.log(`[downloadCSV] Fetching ${exchange.label} data from NASDAQ API...`);
+
+      // NASDAQ Stock Screener 내부 API
+      const url = `https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=25000&exchange=${exchange.name}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const rows = data?.data?.table?.rows;
+
+      if (!rows || !Array.isArray(rows) || rows.length === 0) {
+        throw new Error("API 응답에 데이터가 없습니다.");
+      }
+
+      console.log(`[downloadCSV] ${exchange.label}: ${rows.length} rows received`);
+
+      // JSON → CSV 변환
+      const csvHeaders = [
+        "Symbol", "Name", "Last Sale", "Net Change", "% Change",
+        "Market Cap", "Country", "IPO Year", "Volume", "Sector", "Industry",
+      ];
+      
+      const csvLines = [csvHeaders.join(",")];
+      
+      for (const row of rows) {
+        const values = [
+          row.symbol || "",
+          `"${(row.name || "").replace(/"/g, '""')}"`,
+          row.lastsale || "",
+          row.netchange || "",
+          row.pctchange || "",
+          row.marketCap || "",
+          `"${(row.country || "").replace(/"/g, '""')}"`,
+          row.ipoyear || "",
+          row.volume || "",
+          `"${(row.sector || "").replace(/"/g, '""')}"`,
+          `"${(row.industry || "").replace(/"/g, '""')}"`,
+        ];
+        csvLines.push(values.join(","));
+      }
+
+      const csvContent = csvLines.join("\n");
+      const filePath = join(dataDir, `${exchange.name}.csv`);
+      
+      writeFileSync(filePath, csvContent, "utf-8");
+      counts[exchange.name] = rows.length;
+
+      console.log(`[downloadCSV] ${exchange.label}: saved to ${filePath}`);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error(`[downloadCSV] ${exchange.label} error:`, errMsg);
+      errors.push(`${exchange.label}: ${errMsg}`);
+    }
+  }
+
+  const totalCount = counts.nasdaq + counts.nyse + counts.amex;
+
+  if (totalCount === 0) {
+    return {
+      success: false,
+      message: "모든 거래소 데이터 다운로드 실패",
+      counts,
+      error: errors.join("; "),
+    };
+  }
+
+  const message = errors.length > 0
+    ? `${totalCount}개 종목 다운로드 완료 (일부 실패: ${errors.join(", ")})`
+    : `${totalCount}개 종목 CSV 다운로드 완료 (NASDAQ: ${counts.nasdaq}, NYSE: ${counts.nyse}, AMEX: ${counts.amex})`;
+
+  return {
+    success: true,
+    message,
+    counts,
+    error: errors.length > 0 ? errors.join("; ") : undefined,
+  };
 }
 
 /**

@@ -1221,6 +1221,46 @@ export function aggregateDividendsByYear(dividends: DividendRecord[]): DividendB
   return { data, years };
 }
 
+export interface DividendAccountData {
+  thisMonthDividend: number;
+  yearlyDividend: number;
+  monthlyDividends: MonthlyDividend[];
+  dividendByYear: DividendByYearData | null;
+  yearlyDividendSummary: YearlyDividendSummaryData | null;
+  rollingAverageDividend: RollingAverageDividendData | null;
+  cumulativeDividend: CumulativeDividendData | null;
+}
+
+export function computeDividendAccountData(dividends: DividendRecord[]): DividendAccountData {
+  const monthlyDividends = aggregateMonthlyDividends(dividends);
+  const dividendByYear = aggregateDividendsByYear(dividends);
+  const yearlyDividendSummary = aggregateYearlyDividends(dividends);
+  const rollingAverageDividend = calculateRollingAverageDividend(dividends);
+  const cumulativeDividend = calculateCumulativeDividend(dividends);
+
+  const now = new Date();
+  const thisMonth = `${now.getMonth() + 1}월`;
+  const thisYear = now.getFullYear();
+  const thisMonthData = monthlyDividends.find(
+    (m) => m.month === thisMonth && m.year === thisYear
+  );
+  const thisMonthDividend = thisMonthData?.amount || 0;
+
+  const yearlyDividend = monthlyDividends
+    .filter((m) => m.year === thisYear)
+    .reduce((sum, m) => sum + m.amount, 0);
+
+  return {
+    thisMonthDividend,
+    yearlyDividend,
+    monthlyDividends,
+    dividendByYear,
+    yearlyDividendSummary,
+    rollingAverageDividend,
+    cumulativeDividend,
+  };
+}
+
 // Helper to parse '3. 종목현황' tab
 // 실제 시트 구조: [empty, index, 국가, 종목코드, 종목명, 수량, 평단가(원), 평단가($), 현재가(원), 현재가($), 평가액, 투자비중, ...]
 export interface PortfolioItem {
@@ -1826,6 +1866,10 @@ export interface MajorIndexYieldComparisonData {
   sp500Dollar?: number[];
   nasdaqDollar?: number[];
   dollar?: number[]; // 달러 환율 수익률
+  // 추가 시장 지표 (선택)
+  gold?: number[];          // 금 수익률 (원화 기준)
+  bitcoin?: number[];       // 비트코인 수익률 (원화 기준)
+  realEstate?: number[];    // 부동산 수익률
 }
 
 /**
