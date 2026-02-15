@@ -2480,7 +2480,7 @@ export function parseMonthlyYieldComparisonWithDollar(rows: any[]): MonthlyYield
   const COL_KOSPI_IDX = 9; // P열 - 코스피 지수
   const COL_SP500_IDX = 10; // Q열 - S&P500 지수
   const COL_NASDAQ_IDX = 11; // R열 - 나스닥 지수
-  const COL_DOLLAR = 23; // AD열 - 달러 환율값
+  const COL_DOLLAR = 33; // AN열 - 달러환율 지수 (다른 지수와 동일 기준)
 
   let currentRow: any[] | null = null;
   let prevMonthRow: any[] | null = null;
