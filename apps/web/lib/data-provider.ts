@@ -9,13 +9,7 @@
 import { createServiceClient } from '@repo/database/server';
 import { getUSDKRWRate } from './exchange-rate-api';
 import { getStockPrices, isKoreanStock, type StockPrice } from './stock-price-api';
-import {
-  getKOSPIIndex,
-  getSP500Index,
-  getNASDAQIndex,
-  type IndexData,
-} from './index-data-api';
-import type { MajorIndexYieldComparisonData } from './google-sheets';
+import type { AccountTrendData, MajorIndexYieldComparisonData, MonthlyProfitLoss } from './google-sheets';
 import type { HistoricalMarketData } from './historical-exchange-rate';
 import { calculateMarketYields } from './exchange-rate-enrichment';
 
@@ -99,19 +93,45 @@ export class StandaloneDataProvider implements DataProvider {
   async getDashboardSummary(userId: string): Promise<DashboardSummary> {
     const supabase = createServiceClient();
 
-    // 포트폴리오 조회
-    const portfolio = await this.getPortfolio(userId);
-
-    // 총 자산 및 투자원금 계산
     let totalAsset = 0;
     let totalInvested = 0;
-
     const exchangeRate = await getUSDKRWRate();
 
-    for (const item of portfolio) {
-      const rate = item.currency === 'USD' ? exchangeRate : 1;
-      totalAsset += item.totalValue * rate;
-      totalInvested += item.avgPrice * item.quantity * rate;
+    // 1) account_balances + deposits 우선 조회
+    const { data: accountBalances } = await (supabase as any)
+      .from('account_balances')
+      .select('year_month, balance')
+      .eq('user_id', userId)
+      .order('year_month', { ascending: false });
+
+    if (accountBalances && accountBalances.length > 0) {
+      // 최신 잔액 = totalAsset
+      totalAsset = accountBalances[0].balance || 0;
+
+      // deposits에서 순입금액 계산 = totalInvested
+      const { data: deposits } = await supabase
+        .from('deposits')
+        .select('type, amount')
+        .eq('user_id', userId);
+
+      if (deposits && deposits.length > 0) {
+        for (const d of deposits) {
+          if (d.type === 'DEPOSIT') {
+            totalInvested += d.amount || 0;
+          } else if (d.type === 'WITHDRAW') {
+            totalInvested -= d.amount || 0;
+          }
+        }
+      }
+    } else {
+      // 2) fallback: holdings 기반 계산 (기존 로직)
+      const portfolio = await this.getPortfolio(userId);
+
+      for (const item of portfolio) {
+        const rate = item.currency === 'USD' ? exchangeRate : 1;
+        totalAsset += item.totalValue * rate;
+        totalInvested += item.avgPrice * item.quantity * rate;
+      }
     }
 
     const totalProfit = totalAsset - totalInvested;
@@ -392,9 +412,156 @@ export class StandaloneDataProvider implements DataProvider {
   }
 
   /**
+   * 계좌 추세 데이터 조회 (account_balances + deposits)
+   * Sheet 모드의 parseAccountTrendData()와 동일한 출력 형태
+   */
+  async getAccountTrend(userId: string): Promise<AccountTrendData[]> {
+    const supabase = createServiceClient();
+
+    // account_balances 조회 (시간순)
+    const { data: balances } = await (supabase as any)
+      .from('account_balances')
+      .select('year_month, balance')
+      .eq('user_id', userId)
+      .order('year_month', { ascending: true });
+
+    if (!balances || balances.length === 0) {
+      return [];
+    }
+
+    // deposits 조회 (시간순)
+    const { data: deposits } = await supabase
+      .from('deposits')
+      .select('type, amount, deposit_date')
+      .eq('user_id', userId)
+      .order('deposit_date', { ascending: true });
+
+    // 월별 순입금액 계산
+    const monthlyNetDeposit = new Map<string, number>();
+    if (deposits) {
+      for (const d of deposits) {
+        const date = new Date(d.deposit_date);
+        const ym = `${String(date.getFullYear()).slice(2)}.${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const current = monthlyNetDeposit.get(ym) || 0;
+        const amount = d.type === 'DEPOSIT' ? (d.amount || 0) : -(d.amount || 0);
+        monthlyNetDeposit.set(ym, current + amount);
+      }
+    }
+
+    // AccountTrendData 생성
+    const result: AccountTrendData[] = [];
+    let cumulativeDeposit = 0;
+
+    for (const b of balances) {
+      // year_month: "2025-01" → "25.01"
+      const parts = (b.year_month as string).split('-');
+      const date = `${(parts[0] || '').slice(2)}.${parts[1] || ''}`;
+
+      // 누적 입금액 갱신
+      const netDeposit = monthlyNetDeposit.get(date) || 0;
+      cumulativeDeposit += netDeposit;
+
+      result.push({
+        date,
+        totalAccount: b.balance || 0,
+        cumulativeDeposit: Math.round(cumulativeDeposit),
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * 월별 손익 데이터 조회 (account_balances 기반)
+   * 순손익 = (이번달 잔액 - 지난달 잔액) - (이번달 순입금액)
+   */
+  async getMonthlyProfitLoss(userId: string): Promise<MonthlyProfitLoss[]> {
+    const supabase = createServiceClient();
+
+    // 올해 account_balances 조회
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const yearPrefix = `${currentYear}-`;
+
+    const { data: balances } = await (supabase as any)
+      .from('account_balances')
+      .select('year_month, balance')
+      .eq('user_id', userId)
+      .like('year_month', `${yearPrefix}%`)
+      .order('year_month', { ascending: true });
+
+    if (!balances || balances.length === 0) {
+      return [];
+    }
+
+    // 올해 deposits 조회
+    const { data: deposits } = await supabase
+      .from('deposits')
+      .select('type, amount, deposit_date')
+      .eq('user_id', userId)
+      .gte('deposit_date', `${currentYear}-01-01`)
+      .lte('deposit_date', `${currentYear}-12-31`);
+
+    // 월별 순입금액 계산
+    const monthlyNetDeposit = new Map<number, number>();
+    if (deposits) {
+      for (const d of deposits) {
+        const month = new Date(d.deposit_date).getMonth() + 1;
+        const current = monthlyNetDeposit.get(month) || 0;
+        const amount = d.type === 'DEPOSIT' ? (d.amount || 0) : -(d.amount || 0);
+        monthlyNetDeposit.set(month, current + amount);
+      }
+    }
+
+    // 월별 잔액 맵
+    const monthlyBalance = new Map<number, number>();
+    for (const b of balances) {
+      const month = Number.parseInt((b.year_month as string).split('-')[1] || '0', 10);
+      monthlyBalance.set(month, b.balance || 0);
+    }
+
+    // 이전달 잔액 (작년 12월) 조회
+    let prevBalance = 0;
+    const { data: prevYear } = await (supabase as any)
+      .from('account_balances')
+      .select('balance')
+      .eq('user_id', userId)
+      .eq('year_month', `${currentYear - 1}-12`)
+      .single();
+    if (prevYear) {
+      prevBalance = prevYear.balance || 0;
+    }
+
+    // MonthlyProfitLoss 생성
+    const result: MonthlyProfitLoss[] = [];
+    let lastBalance = prevBalance;
+
+    for (let m = 1; m <= 12; m++) {
+      const balance = monthlyBalance.get(m);
+      if (balance === undefined) {
+        // 데이터 없는 달은 건너뛰기 (lastBalance는 유지)
+        continue;
+      }
+
+      const netDeposit = monthlyNetDeposit.get(m) || 0;
+      const netPL = (balance - lastBalance) - netDeposit;
+
+      result.push({
+        month: `${m}월`,
+        profit: netPL > 0 ? Math.round(netPL) : 0,
+        loss: netPL < 0 ? Math.round(Math.abs(netPL)) : 0,
+      });
+
+      lastBalance = balance;
+    }
+
+    return result;
+  }
+
+  /**
    * 주요 지수 수익률 비교 데이터 조회 (YTD 기준)
-   * - KOSPI, S&P500 (SPY), NASDAQ (QQQ) 지수 데이터
-   * - 포트폴리오 스냅샷 기반 계좌 수익률 계산
+   * 공개 스프레드시트의 historical market data를 사용하여
+   * Sheet 모드와 동일한 실제 YTD 수익률을 계산
    */
   async getMajorIndexYieldComparison(userId: string, historicalRates?: Map<string, number>, marketData?: HistoricalMarketData): Promise<MajorIndexYieldComparisonData | null> {
     const supabase = createServiceClient();
@@ -404,10 +571,32 @@ export class StandaloneDataProvider implements DataProvider {
       const currentYear = now.getFullYear();
       const currentMonth = now.getMonth(); // 0-indexed
 
-      // 연초 날짜 (1월 1일)
-      const yearStart = `${currentYear}-01-01`;
+      // 1. 월별 레이블 생성
+      const months = ['시작'];
+      for (let m = 0; m <= currentMonth; m++) {
+        months.push(`${m + 1}월`);
+      }
 
-      // 1. 포트폴리오 스냅샷 조회 (연초부터 현재까지)
+      // 2. 시장 데이터에서 모든 수익률 계산 (KOSPI, S&P500, NASDAQ, 달러, 금, BTC, 부동산)
+      if (!marketData) {
+        console.warn('[StandaloneProvider] No market data available - skipping comparison chart');
+        return null;
+      }
+
+      const marketYields = calculateMarketYields(months, marketData, currentYear);
+
+      // 지수 데이터 유효성 확인 (하나라도 있어야 차트 표시)
+      const hasKospi = marketYields.kospi.some(v => v !== 0);
+      const hasSP500 = marketYields.sp500.some(v => v !== 0);
+      const hasNasdaq = marketYields.nasdaq.some(v => v !== 0);
+
+      if (!hasKospi && !hasSP500 && !hasNasdaq) {
+        console.warn('[StandaloneProvider] No index data in market data - skipping comparison chart');
+        return null;
+      }
+
+      // 3. 계좌 수익률 계산 (포트폴리오 스냅샷 기반)
+      const yearStart = `${currentYear}-01-01`;
       const { data: snapshots } = await supabase
         .from('portfolio_snapshots')
         .select('snapshot_date, total_asset, total_invested')
@@ -415,30 +604,6 @@ export class StandaloneDataProvider implements DataProvider {
         .gte('snapshot_date', yearStart)
         .order('snapshot_date', { ascending: true });
 
-      // 2. 월별 레이블 생성
-      const months = ['시작'];
-      for (let m = 0; m <= currentMonth; m++) {
-        months.push(`${m + 1}월`);
-      }
-
-      // 3. 현재 지수 데이터 조회
-      const [kospiData, sp500Data, nasdaqData] = await Promise.all([
-        getKOSPIIndex(),
-        getSP500Index(),
-        getNASDAQIndex(),
-      ]);
-
-      // 4. 지수 YTD 수익률 계산
-      // 지수의 경우 연초 대비 현재 수익률을 사용
-      // 현재 API에서는 일간 변동률만 제공하므로,
-      // 실제 YTD는 추후 historical data API 연동 시 개선 가능
-      // 임시로 현재 일간 변동률을 누적 형태로 표시
-      const sp500Yields = this.generateMonthlyYields(sp500Data?.changePercent || 0, currentMonth + 1);
-      const nasdaqYields = this.generateMonthlyYields(nasdaqData?.changePercent || 0, currentMonth + 1);
-      const kospiYields = this.generateMonthlyYields(kospiData?.changePercent || 0, currentMonth + 1);
-
-      // 5. 계좌 수익률 계산
-      // null 값을 0으로 변환하여 타입 안정성 확보
       const normalizedSnapshots = (snapshots || []).map(s => ({
         snapshot_date: s.snapshot_date,
         total_asset: s.total_asset ?? 0,
@@ -446,120 +611,30 @@ export class StandaloneDataProvider implements DataProvider {
       }));
       const accountYields = this.calculateAccountYields(normalizedSnapshots, currentMonth + 1);
 
-      // 지수 데이터가 하나라도 없으면 비교 차트를 표시하지 않음
-      const hasAnyIndexData = kospiData || sp500Data || nasdaqData;
-
-      console.log('[StandaloneProvider] Index comparison:', {
-        kospi: kospiData?.changePercent ?? 'unavailable',
-        sp500: sp500Data?.changePercent ?? 'unavailable',
-        nasdaq: nasdaqData?.changePercent ?? 'unavailable',
-        accountMonths: accountYields.length,
-        hasAnyIndexData,
+      console.log('[StandaloneProvider] Index comparison (historical):', {
+        kospiYTD: marketYields.kospi[marketYields.kospi.length - 1],
+        sp500YTD: marketYields.sp500[marketYields.sp500.length - 1],
+        nasdaqYTD: marketYields.nasdaq[marketYields.nasdaq.length - 1],
+        dollarYTD: marketYields.dollar[marketYields.dollar.length - 1],
       });
-
-      // 지수 데이터가 없으면 null 반환 (차트 미표시)
-      if (!hasAnyIndexData) {
-        console.warn('[StandaloneProvider] No index data available - skipping comparison chart');
-        return null;
-      }
-
-      // 6. 환율 적용 데이터 계산 (historicalRates가 있는 경우)
-      if (historicalRates && historicalRates.size > 0) {
-        // 올해 1월의 환율을 기준율로 설정
-        const janKey = `${String(currentYear).slice(2)}.01`;
-        const baseRate = historicalRates.get(janKey);
-
-        if (baseRate && baseRate > 0) {
-          const dollarYields: number[] = [0]; // 시작점 0%
-          const sp500DollarYields: number[] = [0];
-          const nasdaqDollarYields: number[] = [0];
-
-          for (let m = 1; m <= currentMonth; m++) {
-            const monthKey = `${String(currentYear).slice(2)}.${String(m).padStart(2, '0')}`;
-            const rate = historicalRates.get(monthKey);
-
-            if (rate && rate > 0) {
-              // 환율 변동률 (%)
-              const dollarYield = ((rate / baseRate) - 1) * 100;
-              dollarYields.push(Number(dollarYield.toFixed(1)));
-
-              // S&P500 달러환율 적용: (1 + sp500수익률/100) * (1 + 환율변동률/100) - 1
-              const sp500Return = (sp500Yields[m] ?? 0) / 100;
-              const dollarReturn = dollarYield / 100;
-              const sp500DollarReturn = ((1 + sp500Return) * (1 + dollarReturn) - 1) * 100;
-              sp500DollarYields.push(Number(sp500DollarReturn.toFixed(1)));
-
-              // NASDAQ 달러환율 적용
-              const nasdaqReturn = (nasdaqYields[m] ?? 0) / 100;
-              const nasdaqDollarReturn = ((1 + nasdaqReturn) * (1 + dollarReturn) - 1) * 100;
-              nasdaqDollarYields.push(Number(nasdaqDollarReturn.toFixed(1)));
-            } else {
-              // 환율 데이터 없으면 이전 값 유지
-              dollarYields.push(dollarYields[dollarYields.length - 1] ?? 0);
-              sp500DollarYields.push(sp500DollarYields[sp500DollarYields.length - 1] ?? 0);
-              nasdaqDollarYields.push(nasdaqDollarYields[nasdaqDollarYields.length - 1] ?? 0);
-            }
-          }
-
-          // 추가 시장 지표 수익률 계산
-          const marketYieldsData = marketData ? calculateMarketYields(months, marketData, currentYear) : null;
-
-          return {
-            months,
-            sp500: sp500Yields,
-            nasdaq: nasdaqYields,
-            kospi: kospiYields,
-            account: accountYields,
-            sp500Dollar: sp500DollarYields,
-            nasdaqDollar: nasdaqDollarYields,
-            dollar: dollarYields,
-            ...(marketYieldsData ? {
-              gold: marketYieldsData.gold,
-              bitcoin: marketYieldsData.bitcoin,
-              realEstate: marketYieldsData.realEstate,
-            } : {}),
-          };
-        }
-      }
-
-      // 추가 시장 지표 수익률 계산
-      const marketYieldsData = marketData ? calculateMarketYields(months, marketData, currentYear) : null;
 
       return {
         months,
-        sp500: sp500Yields,
-        nasdaq: nasdaqYields,
-        kospi: kospiYields,
+        sp500: marketYields.sp500,
+        nasdaq: marketYields.nasdaq,
+        kospi: marketYields.kospi,
         account: accountYields,
-        ...(marketYieldsData ? {
-          gold: marketYieldsData.gold,
-          bitcoin: marketYieldsData.bitcoin,
-          realEstate: marketYieldsData.realEstate,
-          dollar: marketYieldsData.dollar,
-        } : {}),
+        sp500Dollar: marketYields.sp500Dollar,
+        nasdaqDollar: marketYields.nasdaqDollar,
+        dollar: marketYields.dollar,
+        gold: marketYields.gold,
+        bitcoin: marketYields.bitcoin,
+        realEstate: marketYields.realEstate,
       };
     } catch (error) {
       console.error('[StandaloneProvider] getMajorIndexYieldComparison error:', error);
       return null;
     }
-  }
-
-  /**
-   * 월별 수익률 배열 생성 (시뮬레이션)
-   * 실제 historical data가 없으므로 현재 수익률을 기반으로 추정
-   */
-  private generateMonthlyYields(currentYield: number, monthCount: number): number[] {
-    const yields: number[] = [0]; // 시작점은 0%
-
-    // 현재 수익률을 월별로 분배 (단순 선형)
-    // 실제 historical API 연동 시 개선 필요
-    for (let i = 1; i <= monthCount; i++) {
-      // 현재까지의 누적 수익률 비율
-      const ratio = i / monthCount;
-      yields.push(Number((currentYield * ratio).toFixed(1)));
-    }
-
-    return yields;
   }
 
   /**

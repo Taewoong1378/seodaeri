@@ -844,8 +844,12 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
     const historicalRates = await getHistoricalExchangeRates();
     const marketData = await getHistoricalMarketData();
 
-    // 1. 포트폴리오 조회 (현재가 API 포함)
-    const portfolioItems = await provider.getPortfolio(userId);
+    // 1. 포트폴리오 + 계좌추세 + 월별손익 병렬 조회
+    const [portfolioItems, accountTrend, monthlyProfitLoss] = await Promise.all([
+      provider.getPortfolio(userId),
+      provider.getAccountTrend(userId),
+      provider.getMonthlyProfitLoss(userId),
+    ]);
     const portfolio: PortfolioItem[] = portfolioItems.map((item, index) => ({
       ticker: item.ticker,
       name: item.name,
@@ -910,8 +914,8 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       cumulativeDividend,
       portfolio,
       performanceComparison: [], // Standalone에서는 지원 안함
-      accountTrend: [], // Standalone에서는 지원 안함
-      monthlyProfitLoss: [], // Standalone에서는 지원 안함
+      accountTrend,
+      monthlyProfitLoss,
       yieldComparison: null, // Standalone에서는 지원 안함
       yieldComparisonDollar: null,
       monthlyYieldComparison: null,

@@ -25,6 +25,11 @@ export interface HistoricalMarketData {
   gold: Map<string, number>;           // YY.MM → 금 원화환산 가격
   bitcoin: Map<string, number>;        // YY.MM → BTC 원화환산 가격
   realEstate: Map<string, number>;     // YY.MM → 서울 아파트 지수
+  kospi: Map<string, number>;          // YY.MM → KOSPI 지수
+  sp500: Map<string, number>;          // YY.MM → S&P500 (USD)
+  nasdaq: Map<string, number>;         // YY.MM → NASDAQ (USD)
+  sp500Krw: Map<string, number>;       // YY.MM → S&P500 원화환산
+  nasdaqKrw: Map<string, number>;      // YY.MM → NASDAQ 원화환산
 }
 
 /**
@@ -129,7 +134,18 @@ function parseCSVMarketData(csvText: string): HistoricalMarketData {
   const gold = new Map<string, number>();
   const bitcoin = new Map<string, number>();
   const realEstate = new Map<string, number>();
+  const kospi = new Map<string, number>();
+  const sp500 = new Map<string, number>();
+  const nasdaq = new Map<string, number>();
+  const sp500Krw = new Map<string, number>();
+  const nasdaqKrw = new Map<string, number>();
   const lines = csvText.split('\n');
+
+  const parseVal = (str: string | undefined): number => {
+    if (!str) return 0;
+    const val = Number.parseFloat(str.trim().replace(/[,"]/g, ""));
+    return (!Number.isNaN(val) && val > 0) ? val : 0;
+  };
 
   // 헤더 2행 제외하고 데이터 파싱
   for (let i = 2; i < lines.length; i++) {
@@ -145,43 +161,43 @@ function parseCSVMarketData(csvText: string): HistoricalMarketData {
     if (!dateStr || !/^\d{2}\.\d{2}$/.test(dateStr)) continue;
 
     // Column H (index 7) = USD/KRW 환율
-    const rateStr = columns[7]?.trim();
-    if (rateStr) {
-      const rate = Number.parseFloat(rateStr.replace(/[,"]/g, ""));
-      if (!Number.isNaN(rate) && rate > 0) {
-        exchangeRates.set(dateStr, rate);
-      }
-    }
+    const rate = parseVal(columns[7]);
+    if (rate > 0) exchangeRates.set(dateStr, rate);
+
+    // Column L (index 11) = KOSPI
+    const kospiVal = parseVal(columns[11]);
+    if (kospiVal > 0) kospi.set(dateStr, kospiVal);
+
+    // Column M (index 12) = S&P500 (USD)
+    const sp500Val = parseVal(columns[12]);
+    if (sp500Val > 0) sp500.set(dateStr, sp500Val);
+
+    // Column N (index 13) = NASDAQ (USD)
+    const nasdaqVal = parseVal(columns[13]);
+    if (nasdaqVal > 0) nasdaq.set(dateStr, nasdaqVal);
+
+    // Column T (index 19) = S&P500 원화환산
+    const sp500KrwVal = parseVal(columns[19]);
+    if (sp500KrwVal > 0) sp500Krw.set(dateStr, sp500KrwVal);
+
+    // Column U (index 20) = NASDAQ 원화환산
+    const nasdaqKrwVal = parseVal(columns[20]);
+    if (nasdaqKrwVal > 0) nasdaqKrw.set(dateStr, nasdaqKrwVal);
 
     // Column V (index 21) = 골드 원화환산
-    const goldStr = columns[21]?.trim();
-    if (goldStr) {
-      const goldVal = Number.parseFloat(goldStr.replace(/[,"]/g, ""));
-      if (!Number.isNaN(goldVal) && goldVal > 0) {
-        gold.set(dateStr, goldVal);
-      }
-    }
+    const goldVal = parseVal(columns[21]);
+    if (goldVal > 0) gold.set(dateStr, goldVal);
 
     // Column W (index 22) = 비트코인 원화환산
-    const btcStr = columns[22]?.trim();
-    if (btcStr) {
-      const btcVal = Number.parseFloat(btcStr.replace(/[,"]/g, ""));
-      if (!Number.isNaN(btcVal) && btcVal > 0) {
-        bitcoin.set(dateStr, btcVal);
-      }
-    }
+    const btcVal = parseVal(columns[22]);
+    if (btcVal > 0) bitcoin.set(dateStr, btcVal);
 
     // Column AA (index 26) = 서울 아파트 지수
-    const reStr = columns[26]?.trim();
-    if (reStr) {
-      const reVal = Number.parseFloat(reStr.replace(/[,"]/g, ""));
-      if (!Number.isNaN(reVal) && reVal > 0) {
-        realEstate.set(dateStr, reVal);
-      }
-    }
+    const reVal = parseVal(columns[26]);
+    if (reVal > 0) realEstate.set(dateStr, reVal);
   }
 
-  return { exchangeRates, gold, bitcoin, realEstate };
+  return { exchangeRates, gold, bitcoin, realEstate, kospi, sp500, nasdaq, sp500Krw, nasdaqKrw };
 }
 
 /**
@@ -427,5 +443,10 @@ export async function getHistoricalMarketData(): Promise<HistoricalMarketData> {
     gold: new Map(),
     bitcoin: new Map(),
     realEstate: new Map(),
+    kospi: new Map(),
+    sp500: new Map(),
+    nasdaq: new Map(),
+    sp500Krw: new Map(),
+    nasdaqKrw: new Map(),
   };
 }

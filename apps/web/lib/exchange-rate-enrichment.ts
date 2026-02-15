@@ -131,7 +131,11 @@ export function calculateMarketYields(
   months: string[],
   marketData: HistoricalMarketData,
   currentYear: number
-): { gold: number[]; bitcoin: number[]; realEstate: number[]; dollar: number[] } {
+): {
+  gold: number[]; bitcoin: number[]; realEstate: number[]; dollar: number[];
+  kospi: number[]; sp500: number[]; nasdaq: number[];
+  sp500Dollar: number[]; nasdaqDollar: number[];
+} {
   const yearStr = String(currentYear).slice(-2); // "26"
   const prevYearStr = String(currentYear - 1).slice(-2); // "25"
   const baselineKey = `${prevYearStr}.12`; // 작년 12월
@@ -141,47 +145,68 @@ export function calculateMarketYields(
   const btcBaseline = marketData.bitcoin.get(baselineKey);
   const reBaseline = marketData.realEstate.get(baselineKey);
   const dollarBaseline = marketData.exchangeRates.get(baselineKey);
+  const kospiBaseline = marketData.kospi?.get(baselineKey);
+  const sp500Baseline = marketData.sp500?.get(baselineKey);
+  const nasdaqBaseline = marketData.nasdaq?.get(baselineKey);
+  const sp500KrwBaseline = marketData.sp500Krw?.get(baselineKey);
+  const nasdaqKrwBaseline = marketData.nasdaqKrw?.get(baselineKey);
 
   const goldYields: number[] = [0]; // 시작점 0%
   const btcYields: number[] = [0];
   const reYields: number[] = [0];
   const dollarYields: number[] = [0];
+  const kospiYields: number[] = [0];
+  const sp500Yields: number[] = [0];
+  const nasdaqYields: number[] = [0];
+  const sp500DollarYields: number[] = [0];
+  const nasdaqDollarYields: number[] = [0];
+
+  const yieldCalc = (val: number | undefined, baseline: number | undefined): number | null => {
+    if (baseline && baseline > 0 && val && val > 0) {
+      return Number(((val / baseline - 1) * 100).toFixed(1));
+    }
+    return null;
+  };
 
   // months[0] = "시작", months[1] = "1월", ...
   for (let i = 1; i < months.length; i++) {
     const monthKey = `${yearStr}.${String(i).padStart(2, '0')}`;
 
     // 금
-    const goldVal = marketData.gold.get(monthKey);
-    if (goldBaseline && goldBaseline > 0 && goldVal && goldVal > 0) {
-      goldYields.push(Number(((goldVal / goldBaseline - 1) * 100).toFixed(1)));
-    } else {
-      goldYields.push(goldYields[goldYields.length - 1] ?? 0);
-    }
+    const goldY = yieldCalc(marketData.gold.get(monthKey), goldBaseline);
+    goldYields.push(goldY ?? (goldYields[goldYields.length - 1] ?? 0));
 
     // 비트코인
-    const btcVal = marketData.bitcoin.get(monthKey);
-    if (btcBaseline && btcBaseline > 0 && btcVal && btcVal > 0) {
-      btcYields.push(Number(((btcVal / btcBaseline - 1) * 100).toFixed(1)));
-    } else {
-      btcYields.push(btcYields[btcYields.length - 1] ?? 0);
-    }
+    const btcY = yieldCalc(marketData.bitcoin.get(monthKey), btcBaseline);
+    btcYields.push(btcY ?? (btcYields[btcYields.length - 1] ?? 0));
 
     // 부동산
-    const reVal = marketData.realEstate.get(monthKey);
-    if (reBaseline && reBaseline > 0 && reVal && reVal > 0) {
-      reYields.push(Number(((reVal / reBaseline - 1) * 100).toFixed(1)));
-    } else {
-      reYields.push(reYields[reYields.length - 1] ?? 0);
-    }
+    const reY = yieldCalc(marketData.realEstate.get(monthKey), reBaseline);
+    reYields.push(reY ?? (reYields[reYields.length - 1] ?? 0));
 
     // 달러
-    const dollarVal = marketData.exchangeRates.get(monthKey);
-    if (dollarBaseline && dollarBaseline > 0 && dollarVal && dollarVal > 0) {
-      dollarYields.push(Number(((dollarVal / dollarBaseline - 1) * 100).toFixed(1)));
-    } else {
-      dollarYields.push(dollarYields[dollarYields.length - 1] ?? 0);
-    }
+    const dollarY = yieldCalc(marketData.exchangeRates.get(monthKey), dollarBaseline);
+    dollarYields.push(dollarY ?? (dollarYields[dollarYields.length - 1] ?? 0));
+
+    // KOSPI
+    const kospiY = yieldCalc(marketData.kospi?.get(monthKey), kospiBaseline);
+    kospiYields.push(kospiY ?? (kospiYields[kospiYields.length - 1] ?? 0));
+
+    // S&P500 (USD)
+    const sp500Y = yieldCalc(marketData.sp500?.get(monthKey), sp500Baseline);
+    sp500Yields.push(sp500Y ?? (sp500Yields[sp500Yields.length - 1] ?? 0));
+
+    // NASDAQ (USD)
+    const nasdaqY = yieldCalc(marketData.nasdaq?.get(monthKey), nasdaqBaseline);
+    nasdaqYields.push(nasdaqY ?? (nasdaqYields[nasdaqYields.length - 1] ?? 0));
+
+    // S&P500 달러환율 적용 (KRW-converted)
+    const sp500DY = yieldCalc(marketData.sp500Krw?.get(monthKey), sp500KrwBaseline);
+    sp500DollarYields.push(sp500DY ?? (sp500DollarYields[sp500DollarYields.length - 1] ?? 0));
+
+    // NASDAQ 달러환율 적용 (KRW-converted)
+    const nasdaqDY = yieldCalc(marketData.nasdaqKrw?.get(monthKey), nasdaqKrwBaseline);
+    nasdaqDollarYields.push(nasdaqDY ?? (nasdaqDollarYields[nasdaqDollarYields.length - 1] ?? 0));
   }
 
   return {
@@ -189,5 +214,10 @@ export function calculateMarketYields(
     bitcoin: btcYields,
     realEstate: reYields,
     dollar: dollarYields,
+    kospi: kospiYields,
+    sp500: sp500Yields,
+    nasdaq: nasdaqYields,
+    sp500Dollar: sp500DollarYields,
+    nasdaqDollar: nasdaqDollarYields,
   };
 }
