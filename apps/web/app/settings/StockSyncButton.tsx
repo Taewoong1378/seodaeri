@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@repo/design-system/components/button";
-import { AlertCircle, Check, Database, RefreshCw } from "lucide-react";
+import { AlertCircle, Check, Database, Download, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface SyncStatus {
@@ -18,15 +18,15 @@ interface SyncStatus {
   total: number;
 }
 
-type SyncMarket = "kr" | "us";
+type SyncAction = "kr" | "us" | "us_download";
 
 export function StockSyncButton() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
-  const [isLoading, setIsLoading] = useState<SyncMarket | null>(null);
+  const [isLoading, setIsLoading] = useState<SyncAction | null>(null);
   const [result, setResult] = useState<{
     success: boolean;
     message: string;
-    market?: SyncMarket;
+    action?: SyncAction;
   } | null>(null);
 
   // 동기화 상태 조회
@@ -45,20 +45,25 @@ export function StockSyncButton() {
     fetchStatus();
   }, []);
 
-  const handleSync = async (market: SyncMarket) => {
-    setIsLoading(market);
+  const handleSync = async (action: SyncAction) => {
+    setIsLoading(action);
     setResult(null);
 
     try {
+      const body =
+        action === "us_download"
+          ? { market: "us", mode: "download_and_sync" }
+          : { market: action };
+
       const res = await fetch("/api/stocks/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ market }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setResult({ success: true, message: data.message, market });
+        setResult({ success: true, message: data.message, action });
         // 상태 재조회
         const statusRes = await fetch("/api/stocks/sync");
         if (statusRes.ok) {
@@ -68,11 +73,11 @@ export function StockSyncButton() {
         setResult({
           success: false,
           message: data.error || data.message || "동기화 실패",
-          market,
+          action,
         });
       }
-    } catch (error) {
-      setResult({ success: false, message: "네트워크 오류", market });
+    } catch (_error) {
+      setResult({ success: false, message: "네트워크 오류", action });
     } finally {
       setIsLoading(null);
     }
@@ -89,12 +94,14 @@ export function StockSyncButton() {
     });
   };
 
+  const isAnyLoading = isLoading !== null;
+
   return (
     <div className="space-y-4">
       {/* 헤더 */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-          <Database size={20} className="text-green-500" />
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+          <Database size={20} className="text-primary" />
         </div>
         <div>
           <p className="text-sm font-medium text-foreground">종목 DB</p>
@@ -121,7 +128,7 @@ export function StockSyncButton() {
           </p>
           <Button
             onClick={() => handleSync("kr")}
-            disabled={isLoading !== null}
+            disabled={isAnyLoading}
             size="sm"
             variant="outline"
             className="w-full h-8 text-xs gap-1"
@@ -139,10 +146,10 @@ export function StockSyncButton() {
             )}
           </Button>
           {/* 한국 결과 메시지 */}
-          {result?.market === "kr" && (
+          {result?.action === "kr" && (
             <div
               className={`flex items-center gap-1 text-[10px] mt-2 ${
-                result.success ? "text-green-500" : "text-red-500"
+                result.success ? "text-primary" : "text-red-500"
               }`}
             >
               {result.success ? <Check size={10} /> : <AlertCircle size={10} />}
@@ -162,30 +169,51 @@ export function StockSyncButton() {
           <p className="text-[10px] text-muted-foreground mb-2">
             {formatDate(syncStatus?.us.lastSync || null)}
           </p>
-          <Button
-            onClick={() => handleSync("us")}
-            disabled={isLoading !== null}
-            size="sm"
-            variant="outline"
-            className="w-full h-8 text-xs gap-1"
-          >
-            {isLoading === "us" ? (
-              <>
-                <RefreshCw size={12} className="animate-spin" />
-                동기화 중...
-              </>
-            ) : (
-              <>
-                <RefreshCw size={12} />
-                동기화
-              </>
-            )}
-          </Button>
+          <div className="space-y-1.5">
+            <Button
+              onClick={() => handleSync("us_download")}
+              disabled={isAnyLoading}
+              size="sm"
+              variant="outline"
+              className="w-full h-8 text-xs gap-1"
+            >
+              {isLoading === "us_download" ? (
+                <>
+                  <RefreshCw size={12} className="animate-spin" />
+                  다운로드 중...
+                </>
+              ) : (
+                <>
+                  <Download size={12} />
+                  CSV 갱신 + 동기화
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={() => handleSync("us")}
+              disabled={isAnyLoading}
+              size="sm"
+              variant="ghost"
+              className="w-full h-7 text-[10px] gap-1 text-muted-foreground"
+            >
+              {isLoading === "us" ? (
+                <>
+                  <RefreshCw size={10} className="animate-spin" />
+                  동기화 중...
+                </>
+              ) : (
+                <>
+                  <RefreshCw size={10} />
+                  기존 CSV로 동기화
+                </>
+              )}
+            </Button>
+          </div>
           {/* 미국 결과 메시지 */}
-          {result?.market === "us" && (
+          {(result?.action === "us" || result?.action === "us_download") && (
             <div
               className={`flex items-center gap-1 text-[10px] mt-2 ${
-                result.success ? "text-green-500" : "text-red-500"
+                result.success ? "text-primary" : "text-red-500"
               }`}
             >
               {result.success ? <Check size={10} /> : <AlertCircle size={10} />}
@@ -197,7 +225,7 @@ export function StockSyncButton() {
 
       {/* 안내 메시지 */}
       <p className="text-[10px] text-muted-foreground">
-        한국: KRX API (장 운영일) / 미국: FMP API (API 키 필요)
+        한국: KRX API (장 운영일) / 미국: NASDAQ Screener API
       </p>
     </div>
   );

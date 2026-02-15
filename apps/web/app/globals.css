@@ -1,14 +1,5 @@
 @import 'tailwindcss';
 
-/* Reset browser default focus outline globally */
-*:focus {
-  outline: none !important;
-}
-
-*:focus-visible {
-  outline: none !important;
-}
-
 @theme {
   --color-background: #F5F5F5; /* Soft White */
   --color-foreground: #1B261D; /* Dark Moss Charcoal */
@@ -66,27 +57,6 @@
     @apply border-border;
   }
 
-  /* Remove browser default focus outline - let Tailwind handle it */
-  input,
-  textarea,
-  select,
-  button {
-    outline: none !important;
-  }
-
-  input:focus,
-  input:focus-visible,
-  textarea:focus,
-  textarea:focus-visible,
-  select:focus,
-  select:focus-visible,
-  button:focus,
-  button:focus-visible {
-    outline: none !important;
-    outline-width: 0 !important;
-    outline-style: none !important;
-  }
-
   /* Inputs inside focus-within containers should not have their own ring */
   .focus-within-container input,
   .focus-within-container input:focus,
@@ -109,7 +79,7 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Remove focus outline on charts and interactive elements */
+  /* Remove focus outline on charts */
   .recharts-wrapper,
   .recharts-surface,
   .recharts-wrapper *:focus,
@@ -150,13 +120,13 @@
 
 /* React Day Picker Custom */
 .rdp-root {
-  --rdp-accent-color: #3b82f6 !important;
-  --rdp-accent-background-color: #3b82f6 !important;
+  --rdp-accent-color: var(--color-primary) !important;
+  --rdp-accent-background-color: var(--color-primary) !important;
   --rdp-day_button-border-radius: 0.5rem !important;
   --rdp-day_button-width: 36px !important;
   --rdp-day_button-height: 36px !important;
   --rdp-selected-border: 0 !important;
-  --rdp-today-color: #3b82f6 !important;
+  --rdp-today-color: var(--color-primary) !important;
   font-family: inherit;
   width: 100%;
 }
@@ -204,23 +174,22 @@
 }
 
 .rdp-day_button:hover:not([disabled]) {
-  background: #f3f4f6 !important;
+  background: var(--color-muted) !important;
 }
 
 .rdp-selected .rdp-day_button {
-  background: #3b82f6 !important;
+  background: var(--color-primary) !important;
   color: white !important;
   font-weight: 600 !important;
   border: none !important;
 }
 
 .rdp-today:not(.rdp-selected) .rdp-day_button {
-  background: #eff6ff !important;
-  color: #3b82f6 !important;
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent) !important;
+  color: var(--color-primary) !important;
   font-weight: 700 !important;
 }
 
 .rdp-outside .rdp-day_button {
   color: #d1d5db !important;
 }
-
