@@ -317,7 +317,7 @@ export function DividendInputModal() {
             <Button
               size="icon"
               onClick={() => setIsOpen(true)}
-              className="h-14 w-14 rounded-full shadow-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 active:bg-blue-800 text-white absolute right-5 bottom-0 pointer-events-auto animate-in zoom-in duration-300 transition-all border-4 border-white/20"
+              className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 active:scale-95 text-primary-foreground absolute right-5 bottom-0 pointer-events-auto animate-in zoom-in duration-300 transition-all"
             >
               <Pen size={24} />
             </Button>
@@ -327,7 +327,7 @@ export function DividendInputModal() {
 
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="sm:max-w-[425px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-[28px] bg-white border-0 shadow-2xl"
+          className="sm:max-w-[425px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl bg-card border-0 shadow-xl"
           style={{
             left: "50%",
             top: "50%",
@@ -336,9 +336,9 @@ export function DividendInputModal() {
           }}
         >
           {/* Header */}
-          <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between sticky top-0 z-10">
             <DialogHeader className="p-0 space-y-0">
-              <DialogTitle className="text-xl font-bold text-gray-900 tracking-tight">
+              <DialogTitle className="text-lg font-bold text-foreground tracking-tight">
                 배당 내역 추가
               </DialogTitle>
             </DialogHeader>
@@ -346,39 +346,35 @@ export function DividendInputModal() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 -mr-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+                className="h-8 w-8 -mr-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </Button>
             </DialogClose>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 bg-white">
+          <div className="flex-1 overflow-y-auto p-5">
             {/* Mode Selection */}
             {mode === "select" && (
               <div className="space-y-4 py-4">
-                <p className="text-sm text-gray-500 text-center mb-8">
+                <p className="text-sm text-muted-foreground text-center mb-8">
                   배당금을 기록할 방법을 선택해주세요
                 </p>
                 <Button
-                  className="w-full h-24 bg-blue-50 hover:bg-blue-100 border-2 border-transparent hover:border-blue-200 text-gray-900 flex flex-col gap-3 rounded-2xl transition-all"
+                  className="w-full h-20 bg-muted hover:bg-muted/80 text-foreground flex flex-col gap-2 rounded-xl transition-all"
                   variant="ghost"
                   onClick={handleManualMode}
                 >
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                    <Pen size={20} />
-                  </div>
-                  <span className="font-semibold">직접 입력하기</span>
+                  <Pen size={18} className="text-muted-foreground" />
+                  <span className="font-semibold text-sm">직접 입력하기</span>
                 </Button>
                 <Button
-                  className="w-full h-24 bg-emerald-50 hover:bg-emerald-100 border-2 border-transparent hover:border-emerald-200 text-gray-900 flex flex-col gap-3 rounded-2xl transition-all"
+                  className="w-full h-20 bg-muted hover:bg-muted/80 text-foreground flex flex-col gap-2 rounded-xl transition-all"
                   variant="ghost"
                   onClick={handlePhotoMode}
                 >
-                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                    <Camera size={20} />
-                  </div>
-                  <span className="font-semibold">
+                  <Camera size={18} className="text-muted-foreground" />
+                  <span className="font-semibold text-sm">
                     캡쳐한 사진으로 자동 입력 (여러 건)
                   </span>
                 </Button>
@@ -389,7 +385,7 @@ export function DividendInputModal() {
             {mode === "manual" && (
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label className="text-sm font-medium text-foreground">
                     배당 입금일
                   </Label>
                   <DatePicker
@@ -401,27 +397,27 @@ export function DividendInputModal() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label className="text-sm font-medium text-foreground">
                     계좌 유형
                   </Label>
                   <Select value={account} onValueChange={setAccount}>
-                    <SelectTrigger className="w-full h-11 bg-gray-50 border-gray-200">
+                    <SelectTrigger className="w-full h-11 bg-muted border-border">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent
-                      className="bg-white border-none shadow-xl p-1 min-w-(--radix-select-trigger-width)"
+                      className="bg-card border-none shadow-xl p-1 min-w-(--radix-select-trigger-width)"
                       position="popper"
                       sideOffset={4}
                     >
                       <SelectItem
                         value="일반 계좌"
-                        className="rounded-lg focus:bg-blue-50 focus:text-blue-600 data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-600 data-[state=checked]:font-medium cursor-pointer py-2.5 px-3 mb-1"
+                        className="rounded-lg focus:bg-primary/10 focus:text-primary data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary data-[state=checked]:font-medium cursor-pointer py-2.5 px-3 mb-1"
                       >
                         일반 계좌
                       </SelectItem>
                       <SelectItem
                         value="절세 계좌"
-                        className="rounded-lg focus:bg-emerald-50 focus:text-emerald-600 data-[state=checked]:bg-emerald-50 data-[state=checked]:text-emerald-600 data-[state=checked]:font-medium cursor-pointer py-2.5 px-3"
+                        className="rounded-lg focus:bg-primary/10 focus:text-primary data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary data-[state=checked]:font-medium cursor-pointer py-2.5 px-3"
                       >
                         절세 계좌
                       </SelectItem>
@@ -451,10 +447,10 @@ export function DividendInputModal() {
 
                 {/* 직접 입력 (검색되지 않는 종목용 - 미국주식 등) */}
                 {!isSearchSelected && (
-                  <div className="p-4 bg-gray-50 border border-gray-100 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 rounded-lg">
+                  <div className="p-4 bg-muted border border-border space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-1 h-4 bg-gray-300 rounded-full" />
-                      <p className="text-xs font-semibold text-gray-500">
+                      <div className="w-1 h-4 bg-border rounded-full" />
+                      <p className="text-xs font-semibold text-muted-foreground">
                         직접 입력 (검색 결과 없을 때)
                       </p>
                     </div>
@@ -462,7 +458,7 @@ export function DividendInputModal() {
                       <div className="space-y-2">
                         <Label
                           htmlFor="ticker"
-                          className="text-xs font-medium text-gray-500"
+                          className="text-xs font-medium text-muted-foreground"
                         >
                           종목코드
                         </Label>
@@ -482,7 +478,7 @@ export function DividendInputModal() {
                       <div className="space-y-2">
                         <Label
                           htmlFor="name"
-                          className="text-xs font-medium text-gray-500"
+                          className="text-xs font-medium text-muted-foreground"
                         >
                           종목명
                         </Label>
@@ -504,7 +500,7 @@ export function DividendInputModal() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="amountKRW"
-                      className="text-sm font-medium text-gray-700"
+                      className="text-sm font-medium text-foreground"
                     >
                       원화 배당금
                     </Label>
@@ -519,7 +515,7 @@ export function DividendInputModal() {
                         placeholder="0"
                         className="h-12 text-right pr-8 font-medium"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                         ₩
                       </span>
                     </div>
@@ -527,7 +523,7 @@ export function DividendInputModal() {
                   <div className="space-y-2">
                     <Label
                       htmlFor="amountUSD"
-                      className="text-sm font-medium text-gray-700"
+                      className="text-sm font-medium text-foreground"
                     >
                       외화 배당금 ($)
                     </Label>
@@ -543,38 +539,35 @@ export function DividendInputModal() {
                         placeholder="0.00"
                         className="h-12 text-right pr-8 font-medium"
                       />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                         $
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-6 space-y-3">
+                <div className="pt-4 flex gap-3">
                   <Button
-                    className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 font-medium text-base transition-all active:scale-[0.98]"
+                    variant="ghost"
+                    className="flex-1 h-12 bg-muted text-muted-foreground hover:bg-muted/80 rounded-xl font-medium"
+                    onClick={() => setMode("select")}
+                    disabled={isSaving}
+                  >
+                    뒤로
+                  </Button>
+                  <Button
+                    className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium"
                     onClick={handleSaveSingle}
                     disabled={isSaving}
                   >
                     {isSaving ? (
                       <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         저장 중...
                       </>
                     ) : (
-                      <>
-                        <Check className="mr-2 h-5 w-5" />
-                        저장하기
-                      </>
+                      "저장하기"
                     )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="w-full h-12 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                    onClick={() => setMode("select")}
-                    disabled={isSaving}
-                  >
-                    뒤로가기
                   </Button>
                 </div>
               </div>
@@ -582,8 +575,8 @@ export function DividendInputModal() {
 
             {/* Photo Preview */}
             {mode === "photo-preview" && (
-              <div className="space-y-6">
-                <div className="aspect-[3/4] bg-gray-50 rounded-2xl flex items-center justify-center relative overflow-hidden border border-gray-100 shadow-inner">
+              <div className="space-y-5">
+                <div className="aspect-3/4 bg-muted rounded-xl flex items-center justify-center relative overflow-hidden border border-border">
                   {imageSrc ? (
                     <img
                       src={imageSrc}
@@ -591,37 +584,37 @@ export function DividendInputModal() {
                       className="w-full h-full object-contain"
                     />
                   ) : (
-                    <div className="flex flex-col items-center gap-2 text-gray-400">
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <Loader2 className="animate-spin" size={32} />
                       <p className="text-sm">이미지 로딩 중...</p>
                     </div>
                   )}
                 </div>
-                <div className="space-y-3">
-                  <Button
-                    className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 font-medium text-base"
-                    onClick={handleAnalyze}
-                    disabled={isAnalyzing}
-                  >
-                    {isAnalyzing ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        분석 중...
-                      </>
-                    ) : (
-                      "이 사진으로 분석하기"
-                    )}
-                  </Button>
+                <div className="flex gap-3">
                   <Button
                     variant="ghost"
-                    className="w-full h-12 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                    className="flex-1 h-12 bg-muted text-muted-foreground hover:bg-muted/80 rounded-xl font-medium"
                     onClick={() => {
                       setImageSrc(null);
                       setMode("select");
                     }}
                     disabled={isAnalyzing}
                   >
-                    다시 선택하기
+                    다시 선택
+                  </Button>
+                  <Button
+                    className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium"
+                    onClick={handleAnalyze}
+                    disabled={isAnalyzing}
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        분석 중...
+                      </>
+                    ) : (
+                      "분석하기"
+                    )}
                   </Button>
                 </div>
               </div>
@@ -631,27 +624,27 @@ export function DividendInputModal() {
             {mode === "photo-verify" && (
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label className="text-sm font-medium text-foreground">
                     계좌 유형
                   </Label>
                   <Select value={account} onValueChange={setAccount}>
-                    <SelectTrigger className="w-full h-11 bg-gray-50 border-gray-200">
+                    <SelectTrigger className="w-full h-11 bg-muted border-border">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent
-                      className="bg-white border-none shadow-xl p-1 min-w-(--radix-select-trigger-width)"
+                      className="bg-card border-none shadow-xl p-1 min-w-(--radix-select-trigger-width)"
                       position="popper"
                       sideOffset={4}
                     >
                       <SelectItem
                         value="일반 계좌"
-                        className="rounded-lg focus:bg-blue-50 focus:text-blue-600 data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-600 data-[state=checked]:font-medium cursor-pointer py-2.5 px-3 mb-1"
+                        className="rounded-lg focus:bg-primary/10 focus:text-primary data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary data-[state=checked]:font-medium cursor-pointer py-2.5 px-3 mb-1"
                       >
                         일반 계좌
                       </SelectItem>
                       <SelectItem
                         value="절세 계좌"
-                        className="rounded-lg focus:bg-emerald-50 focus:text-emerald-600 data-[state=checked]:bg-emerald-50 data-[state=checked]:text-emerald-600 data-[state=checked]:font-medium cursor-pointer py-2.5 px-3"
+                        className="rounded-lg focus:bg-primary/10 focus:text-primary data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary data-[state=checked]:font-medium cursor-pointer py-2.5 px-3"
                       >
                         절세 계좌
                       </SelectItem>
@@ -660,8 +653,8 @@ export function DividendInputModal() {
                 </div>
 
                 <div className="flex items-center justify-between px-1">
-                  <p className="text-sm font-medium text-gray-600">
-                    <span className="text-blue-600 font-bold">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    <span className="text-primary font-bold">
                       {multipleItems.length}건
                     </span>
                     을 찾았습니다
@@ -669,7 +662,7 @@ export function DividendInputModal() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-xs h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    className="text-xs h-8 px-2 text-primary hover:text-primary/80 hover:bg-primary/10"
                     onClick={toggleSelectAll}
                   >
                     {selectedItems.size === multipleItems.length
@@ -682,10 +675,10 @@ export function DividendInputModal() {
                   {multipleItems.map((item, idx) => (
                     <div
                       key={`${item.name}-${item.date}-${idx}`}
-                      className={`p-4 rounded-2xl border transition-all duration-200 ${
+                      className={`p-4 rounded-xl border transition-all duration-200 ${
                         selectedItems.has(idx)
-                          ? "bg-blue-50/50 border-blue-200 shadow-sm"
-                          : "bg-white border-gray-100 hover:border-gray-200"
+                          ? "bg-primary/5 border-primary/30"
+                          : "bg-card border-border hover:border-border/80"
                       }`}
                     >
                       <div className="flex items-start gap-4">
@@ -694,8 +687,8 @@ export function DividendInputModal() {
                           onClick={() => toggleItemSelection(idx)}
                           className={`mt-1 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
                             selectedItems.has(idx)
-                              ? "bg-blue-600 border-blue-600 shadow-sm"
-                              : "bg-white border-gray-300 hover:border-gray-400"
+                              ? "bg-primary border-primary"
+                              : "bg-card border-border hover:border-muted-foreground"
                           }`}
                         >
                           {selectedItems.has(idx) && (
@@ -705,13 +698,13 @@ export function DividendInputModal() {
 
                         <div className="flex-1 space-y-3">
                           <div className="flex items-center justify-between">
-                            <span className="font-bold text-gray-900">
+                            <span className="font-bold text-foreground">
                               {item.name || item.ticker}
                             </span>
                             <button
                               type="button"
                               onClick={() => removeItem(idx)}
-                              className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-1.5 rounded-lg transition-colors"
                             >
                               <Trash2 size={16} />
                             </button>
@@ -724,7 +717,7 @@ export function DividendInputModal() {
                                 updateMultipleItem(idx, "date", e.target.value)
                               }
                               type="date"
-                              className="h-10 text-xs bg-white border-gray-200 rounded-lg"
+                              className="h-10 text-xs bg-card border-border rounded-lg"
                             />
                             <Input
                               value={item.ticker}
@@ -736,7 +729,7 @@ export function DividendInputModal() {
                                 )
                               }
                               placeholder="종목코드"
-                              className="h-10 text-xs bg-white border-gray-200 rounded-lg"
+                              className="h-10 text-xs bg-card border-border rounded-lg"
                             />
                           </div>
 
@@ -751,9 +744,9 @@ export function DividendInputModal() {
                                 }
                                 onFocus={handleInputFocus}
                                 placeholder="원화"
-                                className="h-10 text-xs bg-white border-gray-200 pr-7 rounded-lg text-right"
+                                className="h-10 text-xs bg-card border-border pr-7 rounded-lg text-right"
                               />
-                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
                                 ₩
                               </span>
                             </div>
@@ -771,9 +764,9 @@ export function DividendInputModal() {
                                 }
                                 onFocus={handleInputFocus}
                                 placeholder="외화"
-                                className="h-10 text-xs bg-white border-gray-200 pr-7 rounded-lg text-right"
+                                className="h-10 text-xs bg-card border-border pr-7 rounded-lg text-right"
                               />
-                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
                                 $
                               </span>
                             </div>
@@ -785,9 +778,9 @@ export function DividendInputModal() {
                 </div>
 
                 {selectedItems.size > 0 && (
-                  <div className="p-4 bg-gray-900 rounded-2xl shadow-lg text-white animate-in slide-in-from-bottom-2">
+                  <div className="p-4 bg-foreground rounded-xl text-card animate-in slide-in-from-bottom-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-300">
+                      <span className="text-sm font-medium opacity-70">
                         총 예상 배당금
                       </span>
                       <span className="text-lg font-bold">
@@ -803,33 +796,16 @@ export function DividendInputModal() {
                         )}
                       </span>
                     </div>
-                    <p className="text-[10px] text-gray-500 mt-1 text-right">
+                    <p className="text-[10px] opacity-50 mt-1 text-right">
                       * 환율 1,450원 기준 단순 합산
                     </p>
                   </div>
                 )}
 
-                <div className="pt-4 space-y-3">
-                  <Button
-                    className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 font-medium text-base"
-                    onClick={handleSaveMultiple}
-                    disabled={isSaving || selectedItems.size === 0}
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        저장 중...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="mr-2 h-5 w-5" />
-                        {selectedItems.size}건 저장하기
-                      </>
-                    )}
-                  </Button>
+                <div className="pt-4 flex gap-3">
                   <Button
                     variant="ghost"
-                    className="w-full h-12 text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                    className="flex-1 h-12 bg-muted text-muted-foreground hover:bg-muted/80 rounded-xl font-medium"
                     onClick={() => {
                       if (
                         confirm(
@@ -844,7 +820,21 @@ export function DividendInputModal() {
                     }}
                     disabled={isSaving}
                   >
-                    다시 입력하기
+                    다시 입력
+                  </Button>
+                  <Button
+                    className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium"
+                    onClick={handleSaveMultiple}
+                    disabled={isSaving || selectedItems.size === 0}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        저장 중...
+                      </>
+                    ) : (
+                      `${selectedItems.size}건 저장`
+                    )}
                   </Button>
                 </div>
               </div>

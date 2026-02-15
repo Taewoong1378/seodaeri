@@ -258,7 +258,7 @@ export function TradeInputModal() {
             <Button
               size="icon"
               onClick={() => setIsOpen(true)}
-              className="h-14 w-14 rounded-full shadow-xl bg-emerald-600 hover:bg-emerald-700 active:scale-90 active:bg-emerald-800 text-white absolute right-5 bottom-0 pointer-events-auto animate-in zoom-in duration-300 transition-transform"
+              className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 active:scale-95 text-primary-foreground absolute right-5 bottom-0 pointer-events-auto animate-in zoom-in duration-300 transition-all"
             >
               <Pen size={24} />
             </Button>
@@ -268,7 +268,7 @@ export function TradeInputModal() {
 
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="sm:max-w-[425px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-[20px] bg-popover border-border text-popover-foreground"
+          className="sm:max-w-[425px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl bg-card border-0 shadow-xl text-card-foreground"
           style={{
             left: '50%',
             top: '50%',
@@ -276,21 +276,21 @@ export function TradeInputModal() {
             maxWidth: 'min(425px, calc(100vw - 2rem))',
           }}
         >
-          <div className="p-5 pb-3 border-b border-border">
-            <DialogHeader className="flex flex-row items-center justify-between">
-              <DialogTitle className="text-foreground text-lg font-bold">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between sticky top-0 z-10">
+            <DialogHeader className="p-0 space-y-0">
+              <DialogTitle className="text-lg font-bold text-foreground tracking-tight">
                 거래 내역 추가
               </DialogTitle>
-              <DialogClose asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
-                >
-                  <X size={20} />
-                </Button>
-              </DialogClose>
             </DialogHeader>
+            <DialogClose asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 -mr-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors"
+              >
+                <X size={18} />
+              </Button>
+            </DialogClose>
           </div>
 
           <div className="flex-1 overflow-y-auto p-5">
@@ -301,20 +301,20 @@ export function TradeInputModal() {
                   입력 방식을 선택하세요
                 </p>
                 <Button
-                  className="w-full h-20 bg-muted/50 hover:bg-muted border border-border text-foreground flex flex-col gap-2"
+                  className="w-full h-20 bg-muted hover:bg-muted/80 text-foreground flex flex-col gap-2 rounded-xl transition-all"
                   variant="ghost"
                   onClick={handleManualMode}
                 >
-                  <Pen size={24} className="text-emerald-500" />
-                  <span>직접 입력</span>
+                  <Pen size={18} className="text-muted-foreground" />
+                  <span className="font-semibold text-sm">직접 입력</span>
                 </Button>
                 <Button
-                  className="w-full h-20 bg-muted/50 hover:bg-muted border border-border text-foreground flex flex-col gap-2"
+                  className="w-full h-20 bg-muted hover:bg-muted/80 text-foreground flex flex-col gap-2 rounded-xl transition-all"
                   variant="ghost"
                   onClick={handlePhotoMode}
                 >
-                  <Camera size={24} className="text-blue-500" />
-                  <span>사진으로 입력 (여러 건)</span>
+                  <Camera size={18} className="text-muted-foreground" />
+                  <span className="font-semibold text-sm">사진으로 입력 (여러 건)</span>
                 </Button>
               </div>
             )}
@@ -323,18 +323,26 @@ export function TradeInputModal() {
             {mode === 'manual' && (
               <div className="space-y-4">
                 {/* 매수/매도 선택 */}
-                <div className="flex gap-2">
+                <div className="p-1 bg-muted rounded-xl flex gap-1">
                   <Button
-                    variant={singleForm.type === 'BUY' ? 'default' : 'outline'}
-                    className={`flex-1 ${singleForm.type === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'border-border text-muted-foreground'}`}
+                    variant="ghost"
+                    className={`flex-1 h-10 rounded-lg font-medium transition-all ${
+                      singleForm.type === 'BUY'
+                        ? 'bg-card text-primary shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
                     onClick={() => updateSingleField('type', 'BUY')}
                   >
                     <TrendingUp size={16} className="mr-2" />
                     매수
                   </Button>
                   <Button
-                    variant={singleForm.type === 'SELL' ? 'default' : 'outline'}
-                    className={`flex-1 ${singleForm.type === 'SELL' ? 'bg-red-600 hover:bg-red-700 text-white' : 'border-border text-muted-foreground'}`}
+                    variant="ghost"
+                    className={`flex-1 h-10 rounded-lg font-medium transition-all ${
+                      singleForm.type === 'SELL'
+                        ? 'bg-card text-destructive shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
                     onClick={() => updateSingleField('type', 'SELL')}
                   >
                     <TrendingDown size={16} className="mr-2" />
@@ -428,16 +436,28 @@ export function TradeInputModal() {
                 </div>
 
                 {singleForm.price > 0 && singleForm.quantity > 0 && (
-                  <div className={`p-3 rounded-xl border ${singleForm.type === 'BUY' ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                    <p className={`text-sm text-center ${singleForm.type === 'BUY' ? 'text-emerald-600' : 'text-red-600'}`}>
+                  <div className={`p-3 rounded-xl ${singleForm.type === 'BUY' ? 'bg-primary/10' : 'bg-destructive/10'}`}>
+                    <p className={`text-sm text-center font-medium ${singleForm.type === 'BUY' ? 'text-primary' : 'text-destructive'}`}>
                       {singleForm.type === 'BUY' ? '매수' : '매도'} 총액: <span className="font-bold">₩{formatCurrency(singleForm.price * singleForm.quantity)}</span>
                     </p>
                   </div>
                 )}
 
-                <div className="pt-4 space-y-2">
+                <div className="pt-4 flex gap-3">
                   <Button
-                    className={`w-full ${singleForm.type === 'BUY' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'} text-white`}
+                    variant="ghost"
+                    className="flex-1 h-12 bg-muted text-muted-foreground hover:bg-muted/80 rounded-xl font-medium"
+                    onClick={() => setMode('select')}
+                    disabled={isSaving}
+                  >
+                    뒤로
+                  </Button>
+                  <Button
+                    className={`flex-1 h-12 rounded-xl font-medium ${
+                      singleForm.type === 'BUY'
+                        ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                        : 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'
+                    }`}
                     onClick={handleSaveSingle}
                     disabled={isSaving}
                   >
@@ -447,19 +467,8 @@ export function TradeInputModal() {
                         저장 중...
                       </>
                     ) : (
-                      <>
-                        <Check className="mr-2 h-4 w-4" />
-                        저장하기
-                      </>
+                      "저장하기"
                     )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                    onClick={() => setMode('select')}
-                    disabled={isSaving}
-                  >
-                    뒤로
                   </Button>
                 </div>
               </div>
@@ -468,7 +477,7 @@ export function TradeInputModal() {
             {/* Photo Preview */}
             {mode === 'photo-preview' && (
               <div className="space-y-4">
-                <div className="aspect-[3/4] bg-muted/50 rounded-xl flex items-center justify-center relative overflow-hidden border border-border">
+                <div className="aspect-3/4 bg-muted/50 rounded-xl flex items-center justify-center relative overflow-hidden border border-border">
                   {imageSrc ? (
                     <img
                       src={imageSrc}
@@ -479,9 +488,20 @@ export function TradeInputModal() {
                     <p className="text-muted-foreground">이미지 로딩 중...</p>
                   )}
                 </div>
-                <div className="space-y-2">
+                <div className="flex gap-3">
                   <Button
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                    variant="ghost"
+                    className="flex-1 h-12 bg-muted text-muted-foreground hover:bg-muted/80 rounded-xl font-medium"
+                    onClick={() => {
+                      setImageSrc(null);
+                      setMode('select');
+                    }}
+                    disabled={isAnalyzing}
+                  >
+                    다시 선택
+                  </Button>
+                  <Button
+                    className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium"
                     onClick={handleAnalyze}
                     disabled={isAnalyzing}
                   >
@@ -491,19 +511,8 @@ export function TradeInputModal() {
                         분석 중...
                       </>
                     ) : (
-                      '거래내역 분석하기'
+                      '분석하기'
                     )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                    onClick={() => {
-                      setImageSrc(null);
-                      setMode('select');
-                    }}
-                    disabled={isAnalyzing}
-                  >
-                    다시 선택
                   </Button>
                 </div>
               </div>
@@ -519,7 +528,7 @@ export function TradeInputModal() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-xs text-emerald-500 hover:text-emerald-600"
+                    className="text-xs text-primary hover:text-primary/80"
                     onClick={toggleSelectAll}
                   >
                     {selectedItems.size === multipleItems.length ? '전체 해제' : '전체 선택'}
@@ -533,9 +542,9 @@ export function TradeInputModal() {
                       className={`p-3 rounded-xl border transition-colors ${
                         selectedItems.has(idx)
                           ? item.type === 'BUY'
-                            ? 'bg-emerald-500/10 border-emerald-500/30'
-                            : 'bg-red-500/10 border-red-500/30'
-                          : 'bg-muted/50 border-border'
+                            ? 'bg-primary/5 border-primary/30'
+                            : 'bg-destructive/5 border-destructive/30'
+                          : 'bg-card border-border'
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -545,8 +554,8 @@ export function TradeInputModal() {
                           className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                             selectedItems.has(idx)
                               ? item.type === 'BUY'
-                                ? 'bg-emerald-600 border-emerald-600'
-                                : 'bg-red-600 border-red-600'
+                                ? 'bg-primary border-primary'
+                                : 'bg-destructive border-destructive'
                               : 'border-muted-foreground/30'
                           }`}
                         >
@@ -556,7 +565,7 @@ export function TradeInputModal() {
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <span className={`text-xs px-2 py-0.5 rounded ${item.type === 'BUY' ? 'bg-emerald-500/20 text-emerald-600' : 'bg-red-500/20 text-red-600'}`}>
+                              <span className={`text-xs px-2 py-0.5 rounded ${item.type === 'BUY' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>
                                 {item.type === 'BUY' ? '매수' : '매도'}
                               </span>
                               <span className="font-medium text-foreground text-sm">{item.name || item.ticker}</span>
@@ -608,7 +617,7 @@ export function TradeInputModal() {
                             </div>
                           </div>
 
-                          <div className={`text-xs text-right ${item.type === 'BUY' ? 'text-emerald-600' : 'text-red-600'}`}>
+                          <div className={`text-xs text-right ${item.type === 'BUY' ? 'text-primary' : 'text-destructive'}`}>
                             총 ₩{formatCurrency(item.price * item.quantity)}
                           </div>
                         </div>
@@ -618,8 +627,8 @@ export function TradeInputModal() {
                 </div>
 
                 {selectedItems.size > 0 && (
-                  <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                    <p className="text-sm text-emerald-600 text-center">
+                  <div className="p-3 bg-primary/10 rounded-xl">
+                    <p className="text-sm text-primary text-center font-medium">
                       선택된 {selectedItems.size}건의 총 거래금액:{' '}
                       <span className="font-bold">
                         ₩{formatCurrency(
@@ -632,27 +641,10 @@ export function TradeInputModal() {
                   </div>
                 )}
 
-                <div className="pt-2 space-y-2">
+                <div className="pt-2 flex gap-3">
                   <Button
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                    onClick={handleSaveMultiple}
-                    disabled={isSaving || selectedItems.size === 0}
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        저장 중...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="mr-2 h-4 w-4" />
-                        {selectedItems.size}건 저장하기
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                    variant="ghost"
+                    className="flex-1 h-12 bg-muted text-muted-foreground hover:bg-muted/80 rounded-xl font-medium"
                     onClick={() => {
                       setImageSrc(null);
                       setMultipleItems([]);
@@ -662,6 +654,20 @@ export function TradeInputModal() {
                     disabled={isSaving}
                   >
                     다시 입력
+                  </Button>
+                  <Button
+                    className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium"
+                    onClick={handleSaveMultiple}
+                    disabled={isSaving || selectedItems.size === 0}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        저장 중...
+                      </>
+                    ) : (
+                      `${selectedItems.size}건 저장`
+                    )}
                   </Button>
                 </div>
               </div>

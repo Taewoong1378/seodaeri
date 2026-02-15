@@ -11,20 +11,37 @@ import {
 } from "@repo/design-system/components/dialog";
 import { Input } from "@repo/design-system/components/input";
 import { Label } from "@repo/design-system/components/label";
-import { Check, Loader2, X, Target } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useSaveGoal } from "../../../hooks";
+
+const formatNumberWithComma = (value: string): string => {
+  const numbers = value.replace(/[^\d]/g, "");
+  return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+
+const parseFormattedNumber = (value: string): number => {
+  return Number.parseInt(value.replace(/,/g, ""), 10) || 0;
+};
 
 interface GoalSettingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  type: 'finalAsset' | 'annualDeposit';
+  type: "finalAsset" | "annualDeposit";
   currentGoal?: number | null;
 }
 
 const LABELS = {
-  finalAsset: { title: '최종 총자산 목표 설정', label: '최종 총자산 목표 금액', description: '최종적으로 달성하고 싶은 총 자산 목표를 설정하세요' },
-  annualDeposit: { title: '연간 입금액 목표 설정', label: '연간 입금액 목표 금액', description: '올해 입금하고 싶은 목표 금액을 설정하세요' },
+  finalAsset: {
+    title: "최종 총자산 목표 설정",
+    label: "최종 총자산 목표 금액",
+    description: "최종적으로 달성하고 싶은 총 자산 목표를 설정하세요.",
+  },
+  annualDeposit: {
+    title: "연간 입금액 목표 설정",
+    label: "연간 입금액 목표 금액",
+    description: "올해 입금하고 싶은 목표 금액을 설정하세요.",
+  },
 };
 
 export function GoalSettingModal({
@@ -36,20 +53,14 @@ export function GoalSettingModal({
   const [formattedGoal, setFormattedGoal] = useState<string>("");
   const { mutate: saveGoal, isPending: isSaving } = useSaveGoal();
 
-  const formatNumberWithComma = (value: string): string => {
-    const numbers = value.replace(/[^\d]/g, "");
-    return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  };
-
-  const parseFormattedNumber = (value: string): number => {
-    return Number.parseInt(value.replace(/,/g, ""), 10) || 0;
-  };
-
-  const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    setTimeout(() => {
-      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
-  }, []);
+  const handleInputFocus = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>) => {
+      setTimeout(() => {
+        e.target.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 300);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (open) {
@@ -87,7 +98,7 @@ export function GoalSettingModal({
         onError: () => {
           toast.error("목표 설정에 실패했습니다.");
         },
-      }
+      },
     );
   };
 
@@ -96,7 +107,7 @@ export function GoalSettingModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[425px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-[28px] bg-white border-0 shadow-2xl"
+        className="sm:max-w-[425px] max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl bg-card border-0 shadow-xl"
         style={{
           left: "50%",
           top: "50%",
@@ -105,10 +116,9 @@ export function GoalSettingModal({
         }}
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between sticky top-0 z-10">
           <DialogHeader className="p-0 space-y-0">
-            <DialogTitle className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-              <Target size={20} className="text-blue-600" />
+            <DialogTitle className="text-lg font-bold text-foreground tracking-tight">
               {labels.title}
             </DialogTitle>
           </DialogHeader>
@@ -116,26 +126,24 @@ export function GoalSettingModal({
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 -mr-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"
+              className="h-8 w-8 -mr-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full transition-colors"
             >
-              <X size={20} />
+              <X size={18} />
             </Button>
           </DialogClose>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 bg-white">
-          <div className="space-y-6">
-            <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
-              <p className="text-sm text-blue-700 text-center font-medium">
-                {labels.description}
-              </p>
-            </div>
+        <div className="flex-1 overflow-y-auto p-5">
+          <div className="space-y-5">
+            <p className="text-sm text-muted-foreground text-center">
+              {labels.description}
+            </p>
 
             <div className="space-y-2">
               <Label
                 htmlFor="goalAmount"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-foreground"
               >
                 {labels.label}
               </Label>
@@ -150,29 +158,33 @@ export function GoalSettingModal({
                   placeholder="0"
                   className="h-12 text-right pr-8 font-medium"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                   원
                 </span>
               </div>
             </div>
 
-            {/* Save Button */}
-            <div className="pt-6">
+            {/* Buttons */}
+            <div className="flex gap-3 pt-4">
               <Button
-                className="w-full h-12 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 font-medium text-base text-white"
+                variant="ghost"
+                className="flex-1 h-12 bg-muted text-muted-foreground hover:bg-muted/80 rounded-xl font-medium"
+                onClick={() => onOpenChange(false)}
+              >
+                취소
+              </Button>
+              <Button
+                className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium"
                 onClick={handleSave}
                 disabled={isSaving}
               >
                 {isSaving ? (
                   <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     저장 중...
                   </>
                 ) : (
-                  <>
-                    <Check className="mr-2 h-5 w-5" />
-                    저장하기
-                  </>
+                  "저장하기"
                 )}
               </Button>
             </div>

@@ -169,12 +169,30 @@ export function DashboardContent() {
     "finalAsset"
   );
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [dividendAccountFilter, setDividendAccountFilter] = useState<'all' | 'general' | 'taxSaving'>('all');
 
   // 데모 모드에서는 배너 숨김 (Play Store 심사용)
   const smallBanners = useMemo(() => {
     if (session?.isDemo) return [];
     return getSmallBanners();
   }, [session?.isDemo]);
+
+  // 계좌 유형별 배당 데이터 계산
+  const activeDividendData = useMemo(() => {
+    if (!data) return null;
+    if (dividendAccountFilter === 'all' || !data.dividendByAccount) {
+      return {
+        thisMonthDividend: data.thisMonthDividend,
+        yearlyDividend: data.yearlyDividend,
+        monthlyDividends: data.monthlyDividends,
+        dividendByYear: data.dividendByYear,
+        yearlyDividendSummary: data.yearlyDividendSummary,
+        rollingAverageDividend: data.rollingAverageDividend,
+        cumulativeDividend: data.cumulativeDividend,
+      };
+    }
+    return data.dividendByAccount[dividendAccountFilter];
+  }, [data, dividendAccountFilter]);
 
   // 데이터 로드 완료 시 네이티브 앱에 알림 (스플래시 해제용)
   useEffect(() => {
@@ -502,6 +520,48 @@ export function DashboardContent() {
           /* 탭 3: 배당현황 */
           dividend: (
             <div className="space-y-6">
+              {/* 계좌 유형 필터 */}
+              {displayData.dividendByAccount && (
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-base font-bold text-foreground">배당현황</h3>
+                  <div className="flex items-center gap-0.5 bg-muted/50 rounded-lg p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setDividendAccountFilter('all')}
+                      className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${
+                        dividendAccountFilter === 'all'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      전체
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDividendAccountFilter('general')}
+                      className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${
+                        dividendAccountFilter === 'general'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      일반
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDividendAccountFilter('taxSaving')}
+                      className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${
+                        dividendAccountFilter === 'taxSaving'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      절세
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Quick Stats Summary */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-card border border-border rounded-[20px] p-5 shadow-sm">
@@ -510,7 +570,7 @@ export function DashboardContent() {
                   </span>
                   <div className="flex items-baseline gap-1">
                     <span className="text-xl font-bold text-foreground tracking-tight">
-                      {formatCurrency(displayData.thisMonthDividend)}
+                      {formatCurrency(activeDividendData?.thisMonthDividend ?? 0)}
                     </span>
                     <span className="text-xs text-muted-foreground font-medium">
                       원
@@ -523,7 +583,7 @@ export function DashboardContent() {
                   </span>
                   <div className="flex items-baseline gap-1">
                     <span className="text-xl font-bold text-foreground tracking-tight">
-                      {formatCurrency(displayData.yearlyDividend)}
+                      {formatCurrency(activeDividendData?.yearlyDividend ?? 0)}
                     </span>
                     <span className="text-xs text-muted-foreground font-medium">
                       원
@@ -533,42 +593,42 @@ export function DashboardContent() {
               </div>
 
               {/* Dividend By Year Chart (월별 배당금 현황) */}
-              {displayData.dividendByYear && (
+              {activeDividendData?.dividendByYear && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-4">
-                    <DividendByYearChart data={displayData.dividendByYear} />
+                    <DividendByYearChart data={activeDividendData.dividendByYear} />
                   </CardContent>
                 </Card>
               )}
 
               {/* Yearly Dividend Summary Chart (연도별 배당금 현황) */}
-              {displayData.yearlyDividendSummary && (
+              {activeDividendData?.yearlyDividendSummary && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-4">
                     <YearlyDividendChart
-                      data={displayData.yearlyDividendSummary}
+                      data={activeDividendData.yearlyDividendSummary}
                     />
                   </CardContent>
                 </Card>
               )}
 
               {/* Rolling Average Dividend Chart (12개월 월평균 배당금) */}
-              {displayData.rollingAverageDividend && (
+              {activeDividendData?.rollingAverageDividend && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-4">
                     <RollingAverageDividendChart
-                      data={displayData.rollingAverageDividend}
+                      data={activeDividendData.rollingAverageDividend}
                     />
                   </CardContent>
                 </Card>
               )}
 
               {/* Cumulative Dividend Chart (배당금 누적 그래프) */}
-              {displayData.cumulativeDividend && (
+              {activeDividendData?.cumulativeDividend && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                   <CardContent className="p-4">
                     <CumulativeDividendChart
-                      data={displayData.cumulativeDividend}
+                      data={activeDividendData.cumulativeDividend}
                     />
                   </CardContent>
                 </Card>
@@ -577,8 +637,8 @@ export function DashboardContent() {
               {/* Dividend Chart Section */}
               <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
                 <CardContent className="pt-6 pb-6 px-6">
-                  {displayData.monthlyDividends.length > 0 ? (
-                    <DividendChart data={displayData.monthlyDividends} />
+                  {(activeDividendData?.monthlyDividends ?? []).length > 0 ? (
+                    <DividendChart data={activeDividendData?.monthlyDividends ?? []} />
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">

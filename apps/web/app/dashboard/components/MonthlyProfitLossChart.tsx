@@ -92,11 +92,13 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
   const profitText = variant === 'landing' ? 'text-emerald-600' : 'text-red-500';
   const profitBg = variant === 'landing' ? 'bg-emerald-500' : 'bg-red-500';
 
-  // 커스텀 레이블 (바 위에 금액 표시)
+  // 커스텀 레이블 (바 위에 금액 표시, net=0이면 숨김)
   const renderLabel = (fontSize: number) => (props: any) => {
     const { x, y, width, index } = props;
     const entry = waterfallData[index];
     if (!entry) return null;
+    // net이 0이면 라벨 숨김
+    if (entry.net === 0 && !entry.isTotal) return null;
     const labelY = entry.net >= 0 ? y - 4 : y + entry.value + 12;
     const color = entry.isTotal ? '#64748b' : entry.net >= 0 ? profitColor : lossColor;
     return (
