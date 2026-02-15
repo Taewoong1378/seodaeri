@@ -14,6 +14,11 @@ export default async function OnboardingPage() {
     redirect('/login');
   }
 
+  // 토큰 갱신 실패 시 재로그인 유도
+  if (session.error === "RefreshAccessTokenError") {
+    redirect("/login?error=token_expired");
+  }
+
   // 데모 계정은 온보딩 스킵하고 바로 대시보드로 (Play Store 심사용)
   if (session.isDemo) {
     redirect('/dashboard');
