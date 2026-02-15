@@ -178,6 +178,7 @@ export async function getTransactions(): Promise<TransactionsResult> {
             source: 'app' as const,
             amountKRW: d.amount_krw || 0,
             amountUSD: d.amount_usd || 0,
+            account: d.account || undefined,
           };
         });
         additionalTransactions.push(...dividendTransactions);
@@ -227,7 +228,7 @@ export async function getTransactions(): Promise<TransactionsResult> {
           fetchSheetData(
             session.accessToken,
             user.spreadsheet_id,
-            "'7. 배당내역'!A:J"
+            "'7. 배당내역'!A:K"
           ).catch((e) => {
             console.error('[Sheet] 7. 배당내역 읽기 실패:', e);
             return null;
@@ -278,6 +279,7 @@ export async function getTransactions(): Promise<TransactionsResult> {
                 source: 'sheet' as const,
                 amountKRW: d.amountKRW, // 원화 배당금 (삭제 시 사용)
                 amountUSD: d.amountUSD, // 외화 배당금 (삭제 시 사용)
+                account: d.account, // 계좌 유형
               };
             }
           );

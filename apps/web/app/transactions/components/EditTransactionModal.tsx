@@ -77,10 +77,10 @@ export function EditTransactionModal({
 
   // 계좌총액용 상태
   const [selectedYear, setSelectedYear] = useState<number>(
-    new Date().getFullYear()
+    new Date().getFullYear(),
   );
   const [selectedMonth, setSelectedMonth] = useState<number>(
-    new Date().getMonth() + 1
+    new Date().getMonth() + 1,
   );
   const [balance, setBalance] = useState<string>("");
 
@@ -90,11 +90,12 @@ export function EditTransactionModal({
   const [dividendName, setDividendName] = useState<string>("");
   const [dividendAmountKRW, setDividendAmountKRW] = useState<string>("");
   const [dividendAmountUSD, setDividendAmountUSD] = useState<string>("0");
+  const [dividendAccount, setDividendAccount] = useState<string>("일반 계좌");
 
   // 입출금용 상태
   const [depositDate, setDepositDate] = useState<string>("");
   const [depositType, setDepositType] = useState<"DEPOSIT" | "WITHDRAW">(
-    "DEPOSIT"
+    "DEPOSIT",
   );
   const [depositAmount, setDepositAmount] = useState<string>("");
   const [depositAccount, setDepositAccount] = useState<string>("일반계좌1");
@@ -131,6 +132,7 @@ export function EditTransactionModal({
       setDividendName(transactionData.name || "");
       setDividendAmountKRW(formatNumber(String(transactionData.total_amount)));
       setDividendAmountUSD("0");
+      setDividendAccount(transactionData.account || "일반 계좌");
     } else if (editType === "deposit" && transactionData) {
       const dateStr =
         transactionData.trade_date.split("T")[0] || transactionData.trade_date;
@@ -149,12 +151,15 @@ export function EditTransactionModal({
     onClose();
   }, [onClose]);
 
-  const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    // 모바일 키보드가 올라온 후 스크롤
-    setTimeout(() => {
-      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
-  }, []);
+  const handleInputFocus = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>) => {
+      // 모바일 키보드가 올라온 후 스크롤
+      setTimeout(() => {
+        e.target.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 300);
+    },
+    [],
+  );
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
@@ -166,7 +171,7 @@ export function EditTransactionModal({
       if (editType === "balance" && balanceData) {
         const newYearMonth = `${selectedYear}-${String(selectedMonth).padStart(
           2,
-          "0"
+          "0",
         )}`;
         result = await updateAccountBalance({
           originalYearMonth: balanceData.yearMonth,
@@ -187,6 +192,7 @@ export function EditTransactionModal({
           newName: dividendName,
           newAmountKRW: parseFormattedNumber(dividendAmountKRW),
           newAmountUSD: parseFloat(dividendAmountUSD) || 0,
+          newAccount: dividendAccount,
         });
       } else if (editType === "deposit" && transactionData) {
         result = await updateDeposit({
@@ -229,6 +235,7 @@ export function EditTransactionModal({
     dividendName,
     dividendAmountKRW,
     dividendAmountUSD,
+    dividendAccount,
     depositDate,
     depositType,
     depositAmount,
@@ -243,7 +250,7 @@ export function EditTransactionModal({
       case "balance":
         return "계좌총액 수정";
       case "dividend":
-        return "배당내역 수정";
+        return "배당 내역 수정";
       case "deposit":
         return "입출금내역 수정";
     }
@@ -386,6 +393,37 @@ export function EditTransactionModal({
                     원
                   </span>
                 </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">
+                  계좌 유형
+                </label>
+                <Select
+                  value={dividendAccount}
+                  onValueChange={setDividendAccount}
+                >
+                  <SelectTrigger className="bg-muted/50 border-border text-foreground h-12 focus:ring-blue-500/30 focus:border-blue-500">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent
+                    className="bg-popover border-none shadow-xl p-1 min-w-(--radix-select-trigger-width)"
+                    position="popper"
+                    sideOffset={4}
+                  >
+                    <SelectItem
+                      value="일반 계좌"
+                      className="rounded-lg focus:bg-blue-50 focus:text-blue-600 data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-600 data-[state=checked]:font-medium cursor-pointer py-2.5 px-3 mb-1"
+                    >
+                      일반 계좌
+                    </SelectItem>
+                    <SelectItem
+                      value="절세 계좌"
+                      className="rounded-lg focus:bg-emerald-50 focus:text-emerald-600 data-[state=checked]:bg-emerald-50 data-[state=checked]:text-emerald-600 data-[state=checked]:font-medium cursor-pointer py-2.5 px-3"
+                    >
+                      절세 계좌
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </>
           )}
@@ -533,4 +571,3 @@ export function EditTransactionModal({
     </Dialog>
   );
 }
-

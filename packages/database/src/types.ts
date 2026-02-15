@@ -134,6 +134,7 @@ export interface Database {
           amount_krw: number
           amount_usd: number
           dividend_date: string
+          account: string | null
           sheet_synced: boolean
           created_at: string
           updated_at: string
@@ -146,6 +147,7 @@ export interface Database {
           amount_krw?: number
           amount_usd?: number
           dividend_date: string
+          account?: string | null
           sheet_synced?: boolean
           created_at?: string
           updated_at?: string
@@ -158,6 +160,7 @@ export interface Database {
           amount_krw?: number
           amount_usd?: number
           dividend_date?: string
+          account?: string | null
           sheet_synced?: boolean
           created_at?: string
           updated_at?: string

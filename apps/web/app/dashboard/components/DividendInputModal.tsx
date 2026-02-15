@@ -12,6 +12,13 @@ import {
 } from "@repo/design-system/components/dialog";
 import { Input } from "@repo/design-system/components/input";
 import { Label } from "@repo/design-system/components/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/design-system/components/select";
 import { Camera, Check, Loader2, Pen, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -47,6 +54,9 @@ export function DividendInputModal() {
     setMounted(true);
   }, []);
 
+  // 계좌 유형 상태
+  const [account, setAccount] = useState<string>("일반 계좌");
+
   // 단일 입력용 (직접 입력)
   const [singleForm, setSingleForm] = useState<DividendInput>({
     date: new Date().toISOString().split("T")[0] || "",
@@ -79,6 +89,7 @@ export function DividendInputModal() {
       amountKRW: 0,
       amountUSD: 0,
     });
+    setAccount("일반 계좌");
     setMultipleItems([]);
     setSelectedItems(new Set());
     setSearchResetKey((prev) => prev + 1);
@@ -155,7 +166,7 @@ export function DividendInputModal() {
       return;
     }
 
-    saveDividend(singleForm, {
+    saveDividend({ ...singleForm, account }, {
       onSuccess: (result) => {
         if (result.success) {
           toast.success("배당내역이 저장되었습니다.");
@@ -172,9 +183,9 @@ export function DividendInputModal() {
   };
 
   const handleSaveMultiple = () => {
-    const itemsToSave = multipleItems.filter((_, idx) =>
-      selectedItems.has(idx)
-    );
+    const itemsToSave = multipleItems
+      .filter((_, idx) => selectedItems.has(idx))
+      .map((item) => ({ ...item, account }));
 
     if (itemsToSave.length === 0) {
       toast.error("저장할 항목을 선택해주세요.");
@@ -389,6 +400,35 @@ export function DividendInputModal() {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">
+                    계좌 유형
+                  </Label>
+                  <Select value={account} onValueChange={setAccount}>
+                    <SelectTrigger className="w-full h-11 bg-gray-50 border-gray-200">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent
+                      className="bg-white border-none shadow-xl p-1 min-w-(--radix-select-trigger-width)"
+                      position="popper"
+                      sideOffset={4}
+                    >
+                      <SelectItem
+                        value="일반 계좌"
+                        className="rounded-lg focus:bg-blue-50 focus:text-blue-600 data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-600 data-[state=checked]:font-medium cursor-pointer py-2.5 px-3 mb-1"
+                      >
+                        일반 계좌
+                      </SelectItem>
+                      <SelectItem
+                        value="절세 계좌"
+                        className="rounded-lg focus:bg-emerald-50 focus:text-emerald-600 data-[state=checked]:bg-emerald-50 data-[state=checked]:text-emerald-600 data-[state=checked]:font-medium cursor-pointer py-2.5 px-3"
+                      >
+                        절세 계좌
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* 종목 검색 컴포넌트 */}
                 <StockSearchInput
                   selectedCode={isSearchSelected ? singleForm.ticker : ""}
@@ -590,6 +630,35 @@ export function DividendInputModal() {
             {/* Photo Verify - Multiple Items */}
             {mode === "photo-verify" && (
               <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">
+                    계좌 유형
+                  </Label>
+                  <Select value={account} onValueChange={setAccount}>
+                    <SelectTrigger className="w-full h-11 bg-gray-50 border-gray-200">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent
+                      className="bg-white border-none shadow-xl p-1 min-w-(--radix-select-trigger-width)"
+                      position="popper"
+                      sideOffset={4}
+                    >
+                      <SelectItem
+                        value="일반 계좌"
+                        className="rounded-lg focus:bg-blue-50 focus:text-blue-600 data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-600 data-[state=checked]:font-medium cursor-pointer py-2.5 px-3 mb-1"
+                      >
+                        일반 계좌
+                      </SelectItem>
+                      <SelectItem
+                        value="절세 계좌"
+                        className="rounded-lg focus:bg-emerald-50 focus:text-emerald-600 data-[state=checked]:bg-emerald-50 data-[state=checked]:text-emerald-600 data-[state=checked]:font-medium cursor-pointer py-2.5 px-3"
+                      >
+                        절세 계좌
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="flex items-center justify-between px-1">
                   <p className="text-sm font-medium text-gray-600">
                     <span className="text-blue-600 font-bold">

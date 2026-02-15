@@ -3,13 +3,13 @@
 import { auth } from "@repo/auth/server";
 import { createServiceClient } from "@repo/database/server";
 import { revalidatePath } from "next/cache";
+import { getUSDKRWRate } from "../../lib/exchange-rate-api";
 import {
   appendSheetData,
   deleteSheetRow,
   fetchSheetData,
   insertRowInDateOrder,
 } from "../../lib/google-sheets";
-import { getUSDKRWRate } from "../../lib/exchange-rate-api";
 
 export interface DividendInput {
   date: string; // YYYY-MM-DD
@@ -17,6 +17,7 @@ export interface DividendInput {
   name: string;
   amountKRW: number;
   amountUSD: number;
+  account?: string; // "일반 계좌" | "절세 계좌"
 }
 
 export interface SaveDividendResult {
@@ -29,7 +30,7 @@ export interface SaveDividendResult {
  * 시트 구조: 일자 | 연도 | 월 | 일 | 종목코드 | 종목명 | 원화 배당금 | 외화 배당금 | 원화환산
  */
 export async function saveDividend(
-  input: DividendInput
+  input: DividendInput,
 ): Promise<SaveDividendResult> {
   console.log("[saveDividend] Called with input:", JSON.stringify(input));
 
@@ -80,6 +81,7 @@ export async function saveDividend(
         amount_krw: input.amountKRW,
         amount_usd: input.amountUSD,
         dividend_date: input.date,
+        account: input.account || null,
         sheet_synced: false,
       });
 
@@ -102,7 +104,7 @@ export async function saveDividend(
 
     console.log(
       "[saveDividend] Sheet mode, spreadsheet_id:",
-      user.spreadsheet_id
+      user.spreadsheet_id,
     );
 
     // 날짜 파싱 (YYYY-MM-DD)
@@ -126,6 +128,7 @@ export async function saveDividend(
       input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : "", // H: 원화 배당금
       input.amountUSD > 0 ? input.amountUSD : "", // I: 외화 배당금 (숫자만)
       '=INDIRECT("H"&ROW())+INDIRECT("I"&ROW())*GOOGLEFINANCE("usdkrw")', // J: 원화환산 (수식)
+      input.account || "", // K: 계좌 유형
     ];
 
     // 날짜 순서에 맞는 위치에 삽입
@@ -135,11 +138,11 @@ export async function saveDividend(
       session.accessToken,
       user.spreadsheet_id,
       "7. 배당내역",
-      "'7. 배당내역'!A:J",
+      "'7. 배당내역'!A:K",
       1, // B열(1)에 날짜가 있음
       input.date,
       rowData,
-      1 // 헤더 1행
+      1, // 헤더 1행
     );
 
     console.log("[saveDividend] Success!");
@@ -179,7 +182,7 @@ export async function saveDividend(
  * 여러 배당내역을 한번에 Google Sheet에 저장
  */
 export async function saveDividends(
-  inputs: DividendInput[]
+  inputs: DividendInput[],
 ): Promise<SaveDividendResult> {
   const session = await auth();
 
@@ -237,10 +240,13 @@ export async function saveDividends(
         amount_usd: input.amountUSD,
         total_krw: input.amountKRW + input.amountUSD * exchangeRate,
         dividend_date: input.date,
+        account: input.account || null,
         sheet_synced: false,
       }));
 
-      const { error: dbError } = await supabase.from("dividends").insert(dividendRows);
+      const { error: dbError } = await supabase
+        .from("dividends")
+        .insert(dividendRows);
 
       if (dbError) {
         console.error("[saveDividends] DB error:", dbError);
@@ -274,6 +280,7 @@ export async function saveDividends(
         input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : "", // H: 원화 배당금
         input.amountUSD > 0 ? input.amountUSD : "", // I: 외화 배당금 (숫자만)
         '=INDIRECT("H"&ROW())+INDIRECT("I"&ROW())*GOOGLEFINANCE("usdkrw")', // J: 원화환산 (수식)
+        input.account || "", // K: 계좌 유형
       ];
     });
 
@@ -281,8 +288,8 @@ export async function saveDividends(
     await appendSheetData(
       session.accessToken,
       user.spreadsheet_id,
-      "'7. 배당내역'!A:J",
-      rows
+      "'7. 배당내역'!A:K",
+      rows,
     );
 
     revalidatePath("/dashboard");
@@ -335,6 +342,7 @@ export interface UpdateDividendInput {
   newName: string;
   newAmountKRW: number;
   newAmountUSD: number;
+  newAccount?: string; // "일반 계좌" | "절세 계좌"
 }
 
 // 날짜 파싱 헬퍼 (시리얼 넘버 및 다양한 형식 지원)
@@ -357,7 +365,7 @@ function parseSheetDate(val: any): string | null {
   if (match1) {
     return `${match1[1]}-${match1[2]?.padStart(2, "0")}-${match1[3]?.padStart(
       2,
-      "0"
+      "0",
     )}`;
   }
 
@@ -366,7 +374,7 @@ function parseSheetDate(val: any): string | null {
   if (match2) {
     return `${match2[3]}-${match2[1]?.padStart(2, "0")}-${match2[2]?.padStart(
       2,
-      "0"
+      "0",
     )}`;
   }
 
@@ -384,7 +392,7 @@ function parseSheetNumber(val: any): number {
  * 배당내역 삭제 (Standalone 또는 Supabase + Google Sheet)
  */
 export async function deleteDividend(
-  input: DeleteDividendInput
+  input: DeleteDividendInput,
 ): Promise<SaveDividendResult> {
   console.log("===========================================");
   console.log("[deleteDividend] FUNCTION CALLED");
@@ -459,7 +467,7 @@ export async function deleteDividend(
 
     console.log(
       "[deleteDividend] User found, spreadsheet_id:",
-      user.spreadsheet_id
+      user.spreadsheet_id,
     );
 
     // 1. Supabase에서 삭제
@@ -476,7 +484,7 @@ export async function deleteDividend(
       "[deleteDividend] Supabase delete result - error:",
       dbError,
       "count:",
-      count
+      count,
     );
 
     // 2. Google Sheet에서 해당 행 찾아서 삭제
@@ -485,7 +493,7 @@ export async function deleteDividend(
     const rows = await fetchSheetData(
       session.accessToken,
       user.spreadsheet_id,
-      `'${sheetName}'!A:J`
+      `'${sheetName}'!A:K`,
     );
 
     console.log("[deleteDividend] Sheet rows count:", rows?.length || 0);
@@ -571,10 +579,10 @@ export async function deleteDividend(
         // 처음 몇 개 행만 상세 로깅
         if (i <= 5) {
           console.log(
-            `[deleteDividend] Row ${i}: date=${rowDate}, ticker=${rowTicker}, krw=${rowAmountKRW}, usd=${rowAmountUSD}`
+            `[deleteDividend] Row ${i}: date=${rowDate}, ticker=${rowTicker}, krw=${rowAmountKRW}, usd=${rowAmountUSD}`,
           );
           console.log(
-            `[deleteDividend] Input: date=${input.date}, ticker=${input.ticker}, krw=${input.amountKRW}, usd=${input.amountUSD}`
+            `[deleteDividend] Input: date=${input.date}, ticker=${input.ticker}, krw=${input.amountKRW}, usd=${input.amountUSD}`,
           );
         }
 
@@ -590,7 +598,7 @@ export async function deleteDividend(
             session.accessToken,
             user.spreadsheet_id,
             sheetName,
-            i
+            i,
           );
           found = true;
           break;
@@ -614,10 +622,10 @@ export async function deleteDividend(
 }
 
 /**
- * 배당내역 수정 (Supabase + Google Sheet)
+ * 배당 내역 수정 (Supabase + Google Sheet)
  */
 export async function updateDividend(
-  input: UpdateDividendInput
+  input: UpdateDividendInput,
 ): Promise<SaveDividendResult> {
   console.log("[updateDividend] Called with input:", JSON.stringify(input));
 
@@ -664,12 +672,12 @@ export async function updateDividend(
     const rows = await fetchSheetData(
       session.accessToken,
       user.spreadsheet_id,
-      `'${sheetName}'!A:J`
+      `'${sheetName}'!A:K`,
     );
 
     if (rows && rows.length > 1) {
       // 컬럼 인덱스 (기본값)
-      // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산
+      // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산, K=계좌유형
       const tickerCol = 5; // F열 (종목코드)
       const amountKRWCol = 7; // H열 (원화 배당금)
       const amountUSDCol = 8; // I열 (외화 배당금)
@@ -723,13 +731,14 @@ export async function updateDividend(
               : "", // H: 원화 배당금
             input.newAmountUSD > 0 ? input.newAmountUSD : "", // I: 외화 배당금 (숫자만)
             '=INDIRECT("H"&ROW())+INDIRECT("I"&ROW())*GOOGLEFINANCE("usdkrw")', // J: 원화환산 (수식)
+            input.newAccount || "", // K: 계좌 유형
           ];
 
           // Google Sheets API로 행 업데이트
           const response = await fetch(
             `https://sheets.googleapis.com/v4/spreadsheets/${
               user.spreadsheet_id
-            }/values/'${sheetName}'!A${i + 1}:J${
+            }/values/'${sheetName}'!A${i + 1}:K${
               i + 1
             }?valueInputOption=USER_ENTERED`,
             {
@@ -739,7 +748,7 @@ export async function updateDividend(
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({ values: [newRowData] }),
-            }
+            },
           );
 
           if (!response.ok) {
@@ -769,6 +778,7 @@ export async function updateDividend(
       amount_krw: input.newAmountKRW,
       amount_usd: input.newAmountUSD,
       dividend_date: input.newDate,
+      account: input.newAccount || null,
       sheet_synced: true,
     });
 

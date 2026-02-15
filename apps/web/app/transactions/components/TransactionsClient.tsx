@@ -706,6 +706,21 @@ export function TransactionsClient({
                                   </span>
                                 </>
                               )}
+                              {/* 배당의 경우 계좌 유형 뱃지 표시 */}
+                              {tx.type === "DIVIDEND" && tx.account && (
+                                <>
+                                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                                    tx.account === "절세 계좌"
+                                      ? "bg-emerald-100 text-emerald-600"
+                                      : "bg-blue-100 text-blue-600"
+                                  }`}>
+                                    {tx.account}
+                                  </span>
+                                  <span className="text-muted-foreground/50">
+                                    ·
+                                  </span>
+                                </>
+                              )}
                               {/* 입출금의 경우 메모 표시 */}
                               {(tx.type === "DEPOSIT" ||
                                 tx.type === "WITHDRAW") &&

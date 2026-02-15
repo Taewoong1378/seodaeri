@@ -775,6 +775,7 @@ export interface DividendRecord {
   amountKRW: number;
   amountUSD: number;
   totalKRW: number; // J열 원화환산 (시트 수식으로 계산된 값)
+  account?: string; // K열 계좌 유형
 }
 
 export function parseDividendData(rows: any[]): DividendRecord[] {
@@ -894,6 +895,7 @@ export function parseDividendData(rows: any[]): DividendRecord[] {
     if (amountKRW > 0 || amountUSD > 0 || totalKRWRaw > 0) {
       // 소수점 반올림하여 정수로 저장
       const totalKRW = totalKRWRaw > 0 ? Math.round(totalKRWRaw) : Math.round(amountKRW);
+      const accountVal = String(row[10] || '').trim(); // K열 (index 10) 계좌 유형
       results.push({
         date,
         ticker: String(row[tickerCol] || ''),
@@ -901,6 +903,7 @@ export function parseDividendData(rows: any[]): DividendRecord[] {
         amountKRW: Math.round(amountKRW),
         amountUSD,
         totalKRW,
+        account: accountVal || undefined,
       });
     }
   }
