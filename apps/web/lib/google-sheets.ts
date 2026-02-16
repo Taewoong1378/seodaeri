@@ -1867,9 +1867,11 @@ export interface MajorIndexYieldComparisonData {
   nasdaqDollar?: number[];
   dollar?: number[]; // 달러 환율 수익률
   // 추가 시장 지표 (선택)
-  gold?: number[];          // 금 수익률 (원화 기준)
-  bitcoin?: number[];       // 비트코인 수익률 (원화 기준)
+  gold?: number[];          // 금 수익률 (USD 기준, 기본)
+  bitcoin?: number[];       // 비트코인 수익률 (USD 기준, 기본)
   realEstate?: number[];    // 부동산 수익률
+  goldDollar?: number[];    // 금 수익률 (환율 적용, KRW 기준)
+  bitcoinDollar?: number[]; // 비트코인 수익률 (환율 적용, KRW 기준)
 }
 
 /**
@@ -2567,6 +2569,19 @@ export function parseMonthlyYieldComparisonWithDollar(rows: any[]): MonthlyYield
 
   if (!currentRow) return null;
 
+  // prevMonthRow 재탐색: 정확한 날짜 매칭 실패 시 currentRow 직전 행 사용
+  if (!prevMonthRow) {
+    let lastValidRow: any[] | null = null;
+    for (const row of rows) {
+      if (!row || !Array.isArray(row)) continue;
+      const dateCell = String(row[COL_DATE] || '').trim();
+      if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue;
+      if (row === currentRow) break;
+      lastValidRow = row;
+    }
+    if (lastValidRow) prevMonthRow = lastValidRow;
+  }
+
   // 현재 데이터
   const accountMonthlyYield = parsePercent(currentRow[COL_MONTHLY_YIELD]);
   const accountIdx = parseNumber(currentRow[COL_ACCOUNT_IDX]);
@@ -2576,6 +2591,7 @@ export function parseMonthlyYieldComparisonWithDollar(rows: any[]): MonthlyYield
   const dollarRate = parseNumber(currentRow[COL_DOLLAR]);
 
   // 전월 데이터
+  const prevAccountIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_ACCOUNT_IDX]) : accountIdx;
   const prevKospiIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_KOSPI_IDX]) : kospiIdx;
   const prevSp500Idx = prevMonthRow ? parseNumber(prevMonthRow[COL_SP500_IDX]) : sp500Idx;
   const prevNasdaqIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_NASDAQ_IDX]) : nasdaqIdx;
@@ -2589,8 +2605,21 @@ export function parseMonthlyYieldComparisonWithDollar(rows: any[]): MonthlyYield
   const prevYearDollarRate = prevYearDecRow ? parseNumber(prevYearDecRow[COL_DOLLAR]) : dollarRate;
 
   // 이번 달 수익률
+  // 계좌 월수익률: K열 값 우선, 없으면(월 중간) 인덱스로 직접 계산
+  const accountIdxYield = prevAccountIdx > 0 && accountIdx > 0
+    ? ((accountIdx / prevAccountIdx) - 1) * 100
+    : 0;
+  const accountCurrentMonthYield = accountMonthlyYield !== 0
+    ? accountMonthlyYield
+    : accountIdxYield;
+
+  console.log('[parseMonthlyYieldComparisonWithDollar] account debug:', {
+    accountMonthlyYield, accountIdx, prevAccountIdx, accountIdxYield, accountCurrentMonthYield,
+    prevMonthRowFound: !!prevMonthRow,
+  });
+
   const currentMonthYield = {
-    account: accountMonthlyYield,
+    account: accountCurrentMonthYield,
     kospi: prevKospiIdx > 0 ? ((kospiIdx / prevKospiIdx) - 1) * 100 : 0,
     sp500: prevSp500Idx > 0 ? ((sp500Idx / prevSp500Idx) - 1) * 100 : 0,
     nasdaq: prevNasdaqIdx > 0 ? ((nasdaqIdx / prevNasdaqIdx) - 1) * 100 : 0,
@@ -2725,6 +2754,19 @@ export function parseMonthlyYieldComparisonDollarApplied(rows: any[]): MonthlyYi
 
   if (!currentRow) return null;
 
+  // prevMonthRow 재탐색: 정확한 날짜 매칭 실패 시 currentRow 직전 행 사용
+  if (!prevMonthRow) {
+    let lastValidRow: any[] | null = null;
+    for (const row of rows) {
+      if (!row || !Array.isArray(row)) continue;
+      const dateCell = String(row[COL_DATE] || '').trim();
+      if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue;
+      if (row === currentRow) break;
+      lastValidRow = row;
+    }
+    if (lastValidRow) prevMonthRow = lastValidRow;
+  }
+
   // 현재 데이터
   const accountMonthlyYield = parsePercent(currentRow[COL_MONTHLY_YIELD]);
   const accountIdx = parseNumber(currentRow[COL_ACCOUNT_IDX]);
@@ -2733,6 +2775,7 @@ export function parseMonthlyYieldComparisonDollarApplied(rows: any[]): MonthlyYi
   const nasdaqDollarIdx = parseNumber(currentRow[COL_NASDAQ_DOLLAR_IDX]);
 
   // 전월 데이터
+  const prevAccountIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_ACCOUNT_IDX]) : accountIdx;
   const prevKospiIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_KOSPI_IDX]) : kospiIdx;
   const prevSp500DollarIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_SP500_DOLLAR_IDX]) : sp500DollarIdx;
   const prevNasdaqDollarIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_NASDAQ_DOLLAR_IDX]) : nasdaqDollarIdx;
@@ -2744,8 +2787,21 @@ export function parseMonthlyYieldComparisonDollarApplied(rows: any[]): MonthlyYi
   const prevYearNasdaqDollarIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_NASDAQ_DOLLAR_IDX]) : 100;
 
   // 이번 달 수익률
+  // 계좌 월수익률: K열 값 우선, 없으면(월 중간) 인덱스로 직접 계산
+  const accountIdxYield = prevAccountIdx > 0 && accountIdx > 0
+    ? ((accountIdx / prevAccountIdx) - 1) * 100
+    : 0;
+  const accountCurrentMonthYield = accountMonthlyYield !== 0
+    ? accountMonthlyYield
+    : accountIdxYield;
+
+  console.log('[parseMonthlyYieldComparisonDollarApplied] account debug:', {
+    accountMonthlyYield, accountIdx, prevAccountIdx, accountIdxYield, accountCurrentMonthYield,
+    prevMonthRowFound: !!prevMonthRow,
+  });
+
   const currentMonthYield = {
-    account: accountMonthlyYield,
+    account: accountCurrentMonthYield,
     kospi: prevKospiIdx > 0 ? ((kospiIdx / prevKospiIdx) - 1) * 100 : 0,
     sp500: prevSp500DollarIdx > 0 ? ((sp500DollarIdx / prevSp500DollarIdx) - 1) * 100 : 0,
     nasdaq: prevNasdaqDollarIdx > 0 ? ((nasdaqDollarIdx / prevNasdaqDollarIdx) - 1) * 100 : 0,

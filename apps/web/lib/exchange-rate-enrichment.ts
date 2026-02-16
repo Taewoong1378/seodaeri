@@ -135,6 +135,7 @@ export function calculateMarketYields(
   gold: number[]; bitcoin: number[]; realEstate: number[]; dollar: number[];
   kospi: number[]; sp500: number[]; nasdaq: number[];
   sp500Dollar: number[]; nasdaqDollar: number[];
+  goldDollar: number[]; bitcoinDollar: number[];
 } {
   const yearStr = String(currentYear).slice(-2); // "26"
   const prevYearStr = String(currentYear - 1).slice(-2); // "25"
@@ -150,6 +151,8 @@ export function calculateMarketYields(
   const nasdaqBaseline = marketData.nasdaq?.get(baselineKey);
   const sp500KrwBaseline = marketData.sp500Krw?.get(baselineKey);
   const nasdaqKrwBaseline = marketData.nasdaqKrw?.get(baselineKey);
+  const goldUsdBaseline = marketData.goldUsd?.get(baselineKey);
+  const btcUsdBaseline = marketData.bitcoinUsd?.get(baselineKey);
 
   const goldYields: number[] = [0]; // 시작점 0%
   const btcYields: number[] = [0];
@@ -160,10 +163,14 @@ export function calculateMarketYields(
   const nasdaqYields: number[] = [0];
   const sp500DollarYields: number[] = [0];
   const nasdaqDollarYields: number[] = [0];
+  const goldDollarYields: number[] = [0];
+  const bitcoinDollarYields: number[] = [0];
 
   const yieldCalc = (val: number | undefined, baseline: number | undefined): number | null => {
     if (baseline && baseline > 0 && val && val > 0) {
-      return Number(((val / baseline - 1) * 100).toFixed(1));
+      // Math.trunc로 소수점 첫째자리 절사 (스프레드시트 TRUNC 함수와 동일한 동작)
+      const raw = (val / baseline - 1) * 100;
+      return Math.trunc(raw * 10) / 10;
     }
     return null;
   };
@@ -172,13 +179,21 @@ export function calculateMarketYields(
   for (let i = 1; i < months.length; i++) {
     const monthKey = `${yearStr}.${String(i).padStart(2, '0')}`;
 
-    // 금
-    const goldY = yieldCalc(marketData.gold.get(monthKey), goldBaseline);
+    // 금 (USD - 기본)
+    const goldY = yieldCalc(marketData.goldUsd?.get(monthKey), goldUsdBaseline);
     goldYields.push(goldY ?? (goldYields[goldYields.length - 1] ?? 0));
 
-    // 비트코인
-    const btcY = yieldCalc(marketData.bitcoin.get(monthKey), btcBaseline);
+    // 금 (KRW - 환율 적용)
+    const goldDY = yieldCalc(marketData.gold.get(monthKey), goldBaseline);
+    goldDollarYields.push(goldDY ?? (goldDollarYields[goldDollarYields.length - 1] ?? 0));
+
+    // 비트코인 (USD - 기본)
+    const btcY = yieldCalc(marketData.bitcoinUsd?.get(monthKey), btcUsdBaseline);
     btcYields.push(btcY ?? (btcYields[btcYields.length - 1] ?? 0));
+
+    // 비트코인 (KRW - 환율 적용)
+    const btcDY = yieldCalc(marketData.bitcoin.get(monthKey), btcBaseline);
+    bitcoinDollarYields.push(btcDY ?? (bitcoinDollarYields[bitcoinDollarYields.length - 1] ?? 0));
 
     // 부동산
     const reY = yieldCalc(marketData.realEstate.get(monthKey), reBaseline);
@@ -219,5 +234,7 @@ export function calculateMarketYields(
     nasdaq: nasdaqYields,
     sp500Dollar: sp500DollarYields,
     nasdaqDollar: nasdaqDollarYields,
+    goldDollar: goldDollarYields,
+    bitcoinDollar: bitcoinDollarYields,
   };
 }

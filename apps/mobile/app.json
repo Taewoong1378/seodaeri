@@ -22,7 +22,7 @@
         },
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "5"
+      "buildNumber": "6"
     },
     "android": {
       "adaptiveIcon": {
@@ -40,10 +40,13 @@
               "scheme": "gulim"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
-      "versionCode": 37
+      "versionCode": 38
     },
     "plugins": [
       [

@@ -107,6 +107,8 @@ export function MajorIndexYieldComparisonChart({
     if (rateMode === "dollar" && hasDollarData) {
       if (key === "sp500") return data.sp500Dollar!;
       if (key === "nasdaq") return data.nasdaqDollar!;
+      if (key === "gold") return data.goldDollar || data.gold || [];
+      if (key === "bitcoin") return data.bitcoinDollar || data.bitcoin || [];
     }
     switch (key) {
       case "sp500": return data.sp500;
@@ -161,7 +163,7 @@ export function MajorIndexYieldComparisonChart({
   const tooltipFormatter = (value: number, name: string) => {
     const option = SERIES_OPTIONS.find(o => o.key === name);
     let label = name === "account" ? "내 투자" : (option?.label || name);
-    if (rateMode === "dollar" && (name === "sp500" || name === "nasdaq")) {
+    if (rateMode === "dollar" && (name === "sp500" || name === "nasdaq" || name === "gold" || name === "bitcoin")) {
       label += "(환율)";
     }
     return [
@@ -309,7 +311,7 @@ export function MajorIndexYieldComparisonChart({
           const opt = SERIES_OPTIONS.find(o => o.key === key);
           if (!opt) return null;
           let label = opt.label;
-          if (rateMode === "dollar" && (key === "sp500" || key === "nasdaq")) {
+          if (rateMode === "dollar" && (key === "sp500" || key === "nasdaq" || key === "gold" || key === "bitcoin")) {
             label += "(환율)";
           }
           return (
@@ -517,7 +519,7 @@ export function MajorIndexYieldComparisonChart({
           const values = getSeriesValues(key);
           const val = values[latestIdx] ?? 0;
           let label = opt.label;
-          if (rateMode === "dollar" && (key === "sp500" || key === "nasdaq")) {
+          if (rateMode === "dollar" && (key === "sp500" || key === "nasdaq" || key === "gold" || key === "bitcoin")) {
             label += "(환율)";
           }
           return (

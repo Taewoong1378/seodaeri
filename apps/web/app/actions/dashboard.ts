@@ -541,6 +541,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         gold: marketYields.gold,
         bitcoin: marketYields.bitcoin,
         realEstate: marketYields.realEstate,
+        goldDollar: marketYields.goldDollar,
+        bitcoinDollar: marketYields.bitcoinDollar,
       };
       // dollar 수익률도 marketYields에서 가져옴 (기존 dollar 없는 경우)
       if (!majorIndexYieldComparison.dollar) {

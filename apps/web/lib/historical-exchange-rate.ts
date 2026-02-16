@@ -30,6 +30,8 @@ export interface HistoricalMarketData {
   nasdaq: Map<string, number>;         // YY.MM → NASDAQ (USD)
   sp500Krw: Map<string, number>;       // YY.MM → S&P500 원화환산
   nasdaqKrw: Map<string, number>;      // YY.MM → NASDAQ 원화환산
+  goldUsd?: Map<string, number>;       // YY.MM → 금 USD 가격 (원화환산 / 환율)
+  bitcoinUsd?: Map<string, number>;    // YY.MM → BTC USD 가격 (원화환산 / 환율)
 }
 
 /**
@@ -197,7 +199,24 @@ function parseCSVMarketData(csvText: string): HistoricalMarketData {
     if (reVal > 0) realEstate.set(dateStr, reVal);
   }
 
-  return { exchangeRates, gold, bitcoin, realEstate, kospi, sp500, nasdaq, sp500Krw, nasdaqKrw };
+  // Derive USD values for gold and bitcoin by dividing KRW by exchange rate
+  const goldUsd = new Map<string, number>();
+  const bitcoinUsd = new Map<string, number>();
+
+  for (const [dateStr, goldKrw] of gold) {
+    const rate = exchangeRates.get(dateStr);
+    if (rate && rate > 0) {
+      goldUsd.set(dateStr, goldKrw / rate);
+    }
+  }
+  for (const [dateStr, btcKrw] of bitcoin) {
+    const rate = exchangeRates.get(dateStr);
+    if (rate && rate > 0) {
+      bitcoinUsd.set(dateStr, btcKrw / rate);
+    }
+  }
+
+  return { exchangeRates, gold, bitcoin, realEstate, kospi, sp500, nasdaq, sp500Krw, nasdaqKrw, goldUsd, bitcoinUsd };
 }
 
 /**
@@ -448,5 +467,7 @@ export async function getHistoricalMarketData(): Promise<HistoricalMarketData> {
     nasdaq: new Map(),
     sp500Krw: new Map(),
     nasdaqKrw: new Map(),
+    goldUsd: new Map(),
+    bitcoinUsd: new Map(),
   };
 }

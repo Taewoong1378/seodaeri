@@ -121,8 +121,8 @@ export async function saveDividend(
       "", // A: 빈 칸
       formattedDate, // B: 일자 (YYYY/MM/DD 형식)
       year, // C: 연도
-      `${month}월`, // D: 월
-      `${day}일`, // E: 일
+      `${Number(month)}월`, // D: 월 (2월 형식, 02월 아님)
+      `${Number(day)}일`, // E: 일 (3일 형식, 03일 아님)
       input.ticker, // F: 종목코드
       input.name || input.ticker, // G: 종목명
       input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : "", // H: 원화 배당금
@@ -273,8 +273,8 @@ export async function saveDividends(
         "", // A: 빈 칸
         formattedDate, // B: 일자 (YYYY/MM/DD 형식)
         year, // C: 연도
-        `${month}월`, // D: 월
-        `${day}일`, // E: 일
+        `${Number(month)}월`, // D: 월 (2월 형식, 02월 아님)
+        `${Number(day)}일`, // E: 일 (3일 형식, 03일 아님)
         input.ticker, // F: 종목코드
         input.name || input.ticker, // G: 종목명
         input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : "", // H: 원화 배당금
@@ -722,8 +722,8 @@ export async function updateDividend(
             "", // A: 빈 칸
             formattedNewDate, // B: 날짜 (YYYY/MM/DD 형식)
             year, // C: 연도
-            `${month}월`, // D: 월
-            `${day}일`, // E: 일
+            `${Number(month)}월`, // D: 월 (2월 형식, 02월 아님)
+            `${Number(day)}일`, // E: 일 (3일 형식, 03일 아님)
             input.newTicker, // F: 종목코드
             input.newName || input.newTicker, // G: 종목명
             input.newAmountKRW > 0

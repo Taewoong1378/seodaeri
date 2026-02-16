@@ -630,6 +630,8 @@ export class StandaloneDataProvider implements DataProvider {
         gold: marketYields.gold,
         bitcoin: marketYields.bitcoin,
         realEstate: marketYields.realEstate,
+        goldDollar: marketYields.goldDollar,
+        bitcoinDollar: marketYields.bitcoinDollar,
       };
     } catch (error) {
       console.error('[StandaloneProvider] getMajorIndexYieldComparison error:', error);

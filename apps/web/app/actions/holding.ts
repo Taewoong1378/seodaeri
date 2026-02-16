@@ -12,6 +12,7 @@ export interface HoldingInput {
   quantity: number; // 수량
   avgPrice: number; // 평단가
   currency: 'KRW' | 'USD'; // 통화
+  mode?: 'add' | 'edit'; // 'add' = 추가매수 (수량합산+평단계산), 'edit' = 직접수정 (그대로 덮어쓰기)
 }
 
 export interface SaveHoldingResult {
@@ -68,6 +69,27 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
     if (!user.spreadsheet_id) {
       console.log('[saveHolding] Standalone mode - saving to DB only');
 
+      let finalQuantity = input.quantity;
+      let finalAvgPrice = input.avgPrice;
+
+      // 추가매수 모드: 기존 보유분과 합산
+      if (input.mode !== 'edit') {
+        const { data: existing } = await supabase
+          .from('holdings')
+          .select('quantity, avg_price')
+          .eq('user_id', dbUserId)
+          .eq('ticker', input.ticker)
+          .single();
+
+        if (existing && existing.quantity != null && existing.quantity > 0 && existing.avg_price != null) {
+          const oldQty = existing.quantity;
+          const oldPrice = existing.avg_price;
+          finalQuantity = oldQty + input.quantity;
+          finalAvgPrice = (oldQty * oldPrice + input.quantity * input.avgPrice) / finalQuantity;
+          console.log(`[saveHolding] Merging: ${oldQty}@${oldPrice} + ${input.quantity}@${input.avgPrice} = ${finalQuantity}@${finalAvgPrice.toFixed(2)}`);
+        }
+      }
+
       const { error: dbError } = await supabase
         .from('holdings')
         .upsert(
@@ -75,8 +97,8 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
             user_id: dbUserId,
             ticker: input.ticker,
             name: input.name,
-            quantity: input.quantity,
-            avg_price: input.avgPrice,
+            quantity: finalQuantity,
+            avg_price: finalAvgPrice,
             currency: input.currency,
             updated_at: new Date().toISOString(),
           },
@@ -127,6 +149,27 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
       }
     }
 
+    let finalQuantity = input.quantity;
+    let finalAvgPrice = input.avgPrice;
+
+    // 추가매수 모드: 기존 보유분과 합산
+    if (existingRow !== -1 && input.mode !== 'edit' && existingData) {
+      const existingRowData = existingData[existingRow - 1]; // 0-based index
+      if (existingRowData && Array.isArray(existingRowData)) {
+        // D:H 범위: [0]=종목코드, [1]=종목명, [2]=수량, [3]=평단가원화, [4]=평단가달러
+        const oldQty = parseFloat(String(existingRowData[2] || '0').replace(/,/g, '')) || 0;
+        const oldPriceKRW = parseFloat(String(existingRowData[3] || '0').replace(/[₩,]/g, '')) || 0;
+        const oldPriceUSD = parseFloat(String(existingRowData[4] || '0').replace(/[$,]/g, '')) || 0;
+        const oldPrice = input.currency === 'USD' ? oldPriceUSD : oldPriceKRW;
+
+        if (oldQty > 0 && oldPrice > 0) {
+          finalQuantity = oldQty + input.quantity;
+          finalAvgPrice = (oldQty * oldPrice + input.quantity * input.avgPrice) / finalQuantity;
+          console.log(`[saveHolding] Sheet merge: ${oldQty}@${oldPrice} + ${input.quantity}@${input.avgPrice} = ${finalQuantity}@${finalAvgPrice.toFixed(2)}`);
+        }
+      }
+    }
+
     // 새 종목이면 빈 행 찾기 (Row 9부터)
     let targetRow = existingRow;
     if (targetRow === -1) {
@@ -155,8 +198,8 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
     // 시트에 데이터 저장
     // D~H열만 수정 (C열은 수식이므로 건드리지 않음)
     // D열=종목코드, E열=종목명, F열=수량, G열=평단가(원화), H열=평단가(달러, 미국 종목만)
-    const avgPriceUSD = input.currency === 'USD' ? input.avgPrice : '';
-    const avgPriceKRW = input.currency === 'KRW' ? input.avgPrice : '';
+    const avgPriceUSD = input.currency === 'USD' ? finalAvgPrice : '';
+    const avgPriceKRW = input.currency === 'KRW' ? finalAvgPrice : '';
 
     const sheetResult = await batchUpdateSheet(
       session.accessToken,
@@ -164,7 +207,7 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
       [
         {
           range: `'3. 종목현황'!D${targetRow}:H${targetRow}`,
-          values: [[input.ticker, input.name, input.quantity, avgPriceKRW, avgPriceUSD]],
+          values: [[input.ticker, input.name, finalQuantity, avgPriceKRW, avgPriceUSD]],
         },
       ]
     );
@@ -179,8 +222,8 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
           user_id: dbUserId,
           ticker: input.ticker,
           name: input.name,
-          quantity: input.quantity,
-          avg_price: input.avgPrice,
+          quantity: finalQuantity,
+          avg_price: finalAvgPrice,
           currency: input.currency,
           updated_at: new Date().toISOString(),
         },

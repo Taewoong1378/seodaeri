@@ -185,6 +185,7 @@ export function HoldingInputModal({
         quantity: quantityNum,
         avgPrice: avgPriceNum,
         currency,
+        mode: isEditMode ? 'edit' : 'add',
       });
 
       if (result.success) {
