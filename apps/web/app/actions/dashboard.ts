@@ -112,6 +112,10 @@ export interface DashboardData {
   monthlyYieldComparisonDollarApplied: MonthlyYieldComparisonDollarAppliedData | null;
   // 주요지수 수익률 비교 라인차트 (5. 계좌내역(누적) 탭에서)
   majorIndexYieldComparison: MajorIndexYieldComparisonData | null;
+  // 이번달 수익률 (5번 시트 K열에서 직접 읽음)
+  thisMonthYield?: number;
+  // 올해 수익률 (연초잔액 대비 계산)
+  thisYearYield?: number;
   // 투자 일수 (6. 입금내역 탭의 L4 셀)
   investmentDays: number;
   // 마지막 동기화 시간
@@ -201,7 +205,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
   try {
     // 시트에서 데이터 읽기 (병렬 처리, 60초 캐시)
-    const [accountRows, dividendRows, portfolioRows, performanceRows, profitLossRows, depositDateRows, accountHistoryRows, historicalRates, marketData] = await Promise.all([
+    const [accountRows, dividendRows, portfolioRows, performanceRows, profitLossRows, depositDateRows, accountHistoryRows, historicalRates, marketData, yieldCell] = await Promise.all([
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'1. 계좌현황(누적)'!A:K", user.id),
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!A:K", user.id),
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'3. 종목현황'!A:P", user.id),
@@ -212,12 +216,14 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       // 투자 일수 계산용 - 6. 입금내역의 B열 (날짜)
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'6. 입금내역'!B:B", user.id),
       // 총자산/원금/수익률 계산용 - 5. 계좌내역(누적)의 E:Y열
-      // E=연도, F=월, H=계좌총액, I=입금액, Y=누적수익률
+      // E=연도, F=월, H=계좌총액, I=입금액, K=월수익률, Y=누적수익률
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'5. 계좌내역(누적)'!E:Y", user.id),
       // 과거 월별 환율 데이터 (공개 스프레드시트)
       getHistoricalExchangeRates(),
       // 시장 데이터 (금, 비트코인, 부동산)
       getHistoricalMarketData(),
+      // 누적수익률 - 1번 시트 U9 셀 (정확한 누적수익률)
+      fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'1. 계좌현황(누적)'!U9", user.id),
     ]);
 
     // 현재 환율 + performanceRows에 달러환율 적용 값 주입
@@ -275,6 +281,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     let totalAsset = 0;
     let totalInvested = 0;
     let totalYield = 0;
+    let thisMonthYieldFromSheet: number | undefined;
+    let thisYearYieldFromSheet: number | undefined;
 
     const parseNumber = (val: any): number => {
       if (!val || val === '-') return 0;
@@ -285,8 +293,9 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     const parsePercent = (val: any): number => {
       if (!val || val === '-') return 0;
       const num = parseNumber(val);
-      // UNFORMATTED_VALUE로 인해 소수점 형식일 수 있음 (1.566 = 156.6%)
-      if (num > 0 && num < 10) {
+      // UNFORMATTED_VALUE로 인해 소수점 형식일 수 있음 (0.1566 = 15.66%, -0.03 = -3%)
+      const absNum = Math.abs(num);
+      if (absNum > 0 && absNum < 10) {
         return num * 100;
       }
       return num;
@@ -295,15 +304,37 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     if (accountHistoryRows && accountHistoryRows.length > 0) {
       const currentYear = now.getFullYear();
       const currentMonth = now.getMonth() + 1;
+      const prevYear = currentYear - 1;
+
+      let thisYearDeposit = 0;
+      let startOfYearAsset = 0;
 
       // I열(index 4) 전체 합계 계산 = SUM(I:I)
+      // + 올해 입금액 합계 + 작년 12월 잔액 찾기
       for (const row of accountHistoryRows) {
         if (!row || !Array.isArray(row)) continue;
         const investedVal = parseNumber(row[4]); // I열
         totalInvested += investedVal;
+
+        // 연도/월 파싱
+        const yearVal = String(row[0] || '').trim();
+        const monthVal = String(row[1] || '').trim();
+        const year = Number.parseInt(yearVal.replace(/[^0-9]/g, ''), 10);
+        const monthMatch = monthVal.match(/(\d+)/);
+        const month = monthMatch ? Number.parseInt(monthMatch[1] || '', 10) : 0;
+
+        // 올해 입금액 합계 (SUMIFS 연도=올해)
+        if (year === currentYear) {
+          thisYearDeposit += investedVal;
+        }
+
+        // 작년 12월 잔액 (연초 시작 잔액)
+        if (year === prevYear && month === 12) {
+          startOfYearAsset = parseNumber(row[3]); // H열
+        }
       }
 
-      // 현재 연도/월에 해당하는 H열, Y열 값 찾기 = SUMIFS 로직
+      // 현재 연도/월에 해당하는 H열, K열, Y열 값 찾기 = SUMIFS 로직
       for (const row of accountHistoryRows) {
         if (!row || !Array.isArray(row)) continue;
 
@@ -320,8 +351,9 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         const month = Number.parseInt(monthMatch[1] || '', 10);
 
         if (month === currentMonth) {
-          // H열(index 3) = 계좌총액, Y열(index 20) = 누적수익률
+          // H열(index 3) = 계좌총액, K열(index 6) = 이번달 수익률, Y열(index 20) = 누적수익률
           totalAsset = parseNumber(row[3]);
+          thisMonthYieldFromSheet = parsePercent(row[6]);
           totalYield = parsePercent(row[20]);
           break;
         }
@@ -336,10 +368,26 @@ export async function getDashboardData(): Promise<DashboardData | null> {
           const assetVal = parseNumber(row[3]);
           if (assetVal > 0) {
             totalAsset = assetVal;
+            thisMonthYieldFromSheet = parsePercent(row[6]);
             totalYield = parsePercent(row[20]);
             break;
           }
         }
+      }
+
+      // 올해 수익률 계산: (현재잔액 - 연초잔액 - 올해입금) / 연초잔액 * 100
+      if (startOfYearAsset > 0 && totalAsset > 0) {
+        const thisYearProfit = totalAsset - startOfYearAsset - thisYearDeposit;
+        thisYearYieldFromSheet = (thisYearProfit / startOfYearAsset) * 100;
+      }
+    }
+
+    // 1번 시트 U9 누적수익률 우선 사용 (UNFORMATTED_VALUE: 소수점 형식)
+    if (yieldCell && yieldCell.length > 0 && yieldCell[0]?.length > 0) {
+      const rawYield = Number(yieldCell[0][0]);
+      if (!Number.isNaN(rawYield) && rawYield !== 0) {
+        // UNFORMATTED_VALUE: 1.569 = 156.9%, -0.03 = -3%
+        totalYield = Math.abs(rawYield) < 10 ? rawYield * 100 : rawYield;
       }
     }
 
@@ -561,6 +609,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       monthlyYieldComparison,
       monthlyYieldComparisonDollarApplied,
       majorIndexYieldComparison,
+      thisMonthYield: thisMonthYieldFromSheet !== undefined ? Number.parseFloat(thisMonthYieldFromSheet.toFixed(2)) : undefined,
+      thisYearYield: thisYearYieldFromSheet !== undefined ? Number.parseFloat(thisYearYieldFromSheet.toFixed(2)) : undefined,
       investmentDays,
       lastSyncAt: new Date().toISOString(),
       dividendByAccount,

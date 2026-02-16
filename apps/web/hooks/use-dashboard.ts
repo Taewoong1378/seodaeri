@@ -6,14 +6,18 @@ import { getDashboardData, syncPortfolio, type DashboardData } from '../app/acti
 
 /**
  * 대시보드 데이터를 가져오는 훅
+ * @param serverData - SSR에서 프리페치한 데이터 (스플래시 스크린 최적화용)
  */
-export function useDashboard() {
+export function useDashboard(serverData?: DashboardData | null) {
   return useQuery<DashboardData | null>({
     queryKey: queryKeys.dashboard,
     queryFn: () => getDashboardData(),
     staleTime: 60 * 1000, // 60초
     gcTime: 5 * 60 * 1000, // 5분
     refetchOnWindowFocus: true,
+    // SSR 프리페치 데이터가 있으면 즉시 사용 (클라이언트 fetch 스킵)
+    initialData: serverData ?? undefined,
+    initialDataUpdatedAt: serverData ? Date.now() : undefined,
   });
 }
 

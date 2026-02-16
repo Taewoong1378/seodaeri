@@ -161,9 +161,9 @@ function DashboardSkeleton() {
   );
 }
 
-export function DashboardContent() {
+export function DashboardContent({ serverData }: { serverData?: import('../../../app/actions/dashboard').DashboardData | null }) {
   const { data: session } = useSession();
-  const { data, isPending, error } = useDashboard();
+  const { data, isPending, error } = useDashboard(serverData);
   const { data: goalSettings } = useGoalSettings();
   const [goalModalType, setGoalModalType] = useState<"finalAsset" | "annualDeposit">(
     "finalAsset"
@@ -238,10 +238,13 @@ export function DashboardContent() {
             const thisMonthProfit = thisMonthData
               ? thisMonthData.profit - thisMonthData.loss
               : undefined;
+            // 시트에서 읽은 수익률 우선, 없으면 클라이언트 계산 fallback
             const thisMonthYield =
-              thisMonthProfit !== undefined && displayData.totalInvested > 0
-                ? (thisMonthProfit / displayData.totalInvested) * 100
-                : undefined;
+              displayData.thisMonthYield !== undefined
+                ? displayData.thisMonthYield
+                : thisMonthProfit !== undefined && displayData.totalInvested > 0
+                  ? (thisMonthProfit / displayData.totalInvested) * 100
+                  : undefined;
 
             // 올해 손익 계산 (모든 월 합산)
             const thisYearProfit =
@@ -251,10 +254,13 @@ export function DashboardContent() {
                     0
                   )
                 : undefined;
+            // 시트에서 읽은 수익률 우선, 없으면 클라이언트 계산 fallback
             const thisYearYield =
-              thisYearProfit !== undefined && displayData.totalInvested > 0
-                ? (thisYearProfit / displayData.totalInvested) * 100
-                : undefined;
+              displayData.thisYearYield !== undefined
+                ? displayData.thisYearYield
+                : thisYearProfit !== undefined && displayData.totalInvested > 0
+                  ? (thisYearProfit / displayData.totalInvested) * 100
+                  : undefined;
 
             return (
               <HeroCard

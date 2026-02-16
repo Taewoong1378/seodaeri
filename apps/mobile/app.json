@@ -2,7 +2,7 @@
   "expo": {
     "name": "굴림(Gulim)",
     "slug": "gulim-app",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "gulim",
@@ -22,7 +22,7 @@
         },
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "4"
+      "buildNumber": "5"
     },
     "android": {
       "adaptiveIcon": {
@@ -40,21 +40,19 @@
               "scheme": "gulim"
             }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ],
-      "versionCode": 2
+      "versionCode": 37
     },
     "plugins": [
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#D6E6F5",
-          "image": "./assets/splash.png",
-          "resizeMode": "cover"
+          "backgroundColor": "#ffffff",
+          "image": "./assets/splashscreen.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
         }
       ],
       "expo-apple-authentication"
