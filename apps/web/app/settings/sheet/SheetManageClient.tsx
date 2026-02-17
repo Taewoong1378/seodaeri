@@ -18,6 +18,7 @@ import {
   FolderOpen,
   Loader2,
   RefreshCw,
+  Unlink,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -28,6 +29,7 @@ import {
   type StandaloneDataInfo,
   checkStandaloneData,
   connectSheetById,
+  disconnectSheet,
   validateSheet,
 } from "../../actions/onboarding";
 
@@ -74,6 +76,8 @@ export function SheetManageClient({
   } | null>(null);
   const [validationError, setValidationError] =
     useState<SheetValidationResult | null>(null);
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   // Standalone 데이터 존재 여부 확인
   useEffect(() => {
@@ -280,6 +284,26 @@ export function SheetManageClient({
     setLoading(null);
   };
 
+  // 시트 연동 해제
+  const handleDisconnect = async () => {
+    setDisconnecting(true);
+    try {
+      const result = await disconnectSheet();
+      if (result.success) {
+        queryClient.clear();
+        router.push("/dashboard");
+        router.refresh();
+      } else {
+        setError(result.error || "연동 해제에 실패했습니다.");
+      }
+    } catch {
+      setError("연동 해제 중 오류가 발생했습니다.");
+    } finally {
+      setDisconnecting(false);
+      setShowDisconnectModal(false);
+    }
+  };
+
   const sheetUrl = currentSheetId
     ? `https://docs.google.com/spreadsheets/d/${currentSheetId}`
     : null;
@@ -374,6 +398,34 @@ export function SheetManageClient({
         </CardContent>
       </Card>
 
+      {/* 시트 연동 해제 */}
+      {connected && currentSheetId && (
+        <Card className="border-border bg-card shadow-none rounded-[24px]">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-foreground flex items-center gap-3 text-lg">
+              <div className="p-2 rounded-lg bg-red-500/10">
+                <Unlink className="w-5 h-5 text-red-500" />
+              </div>
+              시트 연동 해제
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              시트 연동을 해제하고 앱 자체 데이터(Standalone) 모드로 전환합니다.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              onClick={() => setShowDisconnectModal(true)}
+              disabled={disconnecting}
+              className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+            >
+              <Unlink className="w-4 h-4" />
+              연동 해제하기
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Success Message */}
       {success && (
         <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
@@ -464,6 +516,60 @@ export function SheetManageClient({
                   </>
                 ) : (
                   "시트 연동하기"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Disconnect Confirm Modal */}
+      {showDisconnectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-full bg-red-500/10 shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-foreground">
+                  시트 연동을 해제하시겠습니까?
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  시트 연동을 해제하면 Standalone 모드로 전환됩니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="p-3 rounded-lg bg-muted/50 border border-border space-y-1.5">
+                <p>• 스프레드시트의 데이터가 더 이상 대시보드에 표시되지 않습니다.</p>
+                <p>• 앱에서 직접 입력한 포트폴리오/배당/입출금 데이터가 사용됩니다.</p>
+                <p>• 언제든 다시 시트를 연동할 수 있습니다.</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowDisconnectModal(false)}
+                className="flex-1"
+                disabled={disconnecting}
+              >
+                취소
+              </Button>
+              <Button
+                onClick={handleDisconnect}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                disabled={disconnecting}
+              >
+                {disconnecting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    해제 중...
+                  </>
+                ) : (
+                  "연동 해제"
                 )}
               </Button>
             </div>

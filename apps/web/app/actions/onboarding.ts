@@ -469,3 +469,41 @@ export async function connectSheetById(sheetId: string): Promise<OnboardingResul
     return { success: false, error: '시트 연동 중 오류가 발생했습니다.' };
   }
 }
+
+/**
+ * 시트 연동 해제 (Standalone 모드로 전환)
+ * spreadsheet_id를 null로 설정
+ */
+export async function disconnectSheet(): Promise<{ success: boolean; error?: string }> {
+  const session = await auth();
+
+  if (!session?.user?.email) {
+    return { success: false, error: '로그인이 필요합니다.' };
+  }
+
+  try {
+    const supabase = createServiceClient();
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        spreadsheet_id: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('email', session.user.email);
+
+    if (updateError) {
+      console.error('Failed to disconnect sheet:', updateError);
+      return { success: false, error: '시트 연동 해제에 실패했습니다.' };
+    }
+
+    revalidatePath('/dashboard');
+    revalidatePath('/settings/sheet');
+    revalidatePath('/onboarding');
+
+    return { success: true };
+  } catch (error) {
+    console.error('disconnectSheet error:', error);
+    return { success: false, error: '시트 연동 해제 중 오류가 발생했습니다.' };
+  }
+}
