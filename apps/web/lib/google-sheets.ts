@@ -1792,6 +1792,12 @@ export function parsePerformanceComparisonData(rows: any[]): PerformanceComparis
  * 수익률 비교 바 차트 데이터 타입
  */
 export interface YieldComparisonData {
+  cumulativeYield: {
+    account: number;
+    kospi: number;
+    sp500: number;
+    nasdaq: number;
+  };
   thisYearYield: {
     account: number;
     kospi: number;
@@ -1810,6 +1816,13 @@ export interface YieldComparisonData {
  * 수익률 비교(달러환율 적용) 바 차트 데이터 타입
  */
 export interface YieldComparisonDollarData {
+  cumulativeYield: {
+    account: number;
+    kospi: number;
+    sp500: number;
+    nasdaq: number;
+    dollar: number;
+  };
   thisYearYield: {
     account: number;
     kospi: number;
@@ -2038,12 +2051,11 @@ export function parseYieldComparisonData(rows: any[]): YieldComparisonData | nul
 
   let years = 1;
   if (firstDate) {
-    const [firstYY, firstMM] = firstDate.split('.').map(Number);
+    const [firstYY] = firstDate.split('.').map(Number);
     const firstYear = 2000 + (firstYY || 0);
-    const firstMonth = firstMM || 1;
     const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    years = Math.max(1, (currentYear - firstYear) + (currentMonth - firstMonth) / 12);
+    // 시트와 동일하게 연도 차이만 사용 (월 무시)
+    years = Math.max(1, currentYear - firstYear);
   }
 
   // 연평균 수익률 계산: (1 + 누적수익률)^(1/연수) - 1
@@ -2064,6 +2076,12 @@ export function parseYieldComparisonData(rows: any[]): YieldComparisonData | nul
   const round = (n: number) => Math.round(n * 10) / 10;
 
   return {
+    cumulativeYield: {
+      account: round(cumulativeYield),
+      kospi: round(cumulativeKospi),
+      sp500: round(cumulativeSp500),
+      nasdaq: round(cumulativeNasdaq),
+    },
     thisYearYield: {
       account: round(thisYearYield.account),
       kospi: round(thisYearYield.kospi),
@@ -2263,12 +2281,11 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
 
   let years = 1;
   if (firstDate) {
-    const [firstYY, firstMM] = firstDate.split('.').map(Number);
+    const [firstYY] = firstDate.split('.').map(Number);
     const firstYear = 2000 + (firstYY || 0);
-    const firstMonth = firstMM || 1;
     const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    years = Math.max(1, (currentYear - firstYear) + (currentMonth - firstMonth) / 12);
+    // 시트와 동일하게 연도 차이만 사용 (월 무시)
+    years = Math.max(1, currentYear - firstYear);
   }
 
   // 연평균 수익률 계산
@@ -2289,6 +2306,13 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
   const round = (n: number) => Math.round(n * 10) / 10;
 
   const result: YieldComparisonDollarData = {
+    cumulativeYield: {
+      account: round(cumulativeYield),
+      kospi: round(cumulativeKospi),
+      sp500: round(cumulativeSp500),
+      nasdaq: round(cumulativeNasdaq),
+      dollar: round(cumulativeDollar),
+    },
     thisYearYield: {
       account: round(thisYearYield.account),
       kospi: round(thisYearYield.kospi),

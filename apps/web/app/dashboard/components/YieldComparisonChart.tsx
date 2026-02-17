@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -25,105 +25,81 @@ interface YieldComparisonChartProps {
   dollarData?: YieldComparisonDollarData | null;
 }
 
-const COLORS = {
-  krw: "#ef4444", // red - 원화
-  dollar: "#3b82f6", // blue - 달러환율
-};
+type RateMode = "basic" | "dollar";
 
 type ChartDatum = {
   name: string;
-  krw: number | null;
-  dollar: number | null;
+  value: number | null;
 };
 
-// 누적수익률 차트 데이터 생성
-function buildCumulativeData(
-  data: YieldComparisonData,
-  dollarData?: YieldComparisonDollarData | null
-): ChartDatum[] {
-  const base: ChartDatum[] = [
-    {
-      name: "계좌",
-      krw: data.thisYearYield.account,
-      dollar: dollarData?.thisYearYield.account ?? null,
-    },
-    {
-      name: "KOSPI",
-      krw: data.thisYearYield.kospi,
-      dollar: dollarData?.thisYearYield.kospi ?? null,
-    },
-    {
-      name: "S&P500",
-      krw: data.thisYearYield.sp500,
-      dollar: dollarData?.thisYearYield.sp500 ?? null,
-    },
-    {
-      name: "NASDAQ",
-      krw: data.thisYearYield.nasdaq,
-      dollar: dollarData?.thisYearYield.nasdaq ?? null,
-    },
-  ];
-  if (dollarData) {
-    base.push({
-      name: "DOLLAR",
-      krw: null,
-      dollar: dollarData.thisYearYield.dollar,
-    });
-  }
-  return base;
-}
+// 바 색상: 계좌는 녹색, 나머지는 파란색 계열
+const BAR_COLORS: Record<string, string> = {
+  "계좌": "#22c55e",
+  "KOSPI": "#3b82f6",
+  "S&P500": "#ef4444",
+  "NASDAQ": "#9ca3af",
+  "DOLLAR": "#8b5cf6",
+};
 
-// 연평균 수익률 차트 데이터 생성
-function buildAnnualizedData(
-  data: YieldComparisonData,
-  dollarData?: YieldComparisonDollarData | null
-): ChartDatum[] {
-  const base: ChartDatum[] = [
-    {
-      name: "계좌",
-      krw: data.annualizedYield.account,
-      dollar: dollarData?.annualizedYield.account ?? null,
-    },
-    {
-      name: "KOSPI",
-      krw: data.annualizedYield.kospi,
-      dollar: dollarData?.annualizedYield.kospi ?? null,
-    },
-    {
-      name: "S&P500",
-      krw: data.annualizedYield.sp500,
-      dollar: dollarData?.annualizedYield.sp500 ?? null,
-    },
-    {
-      name: "NASDAQ",
-      krw: data.annualizedYield.nasdaq,
-      dollar: dollarData?.annualizedYield.nasdaq ?? null,
-    },
-  ];
-  if (dollarData) {
-    base.push({
-      name: "DOLLAR",
-      krw: null,
-      dollar: dollarData.annualizedYield.dollar,
-    });
-  }
-  return base;
-}
-
-// 바 색상 결정
-const getBarColor = (value: number | null, baseColor: string) => {
+const getBarColor = (name: string, value: number | null) => {
   if (value === null) return "transparent";
-  return value >= 0 ? baseColor : "#94a3b8";
+  if (value < 0) return "#94a3b8";
+  return BAR_COLORS[name] || "#3b82f6";
 };
 
 // 데이터 레이블 포맷
 const formatLabel = (value: number) =>
   `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
 
-// 공유 바 차트 컴포넌트
-function DualBarChart({
+// 누적수익률 차트 데이터 생성
+function buildCumulativeData(
+  data: YieldComparisonData,
+  dollarData: YieldComparisonDollarData | null | undefined,
+  rateMode: RateMode
+): ChartDatum[] {
+  const isDollar = rateMode === "dollar" && dollarData;
+  const source = isDollar ? dollarData.cumulativeYield : data.cumulativeYield;
+
+  const result: ChartDatum[] = [
+    { name: "계좌", value: source.account },
+    { name: "KOSPI", value: source.kospi },
+    { name: "S&P500", value: source.sp500 },
+    { name: "NASDAQ", value: source.nasdaq },
+  ];
+
+  if (isDollar && dollarData.cumulativeYield.dollar != null) {
+    result.push({ name: "DOLLAR", value: dollarData.cumulativeYield.dollar });
+  }
+
+  return result;
+}
+
+// 연평균 수익률 차트 데이터 생성
+function buildAnnualizedData(
+  data: YieldComparisonData,
+  dollarData: YieldComparisonDollarData | null | undefined,
+  rateMode: RateMode
+): ChartDatum[] {
+  const isDollar = rateMode === "dollar" && dollarData;
+  const source = isDollar ? dollarData.annualizedYield : data.annualizedYield;
+
+  const result: ChartDatum[] = [
+    { name: "계좌", value: source.account },
+    { name: "KOSPI", value: source.kospi },
+    { name: "S&P500", value: source.sp500 },
+    { name: "NASDAQ", value: source.nasdaq },
+  ];
+
+  if (isDollar && dollarData.annualizedYield.dollar != null) {
+    result.push({ name: "DOLLAR", value: dollarData.annualizedYield.dollar });
+  }
+
+  return result;
+}
+
+// 싱글 바 차트 컴포넌트
+function SingleBarChart({
   chartData,
-  hasDollar,
   height = "100%",
   showYAxis = false,
   showTooltip = true,
@@ -132,7 +108,6 @@ function DualBarChart({
   margin,
 }: {
   chartData: ChartDatum[];
-  hasDollar: boolean;
   height?: string | number;
   showYAxis?: boolean;
   showTooltip?: boolean;
@@ -142,17 +117,19 @@ function DualBarChart({
 }) {
   const isCramped = chartData.length >= 5;
   const fontSize = fontSizeProp ?? (isCramped ? 9 : 11);
-  const labelFontSize = labelFontSizeProp ?? (isCramped ? 8 : 9);
+  const labelFontSize = labelFontSizeProp ?? (isCramped ? 8 : 10);
   const defaultMargin = margin || {
-    top: 20,
+    top: 24,
     right: isCramped ? 16 : 10,
     left: showYAxis ? 10 : isCramped ? 4 : -10,
     bottom: 0,
   };
 
-  const makeLabelRenderer = (color: string) => (props: any) => {
-    const { x, y, width, value } = props;
+  const makeLabelRenderer = () => (props: any) => {
+    const { x, y, width, value, index } = props;
     if (value === undefined || value === null) return null;
+    const entry = chartData[index];
+    const color = getBarColor(entry?.name || "", value);
     return (
       <text
         x={x + width / 2}
@@ -172,8 +149,7 @@ function DualBarChart({
       <BarChart
         data={chartData}
         margin={defaultMargin}
-        barCategoryGap={isCramped ? "15%" : "20%"}
-        barGap={isCramped ? 8 : 10}
+        barCategoryGap={isCramped ? "20%" : "25%"}
       >
         <CartesianGrid
           strokeDasharray="3 3"
@@ -203,6 +179,10 @@ function DualBarChart({
             cursor={{ fill: "rgba(16, 185, 129, 0.08)" }}
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null;
+              const entry = payload[0];
+              if (!entry || entry.value === null) return null;
+              const value = entry.value as number;
+              const color = getBarColor(String(label || ""), value);
               return (
                 <div
                   style={{
@@ -222,143 +202,99 @@ function DualBarChart({
                   >
                     {label}
                   </p>
-                  {payload.map((entry: any) => {
-                    if (entry.value === null) return null;
-                    const name =
-                      entry.dataKey === "krw" ? "원화 기준" : "달러환율 적용";
-                    const value = entry.value as number;
-                    const color =
-                      entry.dataKey === "krw" ? COLORS.krw : COLORS.dollar;
-                    return (
-                      <div
-                        key={entry.dataKey}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          padding: "4px 0",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: 2,
-                            backgroundColor: color,
-                            flexShrink: 0,
-                          }}
-                        />
-                        <span style={{ color: "#64748b", fontSize: 12 }}>
-                          {name}
-                        </span>
-                        <span
-                          style={{
-                            color: "#1e293b",
-                            fontSize: 12,
-                            fontWeight: 600,
-                            marginLeft: "auto",
-                          }}
-                        >
-                          {value >= 0 ? "+" : ""}
-                          {value.toFixed(1)}%
-                        </span>
-                      </div>
-                    );
-                  })}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "4px 0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 2,
+                        backgroundColor: color,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span
+                      style={{
+                        color: "#1e293b",
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {value >= 0 ? "+" : ""}
+                      {value.toFixed(1)}%
+                    </span>
+                  </div>
                 </div>
               );
             }}
           />
         )}
         <Bar
-          dataKey="krw"
-          fill={COLORS.krw}
+          dataKey="value"
           radius={[4, 4, 0, 0]}
-          maxBarSize={isCramped ? 28 : 40}
+          maxBarSize={isCramped ? 36 : 48}
         >
           <LabelList
-            dataKey="krw"
+            dataKey="value"
             position="top"
-            content={makeLabelRenderer(COLORS.krw)}
+            content={makeLabelRenderer()}
           />
           {chartData.map((entry) => (
             <Cell
-              key={`krw-${entry.name}`}
-              fill={getBarColor(entry.krw, COLORS.krw)}
+              key={entry.name}
+              fill={getBarColor(entry.name, entry.value)}
             />
           ))}
         </Bar>
-        {hasDollar && (
-          <Bar
-            dataKey="dollar"
-            fill={COLORS.dollar}
-            radius={[4, 4, 0, 0]}
-            maxBarSize={isCramped ? 28 : 40}
-          >
-            <LabelList
-              dataKey="dollar"
-              position="top"
-              content={makeLabelRenderer(COLORS.dollar)}
-            />
-            {chartData.map((entry) => (
-              <Cell
-                key={`dollar-${entry.name}`}
-                fill={getBarColor(entry.dollar, COLORS.dollar)}
-              />
-            ))}
-          </Bar>
-        )}
       </BarChart>
     </ResponsiveContainer>
   );
 }
 
-// 레전드
-function ChartLegend({ hasDollar }: { hasDollar: boolean }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-1.5">
-        <div
-          className="w-2.5 h-2.5 rounded-sm"
-          style={{ backgroundColor: COLORS.krw }}
-        />
-        <span className="text-[10px] text-muted-foreground">원화 기준</span>
-      </div>
-      {hasDollar && (
-        <div className="flex items-center gap-1.5">
-          <div
-            className="w-2.5 h-2.5 rounded-sm"
-            style={{ backgroundColor: COLORS.dollar }}
-          />
-          <span className="text-[10px] text-muted-foreground">
-            달러환율 적용
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
+// 기본/환율 토글 버튼
+function RateModeToggle({
+  rateMode,
+  setRateMode,
+  size = "sm",
+}: {
+  rateMode: RateMode;
+  setRateMode: (mode: RateMode) => void;
+  size?: "sm" | "md";
+}) {
+  const px = size === "sm" ? "px-2" : "px-3";
+  const py = size === "sm" ? "py-0.5" : "py-1";
+  const text = size === "sm" ? "text-[10px]" : "text-xs";
 
-// 모달 레전드 (인라인 스타일)
-function ModalLegend({ hasDollar }: { hasDollar: boolean }) {
   return (
-    <div className="flex items-center gap-4">
-      <div className="flex items-center gap-1.5">
-        <div
-          className="w-3 h-3 rounded-sm"
-          style={{ backgroundColor: COLORS.krw }}
-        />
-        <span className="text-xs text-muted-foreground">원화 기준</span>
-      </div>
-      {hasDollar && (
-        <div className="flex items-center gap-1.5">
-          <div
-            className="w-3 h-3 rounded-sm"
-            style={{ backgroundColor: COLORS.dollar }}
-          />
-          <span className="text-xs text-muted-foreground">달러환율 적용</span>
-        </div>
-      )}
+    <div className="flex items-center gap-0.5 bg-muted/50 rounded-lg p-0.5">
+      <button
+        type="button"
+        onClick={() => setRateMode("basic")}
+        className={`${px} ${py} ${text} font-medium rounded-md transition-all ${
+          rateMode === "basic"
+            ? "bg-background text-foreground shadow-sm"
+            : "text-muted-foreground"
+        }`}
+      >
+        기본
+      </button>
+      <button
+        type="button"
+        onClick={() => setRateMode("dollar")}
+        className={`${px} ${py} ${text} font-medium rounded-md transition-all ${
+          rateMode === "dollar"
+            ? "bg-background text-foreground shadow-sm"
+            : "text-muted-foreground"
+        }`}
+      >
+        환율
+      </button>
     </div>
   );
 }
@@ -368,12 +304,12 @@ function HiddenCaptureChart({
   chartRef,
   title,
   chartData,
-  hasDollar,
+  rateModeLabel,
 }: {
   chartRef: React.RefObject<HTMLDivElement | null>;
   title: string;
   chartData: ChartDatum[];
-  hasDollar: boolean;
+  rateModeLabel: string;
 }) {
   return (
     <div
@@ -400,48 +336,12 @@ function HiddenCaptureChart({
             margin: 0,
           }}
         >
-          {title}
+          {title} ({rateModeLabel})
         </h3>
       </div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "24px",
-          marginBottom: "16px",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div
-            style={{
-              width: "14px",
-              height: "14px",
-              borderRadius: "2px",
-              backgroundColor: COLORS.krw,
-            }}
-          />
-          <span style={{ fontSize: "13px", color: "#64748b" }}>원화 기준</span>
-        </div>
-        {hasDollar && (
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <div
-              style={{
-                width: "14px",
-                height: "14px",
-                borderRadius: "2px",
-                backgroundColor: COLORS.dollar,
-              }}
-            />
-            <span style={{ fontSize: "13px", color: "#64748b" }}>
-              달러환율 적용
-            </span>
-          </div>
-        )}
-      </div>
-      <div style={{ width: "100%", height: "350px" }}>
-        <DualBarChart
+      <div style={{ width: "100%", height: "380px" }}>
+        <SingleBarChart
           chartData={chartData}
-          hasDollar={hasDollar}
           showYAxis
           showTooltip={false}
           fontSize={14}
@@ -460,7 +360,9 @@ export function CumulativeYieldComparisonChart({
 }: YieldComparisonChartProps) {
   const hiddenChartRef = useRef<HTMLDivElement>(null);
   const hasDollar = !!dollarData;
-  const chartData = buildCumulativeData(data, dollarData);
+  const [rateMode, setRateMode] = useState<RateMode>("basic");
+  const chartData = buildCumulativeData(data, dollarData, rateMode);
+  const rateModeLabel = rateMode === "dollar" ? "환율 적용" : "기본";
 
   return (
     <div className="space-y-3">
@@ -470,19 +372,29 @@ export function CumulativeYieldComparisonChart({
           누적수익률 비교
         </h4>
         <div className="flex items-center gap-2">
+          {hasDollar && (
+            <RateModeToggle rateMode={rateMode} setRateMode={setRateMode} />
+          )}
           <ShareChartButton
             chartRef={hiddenChartRef}
-            title="누적수익률 비교"
+            title={`누적수익률 비교 (${rateModeLabel})`}
           />
-          <LandscapeChartModal title="누적수익률 비교">
+          <LandscapeChartModal title={`누적수익률 비교 (${rateModeLabel})`}>
             <div className="flex flex-col w-full h-full">
-              <div className="flex items-center justify-end mb-2 shrink-0">
-                <ModalLegend hasDollar={hasDollar} />
+              <div className="flex items-center justify-between mb-2 shrink-0">
+                {hasDollar ? (
+                  <RateModeToggle
+                    rateMode={rateMode}
+                    setRateMode={setRateMode}
+                    size="md"
+                  />
+                ) : (
+                  <div />
+                )}
               </div>
               <div className="flex-1 min-h-0">
-                <DualBarChart
+                <SingleBarChart
                   chartData={chartData}
-                  hasDollar={hasDollar}
                   showYAxis
                   fontSize={14}
                   labelFontSize={12}
@@ -494,14 +406,9 @@ export function CumulativeYieldComparisonChart({
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center justify-end">
-        <ChartLegend hasDollar={hasDollar} />
-      </div>
-
       {/* Chart */}
-      <div className={hasDollar ? "h-[260px]" : "h-[240px]"}>
-        <DualBarChart chartData={chartData} hasDollar={hasDollar} />
+      <div className="h-[240px]">
+        <SingleBarChart chartData={chartData} />
       </div>
 
       {/* Hidden Chart for Capture */}
@@ -509,7 +416,7 @@ export function CumulativeYieldComparisonChart({
         chartRef={hiddenChartRef}
         title="누적수익률 비교"
         chartData={chartData}
-        hasDollar={hasDollar}
+        rateModeLabel={rateModeLabel}
       />
     </div>
   );
@@ -522,7 +429,9 @@ export function AnnualizedYieldComparisonChart({
 }: YieldComparisonChartProps) {
   const hiddenChartRef = useRef<HTMLDivElement>(null);
   const hasDollar = !!dollarData;
-  const chartData = buildAnnualizedData(data, dollarData);
+  const [rateMode, setRateMode] = useState<RateMode>("basic");
+  const chartData = buildAnnualizedData(data, dollarData, rateMode);
+  const rateModeLabel = rateMode === "dollar" ? "환율 적용" : "기본";
 
   return (
     <div className="space-y-3">
@@ -532,19 +441,29 @@ export function AnnualizedYieldComparisonChart({
           연평균 수익률 비교
         </h4>
         <div className="flex items-center gap-2">
+          {hasDollar && (
+            <RateModeToggle rateMode={rateMode} setRateMode={setRateMode} />
+          )}
           <ShareChartButton
             chartRef={hiddenChartRef}
-            title="연평균 수익률 비교"
+            title={`연평균 수익률 비교 (${rateModeLabel})`}
           />
-          <LandscapeChartModal title="연평균 수익률 비교">
+          <LandscapeChartModal title={`연평균 수익률 비교 (${rateModeLabel})`}>
             <div className="flex flex-col w-full h-full">
-              <div className="flex items-center justify-end mb-2 shrink-0">
-                <ModalLegend hasDollar={hasDollar} />
+              <div className="flex items-center justify-between mb-2 shrink-0">
+                {hasDollar ? (
+                  <RateModeToggle
+                    rateMode={rateMode}
+                    setRateMode={setRateMode}
+                    size="md"
+                  />
+                ) : (
+                  <div />
+                )}
               </div>
               <div className="flex-1 min-h-0">
-                <DualBarChart
+                <SingleBarChart
                   chartData={chartData}
-                  hasDollar={hasDollar}
                   showYAxis
                   fontSize={14}
                   labelFontSize={12}
@@ -556,14 +475,9 @@ export function AnnualizedYieldComparisonChart({
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center justify-end">
-        <ChartLegend hasDollar={hasDollar} />
-      </div>
-
       {/* Chart */}
-      <div className={hasDollar ? "h-[260px]" : "h-[240px]"}>
-        <DualBarChart chartData={chartData} hasDollar={hasDollar} />
+      <div className="h-[240px]">
+        <SingleBarChart chartData={chartData} />
       </div>
 
       {/* Hidden Chart for Capture */}
@@ -571,7 +485,7 @@ export function AnnualizedYieldComparisonChart({
         chartRef={hiddenChartRef}
         title="연평균 수익률 비교"
         chartData={chartData}
-        hasDollar={hasDollar}
+        rateModeLabel={rateModeLabel}
       />
     </div>
   );

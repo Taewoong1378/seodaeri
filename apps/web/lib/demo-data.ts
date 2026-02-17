@@ -269,6 +269,12 @@ export const DEMO_MONTHLY_PROFIT_LOSS: MonthlyProfitLoss[] = [
 
 // 수익률 비교 (바 차트)
 export const DEMO_YIELD_COMPARISON: YieldComparisonData = {
+  cumulativeYield: {
+    account: 150.7,
+    kospi: 12.5,
+    sp500: 129.4,
+    nasdaq: 175.8,
+  },
   thisYearYield: {
     account: 18.5,
     kospi: 1.8,
@@ -285,6 +291,13 @@ export const DEMO_YIELD_COMPARISON: YieldComparisonData = {
 
 // 수익률 비교 (달러환율 적용)
 export const DEMO_YIELD_COMPARISON_DOLLAR: YieldComparisonDollarData = {
+  cumulativeYield: {
+    account: 150.7,
+    kospi: 12.5,
+    sp500: 178.9,
+    nasdaq: 230.5,
+    dollar: 18.3,
+  },
   thisYearYield: {
     account: 18.5,
     kospi: 1.8,
