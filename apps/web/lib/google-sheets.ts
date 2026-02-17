@@ -1688,6 +1688,8 @@ export interface PerformanceComparisonData {
   kospi: number; // 코스피 수익률 (%)
   sp500: number; // S&P500 수익률 (%)
   nasdaq: number; // 나스닥 수익률 (%)
+  sp500Dollar?: number; // S&P500 달러환율 적용 수익률 (%)
+  nasdaqDollar?: number; // 나스닥 달러환율 적용 수익률 (%)
 }
 
 /**
@@ -1745,6 +1747,10 @@ export function parsePerformanceComparisonData(rows: any[]): PerformanceComparis
     const sp500Idx = parsePercent(row[10]);
     const nasdaqIdx = parsePercent(row[11]);
 
+    // 달러환율 적용 지수 (enrichedRows에서만 존재)
+    const sp500DollarIdx = parsePercent(row[28]); // AI열: S&P500 달러환율 적용
+    const nasdaqDollarIdx = parsePercent(row[29]); // AJ열: NASDAQ 달러환율 적용
+
     // 인덱스 값을 백분율 변화로 변환 (100 -> 0%, 150 -> 50%)
     const portfolio = portfolioIdx > 0 ? portfolioIdx - 100 : 0;
     const kospi = kospiIdx > 0 ? kospiIdx - 100 : 0;
@@ -1754,13 +1760,23 @@ export function parsePerformanceComparisonData(rows: any[]): PerformanceComparis
     // 미래 데이터(모든 인덱스가 0)는 제외
     if (portfolioIdx === 0 && kospiIdx === 0 && sp500Idx === 0 && nasdaqIdx === 0) continue;
 
-    results.push({
+    const item: PerformanceComparisonData = {
       date: dateCell,
       portfolio: Math.round(portfolio * 10) / 10,
       kospi: Math.round(kospi * 10) / 10,
       sp500: Math.round(sp500 * 10) / 10,
       nasdaq: Math.round(nasdaq * 10) / 10,
-    });
+    };
+
+    // 달러환율 적용 값이 있으면 추가
+    if (sp500DollarIdx > 0) {
+      item.sp500Dollar = Math.round((sp500DollarIdx - 100) * 10) / 10;
+    }
+    if (nasdaqDollarIdx > 0) {
+      item.nasdaqDollar = Math.round((nasdaqDollarIdx - 100) * 10) / 10;
+    }
+
+    results.push(item);
   }
 
   console.log('[parsePerformanceComparisonData] Parsed records:', results.length);
@@ -2306,22 +2322,6 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
 export function parseMonthlyYieldComparisonData(rows: any[]): MonthlyYieldComparisonData | null {
   if (!rows || rows.length === 0) return null;
 
-  const parsePercent = (val: any): number => {
-    if (!val || val === '#NUM!' || val === '#VALUE!' || val === '#DIV/0!' || val === '#REF!') return 0;
-    const str = String(val);
-
-    // 음수 표현 감지: ▼
-    const isNegative = str.includes('▼') || str.includes('▽');
-
-    const cleaned = str.replace(/[%,\s▼▽]/g, '');
-    let num = Number.parseFloat(cleaned);
-    if (Number.isNaN(num)) return 0;
-
-    if (isNegative && num > 0) num = -num;
-
-    return num;
-  };
-
   const parseNumber = (val: any): number => {
     if (!val || val === '#NUM!' || val === '#VALUE!') return 0;
     const str = String(val).replace(/[₩$,\s]/g, '');
@@ -2337,7 +2337,6 @@ export function parseMonthlyYieldComparisonData(rows: any[]): MonthlyYieldCompar
   // 컬럼 인덱스 (E열 시작 기준)
   const COL_YEAR = 0; // E열 - 연도
   const COL_MONTH = 1; // F열 - 월
-  const COL_MONTHLY_YIELD = 6; // K열 - 월수익률
   const COL_ACCOUNT_IDX = 10; // O열 - 계좌종합 지수
   const COL_KOSPI_IDX = 11; // P열 - 코스피 지수
   const COL_SP500_IDX = 12; // Q열 - S&P500 지수
@@ -2416,13 +2415,13 @@ export function parseMonthlyYieldComparisonData(rows: any[]): MonthlyYieldCompar
   if (!currentRow) return null;
 
   // 현재 데이터
-  const accountMonthlyYield = parsePercent(currentRow[COL_MONTHLY_YIELD]);
   const accountIdx = parseNumber(currentRow[COL_ACCOUNT_IDX]);
   const kospiIdx = parseNumber(currentRow[COL_KOSPI_IDX]);
   const sp500Idx = parseNumber(currentRow[COL_SP500_IDX]);
   const nasdaqIdx = parseNumber(currentRow[COL_NASDAQ_IDX]);
 
   // 전월 데이터
+  const prevAccountIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_ACCOUNT_IDX]) : accountIdx;
   const prevKospiIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_KOSPI_IDX]) : kospiIdx;
   const prevSp500Idx = prevMonthRow ? parseNumber(prevMonthRow[COL_SP500_IDX]) : sp500Idx;
   const prevNasdaqIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_NASDAQ_IDX]) : nasdaqIdx;
@@ -2433,9 +2432,10 @@ export function parseMonthlyYieldComparisonData(rows: any[]): MonthlyYieldCompar
   const prevYearSp500Idx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_SP500_IDX]) : 100;
   const prevYearNasdaqIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_NASDAQ_IDX]) : 100;
 
-  // 이번 달 수익률 계산
+  // 이번 달 수익률 계산 (인덱스 기반 - 다른 지수와 동일 방식)
+  // K열 월수익률은 UNFORMATTED_VALUE로 소수점 형태(0.027=2.7%)이므로 사용하지 않음
   const currentMonthYield = {
-    account: accountMonthlyYield,
+    account: prevAccountIdx > 0 && accountIdx > 0 ? ((accountIdx / prevAccountIdx) - 1) * 100 : 0,
     kospi: prevKospiIdx > 0 ? ((kospiIdx / prevKospiIdx) - 1) * 100 : 0,
     sp500: prevSp500Idx > 0 ? ((sp500Idx / prevSp500Idx) - 1) * 100 : 0,
     nasdaq: prevNasdaqIdx > 0 ? ((nasdaqIdx / prevNasdaqIdx) - 1) * 100 : 0,
@@ -2488,17 +2488,6 @@ export function parseMonthlyYieldComparisonData(rows: any[]): MonthlyYieldCompar
 export function parseMonthlyYieldComparisonWithDollar(rows: any[]): MonthlyYieldComparisonData | null {
   if (!rows || rows.length === 0) return null;
 
-  const parsePercent = (val: any): number => {
-    if (!val || val === '#NUM!' || val === '#VALUE!' || val === '#DIV/0!' || val === '#REF!') return 0;
-    const str = String(val);
-    const isNegative = str.includes('▼') || str.includes('▽');
-    const cleaned = str.replace(/[%,\s▼▽]/g, '');
-    let num = Number.parseFloat(cleaned);
-    if (Number.isNaN(num)) return 0;
-    if (isNegative && num > 0) num = -num;
-    return num;
-  };
-
   const parseNumber = (val: any): number => {
     if (!val || val === '#NUM!' || val === '#VALUE!') return 0;
     const str = String(val).replace(/[₩$,\s]/g, '');
@@ -2521,7 +2510,6 @@ export function parseMonthlyYieldComparisonWithDollar(rows: any[]): MonthlyYield
 
   // G17:AQ78 범위 기준 컬럼 인덱스 (G=0)
   const COL_DATE = 0; // G열 - 날짜
-  const COL_MONTHLY_YIELD = 4; // K열 - 월수익률
   const COL_ACCOUNT_IDX = 8; // O열 - 계좌종합 지수
   const COL_KOSPI_IDX = 9; // P열 - 코스피 지수
   const COL_SP500_IDX = 10; // Q열 - S&P500 지수
@@ -2583,7 +2571,6 @@ export function parseMonthlyYieldComparisonWithDollar(rows: any[]): MonthlyYield
   }
 
   // 현재 데이터
-  const accountMonthlyYield = parsePercent(currentRow[COL_MONTHLY_YIELD]);
   const accountIdx = parseNumber(currentRow[COL_ACCOUNT_IDX]);
   const kospiIdx = parseNumber(currentRow[COL_KOSPI_IDX]);
   const sp500Idx = parseNumber(currentRow[COL_SP500_IDX]);
@@ -2604,22 +2591,10 @@ export function parseMonthlyYieldComparisonWithDollar(rows: any[]): MonthlyYield
   const prevYearNasdaqIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_NASDAQ_IDX]) : 100;
   const prevYearDollarRate = prevYearDecRow ? parseNumber(prevYearDecRow[COL_DOLLAR]) : dollarRate;
 
-  // 이번 달 수익률
-  // 계좌 월수익률: K열 값 우선, 없으면(월 중간) 인덱스로 직접 계산
-  const accountIdxYield = prevAccountIdx > 0 && accountIdx > 0
-    ? ((accountIdx / prevAccountIdx) - 1) * 100
-    : 0;
-  const accountCurrentMonthYield = accountMonthlyYield !== 0
-    ? accountMonthlyYield
-    : accountIdxYield;
-
-  console.log('[parseMonthlyYieldComparisonWithDollar] account debug:', {
-    accountMonthlyYield, accountIdx, prevAccountIdx, accountIdxYield, accountCurrentMonthYield,
-    prevMonthRowFound: !!prevMonthRow,
-  });
-
+  // 이번 달 수익률 (인덱스 기반 - 다른 지수와 동일 방식)
+  // K열 월수익률은 UNFORMATTED_VALUE로 소수점 형태(0.027=2.7%)이므로 사용하지 않음
   const currentMonthYield = {
-    account: accountCurrentMonthYield,
+    account: prevAccountIdx > 0 && accountIdx > 0 ? ((accountIdx / prevAccountIdx) - 1) * 100 : 0,
     kospi: prevKospiIdx > 0 ? ((kospiIdx / prevKospiIdx) - 1) * 100 : 0,
     sp500: prevSp500Idx > 0 ? ((sp500Idx / prevSp500Idx) - 1) * 100 : 0,
     nasdaq: prevNasdaqIdx > 0 ? ((nasdaqIdx / prevNasdaqIdx) - 1) * 100 : 0,
@@ -2674,17 +2649,6 @@ export function parseMonthlyYieldComparisonWithDollar(rows: any[]): MonthlyYield
 export function parseMonthlyYieldComparisonDollarApplied(rows: any[]): MonthlyYieldComparisonDollarAppliedData | null {
   if (!rows || rows.length === 0) return null;
 
-  const parsePercent = (val: any): number => {
-    if (!val || val === '#NUM!' || val === '#VALUE!' || val === '#DIV/0!' || val === '#REF!') return 0;
-    const str = String(val);
-    const isNegative = str.includes('▼') || str.includes('▽');
-    const cleaned = str.replace(/[%,\s▼▽]/g, '');
-    let num = Number.parseFloat(cleaned);
-    if (Number.isNaN(num)) return 0;
-    if (isNegative && num > 0) num = -num;
-    return num;
-  };
-
   const parseNumber = (val: any): number => {
     if (!val || val === '#NUM!' || val === '#VALUE!') return 0;
     const str = String(val).replace(/[₩$,\s]/g, '');
@@ -2707,7 +2671,6 @@ export function parseMonthlyYieldComparisonDollarApplied(rows: any[]): MonthlyYi
 
   // G17:AQ78 범위 기준 컬럼 인덱스 (G=0)
   const COL_DATE = 0; // G열 - 날짜
-  const COL_MONTHLY_YIELD = 4; // K열 - 월수익률
   const COL_ACCOUNT_IDX = 8; // O열 - 계좌종합 지수
   const COL_KOSPI_IDX = 9; // P열 - 코스피 지수
   const COL_SP500_DOLLAR_IDX = 28; // AI열 - S&P500 달러환율 적용 지수
@@ -2768,7 +2731,6 @@ export function parseMonthlyYieldComparisonDollarApplied(rows: any[]): MonthlyYi
   }
 
   // 현재 데이터
-  const accountMonthlyYield = parsePercent(currentRow[COL_MONTHLY_YIELD]);
   const accountIdx = parseNumber(currentRow[COL_ACCOUNT_IDX]);
   const kospiIdx = parseNumber(currentRow[COL_KOSPI_IDX]);
   const sp500DollarIdx = parseNumber(currentRow[COL_SP500_DOLLAR_IDX]);
@@ -2786,22 +2748,10 @@ export function parseMonthlyYieldComparisonDollarApplied(rows: any[]): MonthlyYi
   const prevYearSp500DollarIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_SP500_DOLLAR_IDX]) : 100;
   const prevYearNasdaqDollarIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_NASDAQ_DOLLAR_IDX]) : 100;
 
-  // 이번 달 수익률
-  // 계좌 월수익률: K열 값 우선, 없으면(월 중간) 인덱스로 직접 계산
-  const accountIdxYield = prevAccountIdx > 0 && accountIdx > 0
-    ? ((accountIdx / prevAccountIdx) - 1) * 100
-    : 0;
-  const accountCurrentMonthYield = accountMonthlyYield !== 0
-    ? accountMonthlyYield
-    : accountIdxYield;
-
-  console.log('[parseMonthlyYieldComparisonDollarApplied] account debug:', {
-    accountMonthlyYield, accountIdx, prevAccountIdx, accountIdxYield, accountCurrentMonthYield,
-    prevMonthRowFound: !!prevMonthRow,
-  });
-
+  // 이번 달 수익률 (인덱스 기반 - 다른 지수와 동일 방식)
+  // K열 월수익률은 UNFORMATTED_VALUE로 소수점 형태(0.027=2.7%)이므로 사용하지 않음
   const currentMonthYield = {
-    account: accountCurrentMonthYield,
+    account: prevAccountIdx > 0 && accountIdx > 0 ? ((accountIdx / prevAccountIdx) - 1) * 100 : 0,
     kospi: prevKospiIdx > 0 ? ((kospiIdx / prevKospiIdx) - 1) * 100 : 0,
     sp500: prevSp500DollarIdx > 0 ? ((sp500DollarIdx / prevSp500DollarIdx) - 1) * 100 : 0,
     nasdaq: prevNasdaqDollarIdx > 0 ? ((nasdaqDollarIdx / prevNasdaqDollarIdx) - 1) * 100 : 0,

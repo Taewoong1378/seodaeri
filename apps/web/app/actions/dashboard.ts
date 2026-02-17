@@ -489,9 +489,9 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       }
     })();
 
-    // 수익률 비교 파싱
-    const performanceComparison: PerformanceComparisonData[] = performanceRows
-      ? parsePerformanceComparisonData(performanceRows)
+    // 수익률 비교 파싱 (enrichedRows 사용 → 달러환율 적용 데이터 포함)
+    const performanceComparison: PerformanceComparisonData[] = (enrichedRows || performanceRows)
+      ? parsePerformanceComparisonData(enrichedRows || performanceRows!)
       : [];
 
     // 계좌 추세 파싱 (같은 performanceRows에서)

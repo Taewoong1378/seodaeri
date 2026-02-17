@@ -20,6 +20,8 @@ interface PerformanceComparisonData {
   kospi: number;
   sp500: number;
   nasdaq: number;
+  sp500Dollar?: number;
+  nasdaqDollar?: number;
 }
 
 interface PerformanceComparisonChartProps {
@@ -34,6 +36,7 @@ const LINES = [
 ];
 
 type IndexKey = 'all' | 'kospi' | 'sp500' | 'nasdaq';
+type RateMode = 'basic' | 'dollar';
 
 const INDEX_OPTIONS: { key: IndexKey; label: string; color: string }[] = [
   { key: 'all', label: '전체', color: '#6366f1' },
@@ -48,7 +51,10 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
 
   const [selectedIndex, setSelectedIndex] = useState<IndexKey>('all');
   const [showSelector, setShowSelector] = useState(false);
+  const [rateMode, setRateMode] = useState<RateMode>('basic');
   const selectedOption = INDEX_OPTIONS.find((o) => o.key === selectedIndex)!;
+
+  const hasDollarData = data.some(d => d.sp500Dollar !== undefined || d.nasdaqDollar !== undefined);
 
   // 현재 연월 계산
   const now = new Date();
@@ -80,13 +86,31 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
     return result;
   });
 
+  // dollar mode일 때 sp500/nasdaq 값을 달러 환율 적용 값으로 교체
+  const chartDisplayData = displayData.map(item => {
+    if (rateMode !== 'dollar') return item;
+    return {
+      ...item,
+      sp500: item.sp500Dollar ?? item.sp500,
+      nasdaq: item.nasdaqDollar ?? item.nasdaq,
+    };
+  });
+
   // 선택된 지수에 따라 표시할 라인 결정
   const visibleLines = selectedIndex === 'all'
     ? LINES
     : LINES.filter(l => l.dataKey === 'portfolio' || l.dataKey === selectedIndex);
 
+  // legend labels with (환율) suffix when in dollar mode
+  const visibleLinesWithLabels = visibleLines.map(line => {
+    if (rateMode === 'dollar' && (line.dataKey === 'sp500' || line.dataKey === 'nasdaq')) {
+      return { ...line, name: `${line.name}(환율)` };
+    }
+    return line;
+  });
+
   // Y축 범위 계산
-  const allValues = displayData.flatMap(d =>
+  const allValues = chartDisplayData.flatMap(d =>
     visibleLines.map(l => d[l.dataKey as keyof typeof d] as number)
   );
   const minValue = Math.min(...allValues);
@@ -95,10 +119,39 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
   const yMax = Math.ceil(maxValue / 20) * 20 + 20;
 
   // X축 interval 계산 - 전체 기간을 한눈에
-  const tickInterval = displayData.length <= 12 ? 0
-    : displayData.length <= 24 ? 2
-    : displayData.length <= 36 ? 3
-    : Math.floor(displayData.length / 10);
+  const tickInterval = chartDisplayData.length <= 12 ? 0
+    : chartDisplayData.length <= 24 ? 2
+    : chartDisplayData.length <= 36 ? 3
+    : Math.floor(chartDisplayData.length / 10);
+
+  const rateModeLabel = rateMode === 'dollar' ? '환율 적용' : '기본';
+
+  const rateModeToggle = (
+    <div className="flex items-center gap-0.5 bg-muted/50 rounded-lg p-0.5">
+      <button
+        type="button"
+        onClick={() => setRateMode('basic')}
+        className={`px-2 py-0.5 text-[10px] font-medium rounded-md transition-all ${
+          rateMode === 'basic'
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground'
+        }`}
+      >
+        기본
+      </button>
+      <button
+        type="button"
+        onClick={() => setRateMode('dollar')}
+        className={`px-2 py-0.5 text-[10px] font-medium rounded-md transition-all ${
+          rateMode === 'dollar'
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground'
+        }`}
+      >
+        환율
+      </button>
+    </div>
+  );
 
   return (
     <div ref={chartRef} className="space-y-4">
@@ -163,104 +216,142 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
           </div>
 
           <div className="flex items-center gap-2">
-          <ShareChartButton chartRef={hiddenChartRef} title="수익률 비교" />
-          <LandscapeChartModal title="수익률 비교">
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-4">
-            {LINES.map((line) => (
-              <div key={line.dataKey} className="flex items-center gap-2">
-                <div
-                  className="w-6 h-0.5"
-                  style={{
-                    backgroundColor: line.color,
-                    backgroundImage: line.strokeDasharray ? 'none' : undefined,
-                  }}
-                />
-                <span className="text-sm text-muted-foreground">{line.name}</span>
+            {hasDollarData && rateModeToggle}
+            <ShareChartButton chartRef={hiddenChartRef} title={`수익률 비교 (${rateModeLabel})`} />
+            <LandscapeChartModal title="수익률 비교">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                  {LINES.map((line) => {
+                    const label = rateMode === 'dollar' && (line.dataKey === 'sp500' || line.dataKey === 'nasdaq')
+                      ? `${line.name}(환율)`
+                      : line.name;
+                    return (
+                      <div key={line.dataKey} className="flex items-center gap-2">
+                        <div
+                          className="w-6 h-0.5"
+                          style={{
+                            backgroundColor: line.color,
+                            backgroundImage: line.strokeDasharray ? 'none' : undefined,
+                          }}
+                        />
+                        <span className="text-sm text-muted-foreground">{label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {hasDollarData && (
+                  <div className="flex items-center gap-0.5 bg-muted/50 rounded-lg p-0.5 ml-4">
+                    <button
+                      type="button"
+                      onClick={() => setRateMode('basic')}
+                      className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                        rateMode === 'basic'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      기본
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRateMode('dollar')}
+                      className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                        rateMode === 'dollar'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground'
+                      }`}
+                    >
+                      환율
+                    </button>
+                  </div>
+                )}
               </div>
-            ))}
+              <div className="w-full h-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={chartDisplayData}
+                    margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+                  >
+                    <defs>
+                      <linearGradient id="portfolioGradientModal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#059669" stopOpacity={0.1} />
+                        <stop offset="100%" stopColor="#059669" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    {chartDisplayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
+                      <ReferenceLine
+                        key={marker.date}
+                        x={marker.date}
+                        stroke="#cbd5e1"
+                        label={{
+                          value: `20${marker.date.split('.')[0]}년`,
+                          position: 'insideTopLeft',
+                          angle: -90,
+                          fill: '#475569',
+                          fontSize: 12,
+                          dy: 30,
+                        }}
+                      />
+                    ))}
+                    <XAxis
+                      dataKey="date"
+                      axisLine={{ stroke: '#cbd5e1' }}
+                      tickLine={false}
+                      tick={{ fill: '#64748b', fontSize: 12 }}
+                      tickFormatter={(value) => `${Number.parseInt(value.split('.')[1])}월`}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#64748b', fontSize: 12 }}
+                      tickFormatter={(value) => `${value}%`}
+                      domain={[yMin, yMax]}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                        padding: '12px',
+                        color: '#1e293b',
+                      }}
+                      labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
+                      itemStyle={{ fontSize: 13, padding: '2px 0' }}
+                      formatter={(value: number, name: string) => {
+                        const lineConfig = LINES.find(l => l.dataKey === name);
+                        let label = lineConfig?.name || name;
+                        if (rateMode === 'dollar' && (name === 'sp500' || name === 'nasdaq')) {
+                          label += '(환율)';
+                        }
+                        return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
+                      }}
+                      labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
+                    />
+                    {LINES.map((line) => (
+                      <Line
+                        key={line.dataKey}
+                        type="monotone"
+                        dataKey={line.dataKey}
+                        name={line.dataKey}
+                        stroke={line.color}
+                        strokeWidth={line.strokeWidth || 2}
+                        strokeDasharray={line.strokeDasharray}
+                        dot={false}
+                        activeDot={{ r: 6, fill: line.color, stroke: '#020617', strokeWidth: 2 }}
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </LandscapeChartModal>
           </div>
-          <div className="w-full h-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={displayData}
-                margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
-              >
-                <defs>
-                  <linearGradient id="portfolioGradientModal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#059669" stopOpacity={0.1} />
-                    <stop offset="100%" stopColor="#059669" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                {displayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
-                  <ReferenceLine
-                    key={marker.date}
-                    x={marker.date}
-                    stroke="#cbd5e1"
-                    label={{
-                      value: `20${marker.date.split('.')[0]}년`,
-                      position: 'insideTopLeft',
-                      angle: -90,
-                      fill: '#475569',
-                      fontSize: 12,
-                      dy: 30,
-                    }}
-                  />
-                ))}
-                <XAxis
-                  dataKey="date"
-                  axisLine={{ stroke: '#cbd5e1' }}
-                  tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                  tickFormatter={(value) => `${Number.parseInt(value.split('.')[1])}월`}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                  tickFormatter={(value) => `${value}%`}
-                  domain={[yMin, yMax]}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-                    padding: '12px',
-                    color: '#1e293b',
-                  }}
-                  labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
-                  itemStyle={{ fontSize: 13, padding: '2px 0' }}
-                  formatter={(value: number, name: string) => {
-                    const lineConfig = LINES.find(l => l.dataKey === name);
-                    return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, lineConfig?.name || name];
-                  }}
-                  labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
-                />
-                {LINES.map((line) => (
-                  <Line
-                    key={line.dataKey}
-                    type="monotone"
-                    dataKey={line.dataKey}
-                    name={line.dataKey}
-                    stroke={line.color}
-                    strokeWidth={line.strokeWidth || 2}
-                    strokeDasharray={line.strokeDasharray}
-                    dot={false}
-                    activeDot={{ r: 6, fill: line.color, stroke: '#020617', strokeWidth: 2 }}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          </LandscapeChartModal>
-        </div>
         </div>
 
         {/* Legend - 별도 줄 */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          {visibleLines.map((line) => (
+          {visibleLinesWithLabels.map((line) => (
             <div key={line.dataKey} className="flex items-center gap-1.5">
               <div
                 className="w-3 h-0.5 rounded"
@@ -276,11 +367,11 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
       <div className="h-[240px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
-            data={displayData}
+            data={chartDisplayData}
             margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-            {displayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
+            {chartDisplayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
               <ReferenceLine
                 key={marker.date}
                 x={marker.date}
@@ -329,7 +420,11 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
               itemStyle={{ fontSize: 12, padding: '2px 0' }}
               formatter={(value: number, name: string) => {
                 const lineConfig = LINES.find(l => l.dataKey === name);
-                return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, lineConfig?.name || name];
+                let label = lineConfig?.name || name;
+                if (rateMode === 'dollar' && (name === 'sp500' || name === 'nasdaq')) {
+                  label += '(환율)';
+                }
+                return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
               }}
               labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
             />
@@ -368,10 +463,10 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
       >
         <div style={{ marginBottom: '16px' }}>
           <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>수익률 비교</h3>
-          <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>vs 주요 지수</p>
+          <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>{rateModeLabel} | vs 주요 지수</p>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-start', columnGap: '24px', rowGap: '8px', marginBottom: '16px' }}>
-          {visibleLines.map((line) => (
+          {visibleLinesWithLabels.map((line) => (
             <div key={line.dataKey} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div
                 style={{
@@ -388,7 +483,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
         <div className="w-full h-[350px]">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
-              data={displayData}
+              data={chartDisplayData}
               margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
             >
               <defs>
@@ -398,7 +493,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-              {displayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
+              {chartDisplayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
                 <ReferenceLine
                   key={marker.date}
                   x={marker.date}
@@ -455,7 +550,11 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                  itemStyle={{ fontSize: 13, padding: '2px 0' }}
                  formatter={(value: number, name: string) => {
                    const lineConfig = LINES.find(l => l.dataKey === name);
-                   return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, lineConfig?.name || name];
+                   let label = lineConfig?.name || name;
+                   if (rateMode === 'dollar' && (name === 'sp500' || name === 'nasdaq')) {
+                     label += '(환율)';
+                   }
+                   return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
                  }}
                  labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
                />
