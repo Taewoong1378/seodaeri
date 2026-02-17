@@ -113,6 +113,21 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
     return result;
   });
 
+  // 데이터가 1개뿐이면 이전달에 0 시작점 추가 (라인이 그려지도록)
+  if (displayData.length === 1 && displayData[0]) {
+    const firstDate = displayData[0].date; // "YY.MM"
+    const [yy, mm] = firstDate.split('.').map(Number);
+    const prevMonth = (mm || 1) - 1;
+    const prevYY = prevMonth <= 0 ? (yy || 0) - 1 : yy;
+    const prevMM = prevMonth <= 0 ? 12 : prevMonth;
+    const prevDateStr = `${String(prevYY).padStart(2, '0')}.${String(prevMM).padStart(2, '0')}`;
+    displayData.unshift({
+      date: prevDateStr,
+      cumulativeDeposit: 0,
+      totalAccount: 0,
+    });
+  }
+
   // Y축 범위 계산
   const allValues = displayData.flatMap(d => [d.cumulativeDeposit, d.totalAccount]);
   const maxValue = Math.max(...allValues);
