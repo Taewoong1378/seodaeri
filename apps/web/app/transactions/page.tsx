@@ -4,8 +4,10 @@ import { ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 import { checkSheetConnection } from '../actions/onboarding';
 import { BottomNav } from '../dashboard/components/BottomNav';
+import { TransactionsSkeleton } from './components/TransactionsSkeleton';
 import { TransactionsWrapper } from './components/TransactionsWrapper';
 
 export default async function TransactionsPage() {
@@ -56,7 +58,9 @@ export default async function TransactionsPage() {
       </header>
 
       <main className="p-5 space-y-4">
-        <TransactionsWrapper />
+        <Suspense fallback={<TransactionsSkeleton />}>
+          <TransactionsWrapper />
+        </Suspense>
       </main>
 
       <BottomNav />

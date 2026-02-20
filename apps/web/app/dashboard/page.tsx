@@ -4,10 +4,12 @@ import { ExternalLink } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { checkSheetConnection } from "../actions/onboarding";
 import { getDashboardData } from "../actions/dashboard";
 import { BottomNav } from "./components/BottomNav";
 import { DashboardContent } from "./components/DashboardContent";
+import { DashboardSkeleton } from "./components/DashboardSkeleton";
 import { SyncButton } from "./components/SyncButton";
 
 export default async function DashboardPage() {
@@ -70,7 +72,9 @@ export default async function DashboardPage() {
       </header>
 
       <main className="p-4">
-        <DashboardContent serverData={serverData} />
+        <Suspense fallback={<DashboardSkeleton />}>
+          <DashboardContent serverData={serverData} />
+        </Suspense>
       </main>
 
       <BottomNav />
