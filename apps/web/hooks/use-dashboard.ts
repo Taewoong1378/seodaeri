@@ -14,6 +14,7 @@ export function useDashboard(serverData?: DashboardData | null) {
     placeholderData: keepPreviousData,
     initialData: serverData ?? undefined,
     initialDataUpdatedAt: serverData ? Date.now() : undefined,
+    refetchOnMount: true, // 다른 페이지에서 invalidate 후 돌아올 때 refetch 필요
   });
 }
 
