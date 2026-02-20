@@ -207,9 +207,33 @@ export class StandaloneDataProvider implements DataProvider {
       return [];
     }
 
-    // 현재가 조회
+    // 현재가 조회 (KIS API)
     const tickers = holdings.map((h) => h.ticker);
     const prices = await getStockPrices(tickers);
+
+    // KIS API에서 가격을 못 가져온 종목은 DB 캐시에서 조회
+    const missingTickers = tickers.filter((t) => !prices.has(t));
+    if (missingTickers.length > 0) {
+      const { data: cachedPrices } = await supabase
+        .from('portfolio_cache')
+        .select('ticker, current_price, currency')
+        .eq('user_id', userId)
+        .in('ticker', missingTickers);
+
+      if (cachedPrices) {
+        for (const cached of cachedPrices) {
+          if (cached.current_price && cached.current_price > 0) {
+            prices.set(cached.ticker, {
+              ticker: cached.ticker,
+              price: cached.current_price,
+              currency: (cached.currency as 'KRW' | 'USD') || 'KRW',
+              timestamp: Date.now(),
+              source: 'db-cache',
+            });
+          }
+        }
+      }
+    }
 
     // 환율 조회
     const exchangeRate = await getUSDKRWRate();
@@ -256,13 +280,19 @@ export class StandaloneDataProvider implements DataProvider {
         : 0;
     }
 
-    // 현재가 캐시 업데이트
-    await this.updatePriceCache(userId, portfolio);
+    // 현재가 캐시 업데이트 (API에서 가져온 가격만)
+    const apiPricedItems = portfolio.filter((item) => {
+      const p = prices.get(item.ticker);
+      return p && p.source !== 'db-cache';
+    });
+    await this.updatePriceCache(userId, apiPricedItems);
 
     return portfolio;
   }
 
   private async updatePriceCache(userId: string, portfolio: PortfolioItem[]): Promise<void> {
+    if (portfolio.length === 0) return;
+
     const supabase = createServiceClient();
 
     const updates = portfolio.map((item) => ({
@@ -273,11 +303,9 @@ export class StandaloneDataProvider implements DataProvider {
       updated_at: new Date().toISOString(),
     }));
 
-    if (updates.length > 0) {
-      await supabase
-        .from('portfolio_cache')
-        .upsert(updates, { onConflict: 'user_id,ticker' });
-    }
+    await supabase
+      .from('portfolio_cache')
+      .upsert(updates, { onConflict: 'user_id,ticker' });
   }
 
   async getDividends(userId: string, year?: number): Promise<DividendRecord[]> {

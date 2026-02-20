@@ -6,6 +6,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { checkSheetConnection } from "../actions/onboarding";
+import { getDashboardData } from "../actions/dashboard";
 import { BottomNav } from "../dashboard/components/BottomNav";
 import { SyncButton } from "../dashboard/components/SyncButton";
 import { PortfolioContent } from "./components/PortfolioContent";
@@ -31,6 +32,9 @@ export default async function PortfolioPage() {
       ? `https://docs.google.com/spreadsheets/d/${connectionResult.sheetId}/edit`
       : null;
   }
+
+  // SSR 프리페치: 대시보드 데이터를 서버에서 미리 로드
+  const serverData = await getDashboardData().catch(() => null);
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-24">
@@ -67,7 +71,7 @@ export default async function PortfolioPage() {
 
       <main className="p-5 space-y-6">
         <Suspense fallback={<PortfolioSkeleton />}>
-          <PortfolioContent sheetUrl={sheetUrl} isStandalone={isStandalone} />
+          <PortfolioContent sheetUrl={sheetUrl} isStandalone={isStandalone} serverData={serverData} />
         </Suspense>
       </main>
 

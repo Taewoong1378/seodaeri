@@ -23,7 +23,7 @@
         },
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "7"
+      "buildNumber": "8"
     },
     "android": {
       "adaptiveIcon": {
@@ -47,7 +47,7 @@
           ]
         }
       ],
-      "versionCode": 39
+      "versionCode": 40
     },
     "plugins": [
       [
@@ -59,7 +59,8 @@
           "resizeMode": "contain"
         }
       ],
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {

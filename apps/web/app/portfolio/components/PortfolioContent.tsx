@@ -1,6 +1,7 @@
 "use client";
 
-import { useSuspenseDashboard } from "../../../hooks";
+import { useDashboard } from "../../../hooks";
+import type { DashboardData } from "../../actions/dashboard";
 import { BenefitBanner } from "./BenefitBanner";
 import { PortfolioClient } from "./PortfolioClient";
 
@@ -17,10 +18,11 @@ function formatCurrency(amount: number, compact = false): string {
 interface PortfolioContentProps {
   sheetUrl: string | null;
   isStandalone: boolean;
+  serverData?: DashboardData | null;
 }
 
-export function PortfolioContent({ sheetUrl, isStandalone }: PortfolioContentProps) {
-  const { data } = useSuspenseDashboard();
+export function PortfolioContent({ sheetUrl, isStandalone, serverData }: PortfolioContentProps) {
+  const { data } = useDashboard(serverData);
 
   const portfolio = data?.portfolio || [];
   const totalAsset = data?.totalAsset || 0;
