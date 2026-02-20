@@ -38,11 +38,11 @@ export function useSuspenseTransactionData() {
     queries: [
       {
         queryKey: queryKeys.transactions,
-        queryFn: () => getTransactions(),
+        queryFn: () => deferServerAction(getTransactions),
       },
       {
         queryKey: [...queryKeys.transactions, 'accountBalances'] as const,
-        queryFn: () => getAccountBalances(),
+        queryFn: () => deferServerAction(getAccountBalances),
       },
     ],
   });
@@ -50,6 +50,17 @@ export function useSuspenseTransactionData() {
     transactions: transactions.data,
     accountBalances: accountBalances.data,
   };
+}
+
+/**
+ * Server Action을 렌더 사이클 밖에서 호출하는 래퍼.
+ * useSuspenseQuery/useSuspenseQueries는 캐시 미스 시 렌더 중에 queryFn을 실행하는데,
+ * Server Action은 Next.js Router 상태를 업데이트하므로 충돌이 발생한다.
+ */
+function deferServerAction<T>(action: () => Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    setTimeout(() => action().then(resolve, reject), 0);
+  });
 }
 
 /**

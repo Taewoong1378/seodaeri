@@ -25,7 +25,20 @@ export function useDashboard(serverData?: DashboardData | null) {
 export function useSuspenseDashboard() {
   return useSuspenseQuery({
     queryKey: queryKeys.dashboard,
-    queryFn: () => getDashboardData(),
+    queryFn: () => deferServerAction(getDashboardData),
+  });
+}
+
+/**
+ * Server Action을 렌더 사이클 밖에서 호출하는 래퍼.
+ * useSuspenseQuery는 캐시 미스 시 렌더 중에 queryFn을 실행하는데,
+ * Server Action은 Next.js Router 상태를 업데이트하므로
+ * "Cannot update component while rendering" 에러가 발생한다.
+ * setTimeout(0)으로 macrotask로 지연시켜 해결.
+ */
+function deferServerAction<T>(action: () => Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    setTimeout(() => action().then(resolve, reject), 0);
   });
 }
 
