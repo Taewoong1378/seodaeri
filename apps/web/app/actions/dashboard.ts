@@ -957,6 +957,64 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
     // 4. 주요 지수 수익률 비교 데이터 조회
     const majorIndexYieldComparison = await provider.getMajorIndexYieldComparison(userId, historicalRates, marketData);
 
+    // 4-1. 올해/당월 수익률 바 차트 데이터 계산
+    let monthlyYieldComparison: MonthlyYieldComparisonData | null = null;
+    if (majorIndexYieldComparison && marketData) {
+      const now = new Date();
+      const cm = now.getMonth() + 1; // 1-indexed
+      const cy = now.getFullYear();
+      const yearStr = String(cy).slice(-2);
+      const prevYearStr = String(cy - 1).slice(-2);
+
+      const curKey = `${yearStr}.${String(cm).padStart(2, '0')}`;
+      const prevKey = cm === 1
+        ? `${prevYearStr}.12`
+        : `${yearStr}.${String(cm - 1).padStart(2, '0')}`;
+
+      const round1 = (val: number) => Math.round(val * 10) / 10;
+      const momYield = (cur: number | undefined, prev: number | undefined): number => {
+        if (!cur || !prev || prev === 0) return 0;
+        return round1((cur / prev - 1) * 100);
+      };
+
+      // YTD (올해 수익률) - majorIndexYieldComparison 마지막 값
+      const lastIdx = majorIndexYieldComparison.months.length - 1;
+      const lastAccountValue = majorIndexYieldComparison.account.reduce<number | null>(
+        (last, val) => val !== null ? val : last, null
+      );
+
+      // 이번 달 계좌 수익률 (YTD 배열에서 MoM 역산)
+      let accountMoM = 0;
+      const accountArr = majorIndexYieldComparison.account;
+      if (lastIdx >= 1) {
+        const curYtd = accountArr[lastIdx] ?? undefined;
+        const prevYtd = accountArr[lastIdx - 1] ?? undefined;
+        if (curYtd !== undefined && prevYtd !== undefined) {
+          accountMoM = round1(((1 + curYtd / 100) / (1 + prevYtd / 100) - 1) * 100);
+        } else if (curYtd !== undefined) {
+          accountMoM = curYtd;
+        }
+      }
+
+      monthlyYieldComparison = {
+        currentMonthYield: {
+          account: accountMoM,
+          kospi: momYield(marketData.kospi?.get(curKey), marketData.kospi?.get(prevKey)),
+          sp500: momYield(marketData.sp500?.get(curKey), marketData.sp500?.get(prevKey)),
+          nasdaq: momYield(marketData.nasdaq?.get(curKey), marketData.nasdaq?.get(prevKey)),
+          dollar: momYield(marketData.exchangeRates.get(curKey), marketData.exchangeRates.get(prevKey)),
+        },
+        thisYearYield: {
+          account: lastAccountValue ?? 0,
+          kospi: majorIndexYieldComparison.kospi[lastIdx] || 0,
+          sp500: majorIndexYieldComparison.sp500[lastIdx] || 0,
+          nasdaq: majorIndexYieldComparison.nasdaq[lastIdx] || 0,
+          dollar: majorIndexYieldComparison.dollar?.[lastIdx] || 0,
+        },
+        currentMonth: `${cm}월`,
+      };
+    }
+
     // 5. 올해 입금액 계산
     const currentYear = new Date().getFullYear();
     const { data: yearDeposits } = await (supabase as any)
@@ -989,7 +1047,7 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       monthlyProfitLoss,
       yieldComparison: null, // Standalone에서는 지원 안함
       yieldComparisonDollar: null,
-      monthlyYieldComparison: null,
+      monthlyYieldComparison,
       monthlyYieldComparisonDollarApplied: null,
       majorIndexYieldComparison,
       thisYearDeposit: Math.round(thisYearDeposit),

@@ -11,6 +11,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.taewoong.gulim",
+      "appleTeamId": "F6AGK54K55",
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSAppTransportSecurity": {
@@ -46,7 +47,7 @@
           ]
         }
       ],
-      "versionCode": 38
+      "versionCode": 39
     },
     "plugins": [
       [

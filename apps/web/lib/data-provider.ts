@@ -595,8 +595,10 @@ export class StandaloneDataProvider implements DataProvider {
         return null;
       }
 
-      // 3. 계좌 수익률 계산 (포트폴리오 스냅샷 + account_balances fallback)
+      // 3. 계좌 수익률 계산 (포트폴리오 스냅샷 or account_balances)
       const yearStart = `${currentYear}-01-01`;
+      let accountYields: (number | null)[];
+
       const { data: snapshots } = await supabase
         .from('portfolio_snapshots')
         .select('snapshot_date, total_asset, total_invested')
@@ -604,14 +606,16 @@ export class StandaloneDataProvider implements DataProvider {
         .gte('snapshot_date', yearStart)
         .order('snapshot_date', { ascending: true });
 
-      let normalizedSnapshots: Array<{ snapshot_date: string; total_asset: number; total_invested: number }> = (snapshots || []).map(s => ({
-        snapshot_date: s.snapshot_date,
-        total_asset: s.total_asset ?? 0,
-        total_invested: s.total_invested ?? 0,
-      }));
-
-      // 포트폴리오 스냅샷이 없으면 account_balances + deposits로 대체
-      if (normalizedSnapshots.length === 0) {
+      if (snapshots && snapshots.length > 0) {
+        // 포트폴리오 스냅샷 있음 → 기존 수익률 계산 사용
+        const normalizedSnapshots = snapshots.map(s => ({
+          snapshot_date: s.snapshot_date,
+          total_asset: s.total_asset ?? 0,
+          total_invested: s.total_invested ?? 0,
+        }));
+        accountYields = this.calculateAccountYields(normalizedSnapshots, currentMonth + 1);
+      } else {
+        // Fallback: account_balances → 잔액 증감률로 계산 (지수와 동일한 방식)
         const { data: balances } = await (supabase as any)
           .from('account_balances')
           .select('year_month, balance')
@@ -619,49 +623,47 @@ export class StandaloneDataProvider implements DataProvider {
           .gte('year_month', `${currentYear}-01`)
           .order('year_month', { ascending: true });
 
+        // 작년 12월 잔액 (기준점)
+        const { data: prevYear } = await (supabase as any)
+          .from('account_balances')
+          .select('balance')
+          .eq('user_id', userId)
+          .eq('year_month', `${currentYear - 1}-12`)
+          .single();
+
+        accountYields = [0]; // 시작점
+
         if (balances && balances.length > 0) {
-          // 누적 입금액 계산
-          const { data: deposits } = await (supabase as any)
-            .from('deposits')
-            .select('date, amount, type')
-            .eq('user_id', userId)
-            .gte('date', yearStart)
-            .order('date', { ascending: true });
-
-          // 연초 이전 누적 입금액
-          const { data: prevDeposits } = await (supabase as any)
-            .from('deposits')
-            .select('amount, type')
-            .eq('user_id', userId)
-            .lt('date', yearStart);
-
-          let baseInvested = 0;
-          for (const d of prevDeposits || []) {
-            baseInvested += d.type === 'DEPOSIT' ? (d.amount || 0) : -(d.amount || 0);
+          const monthlyBalance = new Map<number, number>();
+          for (const b of balances) {
+            const month = Number.parseInt((b.year_month as string).split('-')[1] || '0', 10);
+            monthlyBalance.set(month, b.balance || 0);
           }
 
-          // 월별 누적 입금액 계산
-          const monthlyInvested = new Map<string, number>();
-          let cumInvested = baseInvested;
-          for (const d of deposits || []) {
-            cumInvested += d.type === 'DEPOSIT' ? (d.amount || 0) : -(d.amount || 0);
-            const ym = d.date?.substring(0, 7); // "2026-02"
-            if (ym) monthlyInvested.set(ym, cumInvested);
+          // 기준점: 작년 12월 잔액, 없으면 첫 번째 잔액 사용
+          let baseline = prevYear?.balance || 0;
+          if (baseline === 0) {
+            const firstMonth = Math.min(...Array.from(monthlyBalance.keys()));
+            baseline = monthlyBalance.get(firstMonth) || 0;
           }
 
-          // account_balances를 snapshot 형태로 변환
-          normalizedSnapshots = balances.map((b: any) => {
-            const invested = monthlyInvested.get(b.year_month) ?? baseInvested;
-            return {
-              snapshot_date: `${b.year_month}-28`, // 월말 기준
-              total_asset: b.balance ?? 0,
-              total_invested: Math.max(invested, 1), // 0 방지
-            };
-          });
+          if (baseline > 0) {
+            const firstDataMonth = Math.min(...Array.from(monthlyBalance.keys()));
+            for (let m = 1; m <= currentMonth + 1; m++) {
+              const bal = monthlyBalance.get(m);
+              if (bal !== undefined) {
+                accountYields.push(Math.round(((bal / baseline) - 1) * 1000) / 10);
+              } else {
+                accountYields.push(m < firstDataMonth ? 0 : null);
+              }
+            }
+          } else {
+            for (let i = 0; i < currentMonth + 1; i++) accountYields.push(null);
+          }
+        } else {
+          for (let i = 0; i < currentMonth + 1; i++) accountYields.push(null);
         }
       }
-
-      const accountYields = this.calculateAccountYields(normalizedSnapshots, currentMonth + 1);
 
       console.log('[StandaloneProvider] Index comparison (historical):', {
         kospiYTD: marketYields.kospi[marketYields.kospi.length - 1],
