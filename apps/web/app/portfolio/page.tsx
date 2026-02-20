@@ -4,10 +4,12 @@ import { ExternalLink } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { checkSheetConnection } from "../actions/onboarding";
 import { BottomNav } from "../dashboard/components/BottomNav";
 import { SyncButton } from "../dashboard/components/SyncButton";
 import { PortfolioContent } from "./components/PortfolioContent";
+import { PortfolioSkeleton } from "./components/PortfolioSkeleton";
 
 export default async function PortfolioPage() {
   const session = await auth();
@@ -64,7 +66,9 @@ export default async function PortfolioPage() {
       </header>
 
       <main className="p-5 space-y-6">
-        <PortfolioContent sheetUrl={sheetUrl} isStandalone={isStandalone} />
+        <Suspense fallback={<PortfolioSkeleton />}>
+          <PortfolioContent sheetUrl={sheetUrl} isStandalone={isStandalone} />
+        </Suspense>
       </main>
 
       <BottomNav />

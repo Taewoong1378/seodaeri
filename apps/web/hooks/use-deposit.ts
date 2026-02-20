@@ -17,8 +17,8 @@ export function useAccountList() {
   return useQuery<string[]>({
     queryKey: queryKeys.accountList,
     queryFn: () => getAccountList(),
-    staleTime: 5 * 60 * 1000, // 5분 (자주 변경되지 않음)
-    gcTime: 30 * 60 * 1000, // 30분
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 }
 
@@ -29,8 +29,8 @@ export function useAutoDepositSetting() {
   return useQuery<AutoDepositSetting | null>({
     queryKey: queryKeys.autoDepositSetting,
     queryFn: () => getAutoDepositSetting(),
-    staleTime: 5 * 60 * 1000, // 5분
-    gcTime: 30 * 60 * 1000, // 30분
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 }
 

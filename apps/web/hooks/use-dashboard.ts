@@ -1,23 +1,31 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useSuspenseQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { queryKeys } from '../lib/query-client';
 import { getDashboardData, syncPortfolio, type DashboardData } from '../app/actions/dashboard';
 
 /**
- * 대시보드 데이터를 가져오는 훅
- * @param serverData - SSR에서 프리페치한 데이터 (스플래시 스크린 최적화용)
+ * 대시보드 데이터를 가져오는 훅 (SSR initialData 지원)
  */
 export function useDashboard(serverData?: DashboardData | null) {
   return useQuery<DashboardData | null>({
     queryKey: queryKeys.dashboard,
     queryFn: () => getDashboardData(),
-    staleTime: 60 * 1000, // 60초
-    gcTime: 5 * 60 * 1000, // 5분
-    refetchOnWindowFocus: true,
-    // SSR 프리페치 데이터가 있으면 즉시 사용 (클라이언트 fetch 스킵)
+    placeholderData: keepPreviousData,
     initialData: serverData ?? undefined,
     initialDataUpdatedAt: serverData ? Date.now() : undefined,
+  });
+}
+
+/**
+ * Suspense 기반 대시보드 훅
+ * - 캐시에 데이터가 있으면 즉시 반환 (suspend 안 함)
+ * - 캐시가 비어있으면 suspend → Suspense fallback(스켈레톤) 표시
+ */
+export function useSuspenseDashboard() {
+  return useSuspenseQuery({
+    queryKey: queryKeys.dashboard,
+    queryFn: () => getDashboardData(),
   });
 }
 

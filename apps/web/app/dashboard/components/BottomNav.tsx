@@ -1,21 +1,33 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@repo/design-system/lib/utils';
 import { History, Home, PieChart, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
-import type { ReactElement } from 'react';
+import { useCallback, type ReactElement } from 'react';
+import { queryKeys } from '../../../lib/query-client';
+import { getDashboardData } from '../../actions/dashboard';
+import { getTransactions } from '../../actions/transactions';
 
 const navItems = [
-  { href: '/dashboard', label: '홈', icon: Home },
-  { href: '/transactions', label: '내역', icon: History },
-  { href: '/portfolio', label: '포트폴리오', icon: PieChart },
-  { href: '/settings', label: '설정', icon: Settings },
-];
+  { href: '/dashboard', label: '홈', icon: Home, queryKey: queryKeys.dashboard, queryFn: getDashboardData },
+  { href: '/transactions', label: '내역', icon: History, queryKey: queryKeys.transactions, queryFn: getTransactions },
+  { href: '/portfolio', label: '포트폴리오', icon: PieChart, queryKey: queryKeys.dashboard, queryFn: getDashboardData },
+  { href: '/settings', label: '설정', icon: Settings, queryKey: null, queryFn: null },
+] as const;
 
 export function BottomNav(): ReactElement {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
+
+  const handlePrefetch = useCallback((item: typeof navItems[number]) => {
+    if (!item.queryKey || !item.queryFn) return;
+    queryClient.prefetchQuery({
+      queryKey: item.queryKey as readonly string[],
+      queryFn: item.queryFn as () => Promise<unknown>,
+    });
+  }, [queryClient]);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-xl border-t border-border/40 pb-[env(safe-area-inset-bottom)] shadow-[0_-5px_20px_rgba(0,0,0,0.03)] max-w-[500px] mx-auto">
@@ -28,6 +40,8 @@ export function BottomNav(): ReactElement {
             <Link
               key={item.href}
               href={item.href}
+              onTouchStart={() => handlePrefetch(item)}
+              onMouseEnter={() => handlePrefetch(item)}
               className={cn(
                 "group flex flex-col items-center justify-center w-full h-full space-y-[4px] active:scale-95 transition-transform duration-100",
                 isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"

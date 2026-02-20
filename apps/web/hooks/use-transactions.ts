@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useSuspenseQueries, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { queryKeys } from '../lib/query-client';
 import { getAccountBalances, type AccountBalanceRecord } from '../app/actions/account-balance';
 import { getTransactions, type Transaction, type TransactionsResult } from '../app/actions/transactions';
@@ -15,9 +15,7 @@ export function useTransactions() {
   return useQuery<TransactionsResult>({
     queryKey: queryKeys.transactions,
     queryFn: () => getTransactions(),
-    staleTime: 60 * 1000, // 60초
-    gcTime: 5 * 60 * 1000, // 5분
-    refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -28,10 +26,30 @@ export function useAccountBalances() {
   return useQuery<AccountBalanceRecord[]>({
     queryKey: [...queryKeys.transactions, 'accountBalances'],
     queryFn: () => getAccountBalances(),
-    staleTime: 60 * 1000, // 60초
-    gcTime: 5 * 60 * 1000, // 5분
-    refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
   });
+}
+
+/**
+ * Suspense 기반 거래내역 + 계좌총액 병렬 조회 훅
+ */
+export function useSuspenseTransactionData() {
+  const [transactions, accountBalances] = useSuspenseQueries({
+    queries: [
+      {
+        queryKey: queryKeys.transactions,
+        queryFn: () => getTransactions(),
+      },
+      {
+        queryKey: [...queryKeys.transactions, 'accountBalances'] as const,
+        queryFn: () => getAccountBalances(),
+      },
+    ],
+  });
+  return {
+    transactions: transactions.data,
+    accountBalances: accountBalances.data,
+  };
 }
 
 /**

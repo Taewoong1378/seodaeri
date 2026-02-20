@@ -168,9 +168,8 @@ export function calculateMarketYields(
 
   const yieldCalc = (val: number | undefined, baseline: number | undefined): number | null => {
     if (baseline && baseline > 0 && val && val > 0) {
-      // Math.trunc로 소수점 첫째자리 절사 (스프레드시트 TRUNC 함수와 동일한 동작)
       const raw = (val / baseline - 1) * 100;
-      return Math.trunc(raw * 10) / 10;
+      return Math.round(raw * 10) / 10;
     }
     return null;
   };

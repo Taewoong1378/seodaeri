@@ -116,6 +116,8 @@ export interface DashboardData {
   thisMonthYield?: number;
   // 올해 수익률 (연초잔액 대비 계산)
   thisYearYield?: number;
+  // 올해 총 입금액 (연간 입금액 목표 달성률 계산용)
+  thisYearDeposit?: number;
   // 투자 일수 (6. 입금내역 탭의 L4 셀)
   investmentDays: number;
   // 마지막 동기화 시간
@@ -283,6 +285,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     let totalYield = 0;
     let thisMonthYieldFromSheet: number | undefined;
     let thisYearYieldFromSheet: number | undefined;
+    let thisYearDepositFromSheet = 0;
 
     const parseNumber = (val: any): number => {
       if (!val || val === '-') return 0;
@@ -380,6 +383,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         const thisYearProfit = totalAsset - startOfYearAsset - thisYearDeposit;
         thisYearYieldFromSheet = (thisYearProfit / startOfYearAsset) * 100;
       }
+      thisYearDepositFromSheet = thisYearDeposit;
     }
 
     // 1번 시트 U9 누적수익률 우선 사용 (UNFORMATTED_VALUE: 소수점 형식)
@@ -613,6 +617,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       majorIndexYieldComparison,
       thisMonthYield: thisMonthYieldFromSheet !== undefined ? Number.parseFloat(thisMonthYieldFromSheet.toFixed(2)) : undefined,
       thisYearYield: thisYearYieldFromSheet !== undefined ? Number.parseFloat(thisYearYieldFromSheet.toFixed(2)) : undefined,
+      thisYearDeposit: Math.round(thisYearDepositFromSheet),
       investmentDays,
       lastSyncAt: new Date().toISOString(),
       dividendByAccount,
@@ -952,6 +957,20 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
     // 4. 주요 지수 수익률 비교 데이터 조회
     const majorIndexYieldComparison = await provider.getMajorIndexYieldComparison(userId, historicalRates, marketData);
 
+    // 5. 올해 입금액 계산
+    const currentYear = new Date().getFullYear();
+    const { data: yearDeposits } = await (supabase as any)
+      .from('deposits')
+      .select('amount, type')
+      .eq('user_id', userId)
+      .gte('date', `${currentYear}-01-01`)
+      .lte('date', `${currentYear}-12-31`);
+
+    let thisYearDeposit = 0;
+    for (const d of yearDeposits || []) {
+      thisYearDeposit += d.type === 'DEPOSIT' ? (d.amount || 0) : -(d.amount || 0);
+    }
+
     return {
       totalAsset: summary.totalAsset,
       totalYield: summary.totalYield,
@@ -973,6 +992,7 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       monthlyYieldComparison: null,
       monthlyYieldComparisonDollarApplied: null,
       majorIndexYieldComparison,
+      thisYearDeposit: Math.round(thisYearDeposit),
       investmentDays: summary.investmentDays,
       lastSyncAt: new Date().toISOString(),
       dividendByAccount,

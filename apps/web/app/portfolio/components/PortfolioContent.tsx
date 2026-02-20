@@ -1,7 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useDashboard } from "../../../hooks";
+import { useSuspenseDashboard } from "../../../hooks";
 import { BenefitBanner } from "./BenefitBanner";
 import { PortfolioClient } from "./PortfolioClient";
 
@@ -15,56 +14,16 @@ function formatCurrency(amount: number, compact = false): string {
   return new Intl.NumberFormat("ko-KR").format(Math.round(amount));
 }
 
-function PortfolioSkeleton() {
-  return (
-    <div className="space-y-6 animate-pulse">
-      {/* Summary skeleton */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="h-4 w-20 bg-muted rounded" />
-          <div className="h-3 w-12 bg-muted rounded" />
-        </div>
-        <div className="flex items-baseline gap-2">
-          <div className="h-10 w-32 bg-muted rounded" />
-        </div>
-        <div className="h-20 bg-muted rounded-[20px]" />
-      </section>
-      {/* List skeleton */}
-      <div className="space-y-3">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="h-24 bg-muted rounded-[24px]" />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 interface PortfolioContentProps {
   sheetUrl: string | null;
   isStandalone: boolean;
 }
 
 export function PortfolioContent({ sheetUrl, isStandalone }: PortfolioContentProps) {
-  const { data: session } = useSession();
-  const { data, isPending, error } = useDashboard();
+  const { data } = useSuspenseDashboard();
 
-  if (isPending || !data) {
-    return <PortfolioSkeleton />;
-  }
-
-  if (error && !data) {
-    return (
-      <div className="p-6 text-center">
-        <p className="text-red-400">
-          데이터를 불러오는 중 오류가 발생했습니다.
-        </p>
-        <p className="text-sm text-slate-500 mt-2">{error.message}</p>
-      </div>
-    );
-  }
-
-  const portfolio = data.portfolio || [];
-  const totalAsset = data.totalAsset || 0;
+  const portfolio = data?.portfolio || [];
+  const totalAsset = data?.totalAsset || 0;
 
   // 시트의 투자비중 사용 (없으면 계산)
   const portfolioWithWeight = portfolio.map((item) => ({
@@ -103,7 +62,7 @@ export function PortfolioContent({ sheetUrl, isStandalone }: PortfolioContentPro
               투자원금
             </span>
             <span className="text-foreground font-medium">
-              {formatCurrency(data.totalInvested, true)}원
+              {formatCurrency(data?.totalInvested ?? 0, true)}원
             </span>
           </div>
           <div className="w-px h-8 bg-border" />
@@ -113,10 +72,10 @@ export function PortfolioContent({ sheetUrl, isStandalone }: PortfolioContentPro
             </span>
             <span
               className={`font-medium ${
-                data.totalProfit >= 0 ? "text-emerald-600" : "text-red-500"
+                (data?.totalProfit ?? 0) >= 0 ? "text-emerald-600" : "text-red-500"
               }`}
             >
-              {formatCurrency(data.totalProfit, true)}원
+              {formatCurrency(data?.totalProfit ?? 0, true)}원
             </span>
           </div>
         </div>

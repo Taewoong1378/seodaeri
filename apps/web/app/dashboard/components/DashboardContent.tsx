@@ -163,7 +163,7 @@ function DashboardSkeleton() {
 
 export function DashboardContent({ serverData }: { serverData?: import('../../../app/actions/dashboard').DashboardData | null }) {
   const { data: session } = useSession();
-  const { data, isPending, error } = useDashboard(serverData);
+  const { data, isLoading, error } = useDashboard(serverData);
   const { data: goalSettings } = useGoalSettings();
   const [goalModalType, setGoalModalType] = useState<"finalAsset" | "annualDeposit">(
     "finalAsset"
@@ -194,18 +194,15 @@ export function DashboardContent({ serverData }: { serverData?: import('../../..
     return data.dividendByAccount[dividendAccountFilter];
   }, [data, dividendAccountFilter]);
 
-  // 데이터 로드 완료 시 네이티브 앱에 알림 (스플래시 해제용)
   useEffect(() => {
-    if (!isPending && data && typeof window !== "undefined") {
+    if (!isLoading && data && typeof window !== "undefined") {
       (window as any).ReactNativeWebView?.postMessage(
         JSON.stringify({ type: "App.Ready" })
       );
     }
-  }, [isPending, data]);
+  }, [isLoading, data]);
 
-  // 로딩 중이거나 데이터가 아직 없으면 스켈레톤 표시
-  // data가 있으면 바로 컨텐츠를 보여줌 (백그라운드 refetch 중에도)
-  if (isPending || !data) {
+  if (isLoading || !data) {
     return <DashboardSkeleton />;
   }
 
@@ -275,6 +272,7 @@ export function DashboardContent({ serverData }: { serverData?: import('../../..
                 investmentDays={displayData.investmentDays}
                 finalAssetGoal={goalSettings?.finalAssetGoal}
                 annualDepositGoal={goalSettings?.annualDepositGoal}
+                thisYearDeposit={displayData.thisYearDeposit}
                 onEditFinalAssetGoal={() => {
                   setGoalModalType("finalAsset");
                   setIsGoalModalOpen(true);

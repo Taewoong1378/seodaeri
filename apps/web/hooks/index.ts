@@ -1,6 +1,7 @@
 // Dashboard hooks
 export {
   useDashboard,
+  useSuspenseDashboard,
   useSyncPortfolio,
   useInvalidateDashboard,
   defaultDashboardData,
@@ -14,6 +15,7 @@ export type { StockSearchResult } from './use-stock-search';
 export {
   useTransactions,
   useAccountBalances,
+  useSuspenseTransactionData,
   useSaveDeposit,
   useSaveDividend,
   useSaveDividends,

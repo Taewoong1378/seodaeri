@@ -7,17 +7,13 @@ function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // 기본 stale time: 60초 (서버 캐시와 동일)
-        staleTime: 60 * 1000,
-        // 가비지 컬렉션 시간: 5분
-        gcTime: 5 * 60 * 1000,
-        // 창 포커스 시 자동 refetch
-        refetchOnWindowFocus: true,
-        // 재연결 시 자동 refetch
+        staleTime: 2 * 60 * 1000, // 2분: 서버 캐시(60s)보다 길게 → 불필요한 refetch 방지
+        gcTime: 10 * 60 * 1000, // 10분: 페이지 이동 후 돌아와도 캐시 유지
+        refetchOnWindowFocus: false, // WebView 포커스 전환이 잦아 비활성화
         refetchOnReconnect: true,
-        // 실패 시 3번까지 재시도
-        retry: 3,
-        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+        refetchOnMount: false, // 마운트 시 stale 데이터면 refetch 안 함 (캐시 활용)
+        retry: 2,
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
       },
       mutations: {
         retry: 1,

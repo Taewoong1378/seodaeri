@@ -3,6 +3,7 @@ import { Toaster } from '@repo/design-system'
 import type { Metadata, Viewport } from 'next'
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '../lib/constants'
 import { QueryProvider } from '../lib/query-client'
+import { NavigationProgress } from './components/NavigationProgress'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -102,6 +103,7 @@ export default function RootLayout({
       <body className="overscroll-none bg-[#F5F5F5]" style={{ backgroundColor: '#F5F5F5' }}>
         <SessionProvider>
           <QueryProvider>
+            <NavigationProgress />
             {children}
             <Toaster />
           </QueryProvider>

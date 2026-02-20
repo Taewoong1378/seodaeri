@@ -13,6 +13,7 @@ interface HeroCardProps {
   investmentDays?: number;
   finalAssetGoal?: number | null;
   annualDepositGoal?: number | null;
+  thisYearDeposit?: number;
   onEditFinalAssetGoal?: () => void;
   onEditAnnualDepositGoal?: () => void;
 }
@@ -62,6 +63,7 @@ export function HeroCard({
   investmentDays = 0,
   finalAssetGoal,
   annualDepositGoal,
+  thisYearDeposit = 0,
   onEditFinalAssetGoal,
   onEditAnnualDepositGoal,
 }: HeroCardProps) {
@@ -103,13 +105,13 @@ export function HeroCard({
                       </button>
                     </div>
                     <span className="text-xs font-bold text-emerald-600">
-                      {Math.min((totalAsset / annualDepositGoal) * 100, 100).toFixed(1)}%
+                      {Math.min((thisYearDeposit / annualDepositGoal) * 100, 100).toFixed(1)}%
                     </span>
                   </div>
                   <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min((totalAsset / annualDepositGoal) * 100, 100)}%` }}
+                      style={{ width: `${Math.min((thisYearDeposit / annualDepositGoal) * 100, 100)}%` }}
                     />
                   </div>
                   <p className="text-[11px] text-muted-foreground">

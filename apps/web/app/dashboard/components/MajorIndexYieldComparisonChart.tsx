@@ -29,7 +29,7 @@ const SERIES_OPTIONS: { key: SeriesKey; label: string; color: string }[] = [
   { key: "gold", label: "금", color: "#eab308" },
   { key: "bitcoin", label: "BTC", color: "#f97316" },
   { key: "dollar", label: "달러", color: "#8b5cf6" },
-  { key: "realEstate", label: "부동산", color: "#06b6d4" },
+  { key: "realEstate", label: "서울 아파트", color: "#06b6d4" },
 ];
 
 const COLORS: Record<string, string> = {
