@@ -10,6 +10,7 @@
  */
 
 import { createServiceClient } from '@repo/database/server';
+import { getKISToken, KIS_BASE_URL } from './kis-token';
 
 export interface StockPrice {
   ticker: string;
@@ -40,14 +41,6 @@ const OFF_HOURS_CACHE_MS = 60 * 60 * 1000; // 1시간
 // 한국투자증권 OpenAPI (KIS)
 // ============================================
 
-const KIS_BASE_URL = 'https://openapi.koreainvestment.com:9443';
-
-interface KISTokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-}
-
 interface KISPriceResponse {
   rt_cd: string; // 성공시 "0"
   msg_cd: string;
@@ -62,56 +55,6 @@ interface KISPriceResponse {
     acml_vol: string; // 거래량
     acml_tr_pbmn: string; // 거래대금
   };
-}
-
-let kisAccessToken: string | null = null;
-let kisTokenExpiry: number = 0;
-
-/**
- * KIS API 인증 토큰 발급
- */
-async function getKISToken(): Promise<string | null> {
-  // 토큰이 유효하면 재사용
-  if (kisAccessToken && Date.now() < kisTokenExpiry - 60000) {
-    return kisAccessToken;
-  }
-
-  const appKey = process.env.KIS_APP_KEY;
-  const appSecret = process.env.KIS_APP_SECRET;
-
-  if (!appKey || !appSecret) {
-    console.warn('[KIS] APP_KEY or APP_SECRET not configured');
-    return null;
-  }
-
-  try {
-    const response = await fetch(`${KIS_BASE_URL}/oauth2/tokenP`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        grant_type: 'client_credentials',
-        appkey: appKey,
-        appsecret: appSecret,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error('[KIS] Token request failed:', response.status);
-      return null;
-    }
-
-    const data: KISTokenResponse = await response.json();
-    kisAccessToken = data.access_token;
-    kisTokenExpiry = Date.now() + data.expires_in * 1000;
-
-    console.log('[KIS] Token acquired, expires in', data.expires_in, 'seconds');
-    return kisAccessToken;
-  } catch (error) {
-    console.error('[KIS] Token error:', error);
-    return null;
-  }
 }
 
 /**

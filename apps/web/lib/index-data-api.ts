@@ -10,7 +10,7 @@
  * - 장외시간: 1시간 캐시
  */
 
-const KIS_BASE_URL = 'https://openapi.koreainvestment.com:9443';
+import { getKISToken, KIS_BASE_URL } from './kis-token';
 
 // 캐시 유효 시간
 const MARKET_HOURS_CACHE_MS = 5 * 60 * 1000; // 5분
@@ -33,16 +33,6 @@ interface IndexCache {
 
 // 메모리 캐시
 const indexCache = new Map<string, IndexCache>();
-
-// KIS 토큰 관리 (stock-price-api.ts와 공유)
-let kisAccessToken: string | null = null;
-let kisTokenExpiry: number = 0;
-
-interface KISTokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-}
 
 interface KISIndexPriceResponse {
   rt_cd: string;
@@ -77,55 +67,6 @@ interface KISOverseasPriceResponse {
     tamt: string;
     ordy: string;
   };
-}
-
-/**
- * KIS API 인증 토큰 발급
- */
-async function getKISToken(): Promise<string | null> {
-  // 토큰이 유효하면 재사용
-  if (kisAccessToken && Date.now() < kisTokenExpiry - 60000) {
-    return kisAccessToken;
-  }
-
-  const appKey = process.env.KIS_APP_KEY;
-  const appSecret = process.env.KIS_APP_SECRET;
-
-  if (!appKey || !appSecret) {
-    console.warn('[KIS-Index] APP_KEY or APP_SECRET not configured');
-    return null;
-  }
-
-  try {
-    const response = await fetch(`${KIS_BASE_URL}/oauth2/tokenP`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        grant_type: 'client_credentials',
-        appkey: appKey,
-        appsecret: appSecret,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => 'No body');
-      console.warn('[KIS-Index] Token request failed:', response.status, '-', errorBody);
-      console.warn('[KIS-Index] App Key/Secret을 확인하거나 KIS Developers에서 앱 상태를 확인하세요.');
-      return null;
-    }
-
-    const data: KISTokenResponse = await response.json();
-    kisAccessToken = data.access_token;
-    kisTokenExpiry = Date.now() + data.expires_in * 1000;
-
-    console.log('[KIS-Index] Token acquired, expires in', data.expires_in, 'seconds');
-    return kisAccessToken;
-  } catch (error) {
-    console.error('[KIS-Index] Token error:', error);
-    return null;
-  }
 }
 
 /**
