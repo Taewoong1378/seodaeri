@@ -1015,6 +1015,61 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       };
     }
 
+    // 4-2. 올해/당월 수익률 바 차트 (달러환율 반영) 데이터 계산
+    let monthlyYieldComparisonDollarApplied: MonthlyYieldComparisonDollarAppliedData | null = null;
+    if (majorIndexYieldComparison && marketData) {
+      const now2 = new Date();
+      const cm2 = now2.getMonth() + 1;
+      const cy2 = now2.getFullYear();
+      const yearStr2 = String(cy2).slice(-2);
+      const prevYearStr2 = String(cy2 - 1).slice(-2);
+
+      const curKey2 = `${yearStr2}.${String(cm2).padStart(2, '0')}`;
+      const prevKey2 = cm2 === 1
+        ? `${prevYearStr2}.12`
+        : `${yearStr2}.${String(cm2 - 1).padStart(2, '0')}`;
+
+      const round1d = (val: number) => Math.round(val * 10) / 10;
+      const momYieldD = (cur: number | undefined, prev: number | undefined): number => {
+        if (!cur || !prev || prev === 0) return 0;
+        return round1d((cur / prev - 1) * 100);
+      };
+
+      // 계좌 MoM (기본 차트와 동일)
+      const lastIdx2 = majorIndexYieldComparison.months.length - 1;
+      let accountMoM2 = 0;
+      const accountArr2 = majorIndexYieldComparison.account;
+      if (lastIdx2 >= 1) {
+        const curYtd2 = accountArr2[lastIdx2] ?? undefined;
+        const prevYtd2 = accountArr2[lastIdx2 - 1] ?? undefined;
+        if (curYtd2 !== undefined && prevYtd2 !== undefined) {
+          accountMoM2 = round1d(((1 + curYtd2 / 100) / (1 + prevYtd2 / 100) - 1) * 100);
+        } else if (curYtd2 !== undefined) {
+          accountMoM2 = curYtd2;
+        }
+      }
+
+      const lastAccountValue2 = majorIndexYieldComparison.account.reduce<number | null>(
+        (last, val) => val !== null ? val : last, null
+      );
+
+      monthlyYieldComparisonDollarApplied = {
+        currentMonthYield: {
+          account: accountMoM2,
+          kospi: momYieldD(marketData.kospi?.get(curKey2), marketData.kospi?.get(prevKey2)),
+          sp500: momYieldD(marketData.sp500Krw?.get(curKey2), marketData.sp500Krw?.get(prevKey2)),
+          nasdaq: momYieldD(marketData.nasdaqKrw?.get(curKey2), marketData.nasdaqKrw?.get(prevKey2)),
+        },
+        thisYearYield: {
+          account: lastAccountValue2 ?? 0,
+          kospi: majorIndexYieldComparison.kospi[lastIdx2] || 0,
+          sp500: majorIndexYieldComparison.sp500Dollar?.[lastIdx2] || 0,
+          nasdaq: majorIndexYieldComparison.nasdaqDollar?.[lastIdx2] || 0,
+        },
+        currentMonth: `${cm2}월`,
+      };
+    }
+
     // 5. 올해 입금액 계산
     const currentYear = new Date().getFullYear();
     const { data: yearDeposits } = await (supabase as any)
@@ -1027,6 +1082,123 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
     let thisYearDeposit = 0;
     for (const d of yearDeposits || []) {
       thisYearDeposit += d.type === 'DEPOSIT' ? (d.amount || 0) : -(d.amount || 0);
+    }
+
+    // 누적수익률/연평균수익률 비교 데이터 계산 (Standalone)
+    let yieldComparison: YieldComparisonData | null = null;
+    let yieldComparisonDollar: YieldComparisonDollarData | null = null;
+    if (majorIndexYieldComparison && marketData && summary.totalYield !== 0) {
+      const round1 = (n: number) => Math.round(n * 10) / 10;
+
+      // 1. 올해 수익률: majorIndexYieldComparison 마지막 값
+      const lastIdx = majorIndexYieldComparison.months.length - 1;
+      const thisYearYield = {
+        account: round1(majorIndexYieldComparison.account[lastIdx] ?? 0),
+        kospi: round1(majorIndexYieldComparison.kospi[lastIdx] ?? 0),
+        sp500: round1(majorIndexYieldComparison.sp500[lastIdx] ?? 0),
+        nasdaq: round1(majorIndexYieldComparison.nasdaq[lastIdx] ?? 0),
+      };
+
+      // 2. 누적수익률: 계좌는 summary.totalYield, 지수는 투자 시작월 대비 현재 가격
+      const accountCumulative = round1(summary.totalYield);
+      let kospiCumulative = 0;
+      let sp500Cumulative = 0;
+      let nasdaqCumulative = 0;
+      let dollarCumulative = 0;
+      let sp500KrwCumulative = 0;
+      let nasdaqKrwCumulative = 0;
+
+      if (summary.investmentDays > 0) {
+        const startDate = new Date(Date.now() - summary.investmentDays * 24 * 60 * 60 * 1000);
+        const startYY = String(startDate.getFullYear()).slice(2);
+        const startMM = String(startDate.getMonth() + 1).padStart(2, '0');
+        const startKey = `${startYY}.${startMM}`;
+
+        const nowDate = new Date();
+        const nowYY = String(nowDate.getFullYear()).slice(2);
+        const nowMM = String(nowDate.getMonth() + 1).padStart(2, '0');
+        const nowKey = `${nowYY}.${nowMM}`;
+
+        const calcCumulative = (dataMap: Map<string, number> | undefined): number => {
+          if (!dataMap) return 0;
+          const startVal = dataMap.get(startKey);
+          const nowVal = dataMap.get(nowKey);
+          if (!startVal || !nowVal || startVal === 0) return 0;
+          return round1(((nowVal / startVal) - 1) * 100);
+        };
+
+        kospiCumulative = calcCumulative(marketData.kospi);
+        sp500Cumulative = calcCumulative(marketData.sp500);
+        nasdaqCumulative = calcCumulative(marketData.nasdaq);
+
+        // 환율 적용 수익률 비교 데이터 (달러 환율 반영)
+        if (marketData.exchangeRates && marketData.sp500Krw && marketData.nasdaqKrw) {
+          dollarCumulative = calcCumulative(marketData.exchangeRates);
+          sp500KrwCumulative = calcCumulative(marketData.sp500Krw);
+          nasdaqKrwCumulative = calcCumulative(marketData.nasdaqKrw);
+        }
+      }
+
+      const cumulativeYield = {
+        account: accountCumulative,
+        kospi: kospiCumulative,
+        sp500: sp500Cumulative,
+        nasdaq: nasdaqCumulative,
+      };
+
+      // 3. 연평균수익률: (1 + cumulative/100)^(1/years) - 1
+      const years = Math.max(1, summary.investmentDays / 365);
+      const calcAnnualized = (cumulative: number): number => {
+        const total = 1 + cumulative / 100;
+        if (total <= 0) return 0;
+        return round1((total ** (1 / years) - 1) * 100);
+      };
+
+      const annualizedYield = {
+        account: calcAnnualized(accountCumulative),
+        kospi: calcAnnualized(kospiCumulative),
+        sp500: calcAnnualized(sp500Cumulative),
+        nasdaq: calcAnnualized(nasdaqCumulative),
+      };
+
+      yieldComparison = { cumulativeYield, thisYearYield, annualizedYield };
+
+      // 환율 적용 수익률 비교 결과 생성
+      if (dollarCumulative !== 0 || sp500KrwCumulative !== 0 || nasdaqKrwCumulative !== 0) {
+        const prevYearKey = `${String(new Date().getFullYear() - 1).slice(2)}.12`;
+        const nowKey2 = `${String(new Date().getFullYear()).slice(2)}.${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+        const ytdCalc = (dataMap: Map<string, number> | undefined): number => {
+          if (!dataMap) return 0;
+          const prev = dataMap.get(prevYearKey);
+          const now = dataMap.get(nowKey2);
+          if (!prev || !now || prev === 0) return 0;
+          return round1(((now / prev) - 1) * 100);
+        };
+
+        yieldComparisonDollar = {
+          cumulativeYield: {
+            account: accountCumulative,
+            kospi: kospiCumulative,
+            sp500: sp500KrwCumulative,
+            nasdaq: nasdaqKrwCumulative,
+            dollar: dollarCumulative,
+          },
+          thisYearYield: {
+            account: thisYearYield.account,
+            kospi: thisYearYield.kospi,
+            sp500: ytdCalc(marketData.sp500Krw),
+            nasdaq: ytdCalc(marketData.nasdaqKrw),
+            dollar: ytdCalc(marketData.exchangeRates),
+          },
+          annualizedYield: {
+            account: calcAnnualized(accountCumulative),
+            kospi: calcAnnualized(kospiCumulative),
+            sp500: calcAnnualized(sp500KrwCumulative),
+            nasdaq: calcAnnualized(nasdaqKrwCumulative),
+            dollar: calcAnnualized(dollarCumulative),
+          },
+        };
+      }
     }
 
     return {
@@ -1045,10 +1217,10 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       performanceComparison: [], // Standalone에서는 지원 안함
       accountTrend,
       monthlyProfitLoss,
-      yieldComparison: null, // Standalone에서는 지원 안함
-      yieldComparisonDollar: null,
+      yieldComparison,
+      yieldComparisonDollar,
       monthlyYieldComparison,
-      monthlyYieldComparisonDollarApplied: null,
+      monthlyYieldComparisonDollarApplied,
       majorIndexYieldComparison,
       thisYearDeposit: Math.round(thisYearDeposit),
       investmentDays: summary.investmentDays,

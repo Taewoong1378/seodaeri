@@ -240,6 +240,8 @@ export class StandaloneDataProvider implements DataProvider {
 
     // 포트폴리오 아이템 생성
     const portfolio: PortfolioItem[] = [];
+    // 캐시용 원본 가격 보관 (USD 이중 환산 방지)
+    const originalPrices: Map<string, { currentPrice: number; currency: 'KRW' | 'USD' }> = new Map();
     let totalValueKRW = 0;
 
     for (const holding of holdings) {
@@ -254,37 +256,46 @@ export class StandaloneDataProvider implements DataProvider {
       const profit = totalValue - invested;
       const profitPercent = invested > 0 ? (profit / invested) * 100 : 0;
 
-      // KRW 환산 총액 (비중 계산용)
+      // KRW 환산
       const rate = currency === 'USD' ? exchangeRate : 1;
       totalValueKRW += totalValue * rate;
+
+      // 캐시용 원본 가격 저장 (환산 전)
+      originalPrices.set(holding.ticker, { currentPrice, currency });
 
       portfolio.push({
         ticker: holding.ticker,
         name: holding.name || holding.ticker,
         quantity,
-        avgPrice,
-        currentPrice,
-        totalValue,
-        profit,
+        avgPrice: Math.round(avgPrice * rate),
+        currentPrice: Math.round(currentPrice * rate),
+        totalValue: Math.round(totalValue * rate),
+        profit: Math.round(profit * rate),
         profitPercent: Number(profitPercent.toFixed(2)),
         currency,
       });
     }
 
-    // 비중 계산
+    // 비중 계산 (totalValue는 이미 KRW 환산된 값)
     for (const item of portfolio) {
-      const rate = item.currency === 'USD' ? exchangeRate : 1;
-      const valueKRW = item.totalValue * rate;
       item.weight = totalValueKRW > 0
-        ? Number(((valueKRW / totalValueKRW) * 100).toFixed(2))
+        ? Number(((item.totalValue / totalValueKRW) * 100).toFixed(2))
         : 0;
     }
 
-    // 현재가 캐시 업데이트 (API에서 가져온 가격만)
-    const apiPricedItems = portfolio.filter((item) => {
-      const p = prices.get(item.ticker);
-      return p && p.source !== 'db-cache';
-    });
+    // 현재가 캐시 업데이트 (원본 가격으로 저장, KRW 환산값이 아닌 API 원본)
+    const apiPricedItems = portfolio
+      .filter((item) => {
+        const p = prices.get(item.ticker);
+        return p && p.source !== 'db-cache';
+      })
+      .map((item) => {
+        const orig = originalPrices.get(item.ticker);
+        return {
+          ...item,
+          currentPrice: orig?.currentPrice ?? item.currentPrice,
+        };
+      });
     await this.updatePriceCache(userId, apiPricedItems);
 
     return portfolio;
@@ -643,7 +654,7 @@ export class StandaloneDataProvider implements DataProvider {
         }));
         accountYields = this.calculateAccountYields(normalizedSnapshots, currentMonth + 1);
       } else {
-        // Fallback: account_balances → 잔액 증감률로 계산 (지수와 동일한 방식)
+        // Fallback: account_balances + deposits → 입금 차감 수익률 계산
         const { data: balances } = await (supabase as any)
           .from('account_balances')
           .select('year_month, balance')
@@ -651,13 +662,33 @@ export class StandaloneDataProvider implements DataProvider {
           .gte('year_month', `${currentYear}-01`)
           .order('year_month', { ascending: true });
 
-        // 작년 12월 잔액 (기준점)
-        const { data: prevYear } = await (supabase as any)
-          .from('account_balances')
-          .select('balance')
+        // 전체 입금 내역 조회 (누적 투자금 계산용)
+        const { data: allDeposits } = await (supabase as any)
+          .from('deposits')
+          .select('amount, type, date')
           .eq('user_id', userId)
-          .eq('year_month', `${currentYear - 1}-12`)
-          .single();
+          .order('date', { ascending: true });
+
+        // 월별 누적 투자금 계산 (YYYY-MM → 누적액)
+        const cumulativeByYM = new Map<string, number>();
+        let runningInvested = 0;
+        for (const d of allDeposits || []) {
+          runningInvested += d.type === 'DEPOSIT' ? (d.amount || 0) : -(d.amount || 0);
+          const ym = (d.date as string).slice(0, 7);
+          cumulativeByYM.set(ym, runningInvested);
+        }
+
+        // 특정 year-month까지의 누적 투자금 반환 (해당 월에 입금이 없어도 이전 값 유지)
+        const getInvestedAt = (year: number, month: number): number => {
+          const targetYM = `${year}-${String(month).padStart(2, '0')}`;
+          let result = 0;
+          const sorted = Array.from(cumulativeByYM.entries()).sort(([a], [b]) => a.localeCompare(b));
+          for (const [ym, val] of sorted) {
+            if (ym <= targetYM) result = val;
+            else break;
+          }
+          return result;
+        };
 
         accountYields = [0]; // 시작점
 
@@ -668,25 +699,21 @@ export class StandaloneDataProvider implements DataProvider {
             monthlyBalance.set(month, b.balance || 0);
           }
 
-          // 기준점: 작년 12월 잔액, 없으면 첫 번째 잔액 사용
-          let baseline = prevYear?.balance || 0;
-          if (baseline === 0) {
-            const firstMonth = Math.min(...Array.from(monthlyBalance.keys()));
-            baseline = monthlyBalance.get(firstMonth) || 0;
-          }
+          const firstDataMonth = Math.min(...Array.from(monthlyBalance.keys()));
 
-          if (baseline > 0) {
-            const firstDataMonth = Math.min(...Array.from(monthlyBalance.keys()));
-            for (let m = 1; m <= currentMonth + 1; m++) {
-              const bal = monthlyBalance.get(m);
-              if (bal !== undefined) {
-                accountYields.push(Math.round(((bal / baseline) - 1) * 1000) / 10);
+          for (let m = 1; m <= currentMonth + 1; m++) {
+            const bal = monthlyBalance.get(m);
+            if (bal !== undefined) {
+              const invested = getInvestedAt(currentYear, m);
+              if (invested > 0) {
+                // 수익률 = (잔고 - 누적투자금) / 누적투자금 * 100
+                accountYields.push(Math.round(((bal - invested) / invested) * 1000) / 10);
               } else {
-                accountYields.push(m < firstDataMonth ? 0 : null);
+                accountYields.push(0);
               }
+            } else {
+              accountYields.push(m < firstDataMonth ? 0 : null);
             }
-          } else {
-            for (let i = 0; i < currentMonth + 1; i++) accountYields.push(null);
           }
         } else {
           for (let i = 0; i < currentMonth + 1; i++) accountYields.push(null);
