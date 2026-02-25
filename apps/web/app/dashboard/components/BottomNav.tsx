@@ -12,8 +12,8 @@ import { getTransactions } from '../../actions/transactions';
 
 const navItems = [
   { href: '/dashboard', label: '홈', icon: Home, queryKey: queryKeys.dashboard, queryFn: getDashboardData },
-  { href: '/transactions', label: '내역', icon: History, queryKey: queryKeys.transactions, queryFn: getTransactions },
   { href: '/portfolio', label: '포트폴리오', icon: PieChart, queryKey: queryKeys.dashboard, queryFn: getDashboardData },
+  { href: '/transactions', label: '내역', icon: History, queryKey: queryKeys.transactions, queryFn: getTransactions },
   { href: '/settings', label: '설정', icon: Settings, queryKey: null, queryFn: null },
 ] as const;
 

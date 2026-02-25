@@ -260,7 +260,7 @@ export function HoldingInputModal({
         }}
       >
         {/* Header */}
-        <DialogHeader className="p-5 pb-4 border-b border-border">
+        <DialogHeader className="p-5 pb-4 border-b border-border min-w-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
               <Briefcase className="w-5 h-5 text-primary" />
@@ -277,7 +277,7 @@ export function HoldingInputModal({
         </DialogHeader>
 
         {/* Body */}
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 min-w-0 overflow-hidden">
           {/* 종목 검색 또는 수동 입력 */}
           {!isEditMode && !showManualInput ? (
             <>
@@ -420,7 +420,7 @@ export function HoldingInputModal({
         </div>
 
         {/* Footer */}
-        <div className="p-5 pt-0 flex gap-2">
+        <div className="p-5 pt-0 flex gap-2 min-w-0">
           {isEditMode && (
             <Button
               variant="outline"

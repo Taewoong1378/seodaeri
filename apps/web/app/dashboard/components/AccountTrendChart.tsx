@@ -128,10 +128,19 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
     });
   }
 
-  // Y축 범위 계산
+  // Y축 범위 계산 (데이터 크기에 맞게 유동적으로)
   const allValues = displayData.flatMap(d => [d.cumulativeDeposit, d.totalAccount]);
   const maxValue = Math.max(...allValues);
-  const yMax = Math.ceil(maxValue / 10000000) * 10000000 + 5000000;
+  const yMax = (() => {
+    if (maxValue <= 0) return 100000; // 데이터 없으면 10만
+    // 최대값의 약 1.3배를 보기 좋은 단위로 올림
+    const padded = maxValue * 1.3;
+    if (padded <= 500000) return Math.ceil(padded / 100000) * 100000; // ~50만: 10만 단위
+    if (padded <= 5000000) return Math.ceil(padded / 500000) * 500000; // ~500만: 50만 단위
+    if (padded <= 50000000) return Math.ceil(padded / 5000000) * 5000000; // ~5천만: 500만 단위
+    if (padded <= 500000000) return Math.ceil(padded / 50000000) * 50000000; // ~5억: 5천만 단위
+    return Math.ceil(padded / 100000000) * 100000000; // 5억+: 1억 단위
+  })();
 
   // X축 interval 계산 - 전체 기간을 한눈에 보여주되 라벨이 겹치지 않도록
   const tickInterval = displayData.length <= 12 ? 0

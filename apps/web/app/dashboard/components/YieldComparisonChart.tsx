@@ -43,7 +43,6 @@ const BAR_COLORS: Record<string, string> = {
 
 const getBarColor = (name: string, value: number | null) => {
   if (value === null) return "transparent";
-  if (value < 0) return "#94a3b8";
   return BAR_COLORS[name] || "#3b82f6";
 };
 
