@@ -825,6 +825,19 @@ export function getCarouselBanners(provider?: BannerProvider): BannerItem[] {
   }
 }
 
+// 캐러셀 배너를 SmallBanner 형태로 변환
+export function getCarouselBannersAsSmall(provider?: BannerProvider): SmallBannerItem[] {
+  const carouselBanners = getCarouselBanners(provider);
+  return carouselBanners.map((banner) => ({
+    id: banner.id,
+    title: banner.title,
+    description: banner.description,
+    image: banner.image,
+    link: banner.link || '#',
+    gradient: banner.bgGradient,
+  }));
+}
+
 // 작은 배너 데이터 가져오기
 export function getSmallBanners(provider?: BannerProvider): SmallBannerItem[] {
   const activeProvider = provider ?? getBannerProvider();

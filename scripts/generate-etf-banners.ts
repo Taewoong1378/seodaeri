@@ -24,14 +24,14 @@ const BANNER_TYPE_CONFIG: Record<
   { ratio: string; size: string; description: string }
 > = {
   carousel: {
-    ratio: "16:9",
+    ratio: "21:9",
     size: "1K",
-    description: "Wide cinematic banner for main dashboard carousel",
+    description: "Ultra-wide banner with baked-in Korean typography for dashboard top carousel",
   },
   small: {
-    ratio: "3:1",
+    ratio: "21:9",
     size: "1K",
-    description: "Thin horizontal banner for between content sections",
+    description: "Ultra-wide banner with baked-in Korean typography for between content sections",
   },
   benefit: {
     ratio: "1:1",
@@ -163,53 +163,62 @@ DO NOT include:
   }
 
   if (bannerType === "small") {
-    // 3:1 얇은 가로형 배너
-    return `Create a sleek, thin horizontal banner for ${brand.toUpperCase()} ETF.
+    return `Create a premium ultra-wide thin banner image for ${brand.toUpperCase()} ETF.
 
 CRITICAL REQUIREMENTS:
-- **Aspect Ratio**: Exactly 3:1 (wide and thin)
-- **Style**: Modern, minimal, gradient-based
+- **Aspect Ratio**: Exactly 21:9 (ultra-wide, very thin horizontal)
+- **Style**: Modern, cinematic, professional financial marketing
 - **Background**: Smooth gradient using ${brandStyle.colors}
 ${brandStyle.style}
 
+BAKED-IN KOREAN TYPOGRAPHY (MUST render text directly in the image):
+- Title: "${title}" - render in LARGE, bold white text, left-aligned with slight 3D or shadow effect
+- Subtitle below title in smaller white text (80% opacity)
+- Text should be clearly readable against the background
+- Use clean Korean sans-serif font style (like Pretendard or Noto Sans KR)
+
 BANNER DESIGN:
-- Left side: Small icon or symbol representing ${theme}
-- Center/Right: Space for text overlay (will be added programmatically)
+- Left 60%: Text area with title and subtitle
+- Right 40%: Visual elements representing ${theme}
 - Elements: ${elements}
-- Keep design clean and uncluttered
-- Add subtle texture or pattern
+- Keep design clean and uncluttered with breathing room
+- Add subtle texture or pattern in background
 
 COMPOSITION:
 - ${typeConfig.description}
 - Professional financial product marketing quality
-- Subtle floating elements, not overwhelming
+- The text IS PART of the image - do NOT leave blank space for text overlay
 `;
   }
 
-  // carousel - 16:9 wide banner
-  return `Create a cinematic, high-end 3D banner image for ${brand.toUpperCase()} ETF.
+  // carousel - 21:9 ultra-wide banner (same format as small now)
+  return `Create a premium ultra-wide banner image for ${brand.toUpperCase()} ETF.
 
-CRITICAL STYLE REQUIREMENTS:
+CRITICAL REQUIREMENTS:
+- **Aspect Ratio**: Exactly 21:9 (ultra-wide cinematic)
+- **Style**: High-end, cinematic, 3D elements with professional financial marketing quality
+- **Background**: Dramatic gradient using ${brandStyle.colors}
 ${brandStyle.style}
 
-TEXT REQUIREMENTS:
-- "${brand.toUpperCase()} ETF" logo in the upper center area with 3D metallic ${
-    brandStyle.accent
-  } text
-- Product name "${title}" at the BOTTOM in large 3D text with metallic/chrome effect
+BAKED-IN KOREAN TYPOGRAPHY (MUST render text directly in the image):
+- Product name: "${title}" - render in LARGE, bold 3D metallic text with ${brandStyle.accent} color
+- Below it: Brief tagline in white text (80% opacity)
+- "${brand.toUpperCase()} ETF" brand mark in upper-left corner, small and subtle
+- Use clean Korean sans-serif font style (like Pretendard or Noto Sans KR)
+- Text should be clearly readable and well-composed within the image
 
 3D FLOATING ELEMENTS:
-- Glossy, futuristic 3D icons floating around the text
+- Glossy, futuristic 3D icons floating around the text area
 - Elements: ${elements}
 - Glass/chrome material with subtle reflections
-- Light trails and energy streams connecting elements
+- Light trails and energy streams
 
 COMPOSITION:
-- Wide 16:9 cinematic banner format
-- Centered text with floating 3D elements around
+- Ultra-wide 21:9 format
+- Left-aligned text with floating 3D elements on the right
 - Professional financial product marketing quality
 - Theme: ${theme}
-- The Korean text "${title}" must be accurate and prominent
+- The Korean text "${title}" must be accurate, prominent, and RENDERED IN THE IMAGE
 `;
 }
 
@@ -565,7 +574,7 @@ async function main(): Promise<void> {
   console.log("🏦 ETF Banner Image Generator (Multi-Type Support)");
   console.log("===================================================");
   console.log("Brands: TIGER, SOL, KODEX, RISE, KIWOOM");
-  console.log("Types: carousel (16:9), small (3:1), benefit (1:1)\n");
+  console.log("Types: carousel (21:9), small (21:9), benefit (1:1)\n");
 
   if (!GEMINI_API_KEY) {
     console.error("❌ GEMINI_API_KEY is required.");

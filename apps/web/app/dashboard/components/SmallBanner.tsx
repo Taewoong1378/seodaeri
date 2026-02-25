@@ -22,15 +22,15 @@ export function SmallBanner({
   return (
     <Link href={link} className="block group">
       <div className="relative overflow-hidden rounded-[20px] shadow-md border border-white/5 transition-transform active:scale-[0.98]">
-        <div className={`absolute inset-0 bg-gradient-to-r ${gradient} opacity-90`} />
-        
+        <div className={`absolute inset-0 bg-gradient-to-r ${gradient} opacity-40`} />
+
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <Image
             src={image}
             alt={title}
             fill
-            className="object-cover opacity-40 mix-blend-overlay transition-transform duration-500 group-hover:scale-105"
+            className="object-cover opacity-70 transition-transform duration-500 group-hover:scale-105"
           />
         </div>
 

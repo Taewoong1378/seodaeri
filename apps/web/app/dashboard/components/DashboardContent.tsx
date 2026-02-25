@@ -6,9 +6,8 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useDashboard, useGoalSettings } from "../../../hooks";
-import { getSmallBanners } from "../../../lib/banner-data";
+import { getCarouselBannersAsSmall, getSmallBanners } from "../../../lib/banner-data";
 import { AccountTrendChart } from "./AccountTrendChart";
-import { BannerCarousel } from "./BannerCarousel";
 import { DashboardSkeleton } from "./DashboardSkeleton";
 import { CumulativeDividendChart } from "./CumulativeDividendChart";
 import { DashboardTabs } from "./DashboardTabs";
@@ -25,6 +24,7 @@ import { PortfolioDonutChart } from "./PortfolioDonutChart";
 import { PortfolioHoldingsChart } from "./PortfolioHoldingsChart";
 import { RollingAverageDividendChart } from "./RollingAverageDividendChart";
 import { SmallBanner } from "./SmallBanner";
+import { SmallBannerCarousel } from "./SmallBannerCarousel";
 import { YearlyDividendChart } from "./YearlyDividendChart";
 import {
   AnnualizedYieldComparisonChart,
@@ -49,6 +49,11 @@ export function DashboardContent({ serverData }: { serverData?: import('../../..
   const smallBanners = useMemo(() => {
     if (session?.isDemo) return [];
     return getSmallBanners();
+  }, [session?.isDemo]);
+
+  const carouselBanners = useMemo(() => {
+    if (session?.isDemo) return [];
+    return getCarouselBannersAsSmall();
   }, [session?.isDemo]);
 
   // 계좌 유형별 배당 데이터 계산
@@ -98,7 +103,9 @@ export function DashboardContent({ serverData }: { serverData?: import('../../..
       {/* Hero Section */}
       <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* 배너 캐러셀 */}
-        <BannerCarousel />
+        {carouselBanners.length > 0 && (
+          <SmallBannerCarousel items={carouselBanners} />
+        )}
         {displayData.totalAsset > 0 &&
           (() => {
             // 이번달 손익 계산
