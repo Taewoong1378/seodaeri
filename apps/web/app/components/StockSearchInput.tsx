@@ -71,23 +71,23 @@ export function StockSearchInput({
           {label}
         </label>
         <div
-          className={`flex items-center gap-3 p-3 h-11 rounded-lg border transition-all duration-200 ${
+          className={`flex items-center gap-3 p-3 h-11 rounded-lg border overflow-hidden transition-all duration-200 ${
             darkTheme
               ? "bg-white/5 border-white/10"
               : "bg-background border-border shadow-sm"
           }`}
         >
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <div className="flex items-center gap-2 min-w-0">
               <span
-                className={`font-semibold truncate ${
+                className={`font-semibold text-sm truncate min-w-0 ${
                   darkTheme ? "text-white" : "text-foreground"
                 }`}
               >
                 {selectedName || selectedCode}
               </span>
               <span
-                className={`text-xs px-1.5 py-0.5 rounded-md bg-muted font-medium ${
+                className={`text-xs px-1.5 py-0.5 rounded-md bg-muted font-medium shrink-0 ${
                   darkTheme ? "bg-white/10 text-slate-400" : "text-muted-foreground"
                 }`}
               >

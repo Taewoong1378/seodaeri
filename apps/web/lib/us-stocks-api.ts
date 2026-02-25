@@ -5,7 +5,7 @@
  * - downloadUSStockCSVs()로 최신 CSV를 NASDAQ API에서 다운로드 가능
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export interface USStock {
@@ -81,6 +81,7 @@ export async function fetchUSStocks(): Promise<USStock[]> {
     { path: join(dataDir, "nasdaq.csv"), market: "NASDAQ" },
     { path: join(dataDir, "nyse.csv"), market: "NYSE" },
     { path: join(dataDir, "amex.csv"), market: "AMEX" },
+    { path: join(dataDir, "etf.csv"), market: "ETF" },
   ];
 
   const allStocks: USStock[] = [];
@@ -130,13 +131,13 @@ export async function fetchUSStocks(): Promise<USStock[]> {
  * NASDAQ API에서 최신 주식 데이터를 다운로드하여 CSV 파일로 저장
  * - NASDAQ Stock Screener의 내부 API 사용
  * - NASDAQ, NYSE, AMEX 3개 거래소 데이터 다운로드
- * 
+ *
  * @returns 다운로드 결과 (거래소별 종목 수)
  */
 export async function downloadUSStockCSVs(): Promise<{
   success: boolean;
   message: string;
-  counts: { nasdaq: number; nyse: number; amex: number };
+  counts: { nasdaq: number; nyse: number; amex: number; etf: number };
   error?: string;
 }> {
   const exchanges = [
@@ -146,31 +147,35 @@ export async function downloadUSStockCSVs(): Promise<{
   ] as const;
 
   const dataDir = join(process.cwd(), "data");
-  
+
   // data 디렉토리가 없으면 생성
   if (!existsSync(dataDir)) {
     mkdirSync(dataDir, { recursive: true });
   }
 
-  const counts: { nasdaq: number; nyse: number; amex: number } = {
+  const counts: { nasdaq: number; nyse: number; amex: number; etf: number } = {
     nasdaq: 0,
     nyse: 0,
     amex: 0,
+    etf: 0,
   };
 
   const errors: string[] = [];
 
   for (const exchange of exchanges) {
     try {
-      console.log(`[downloadCSV] Fetching ${exchange.label} data from NASDAQ API...`);
+      console.log(
+        `[downloadCSV] Fetching ${exchange.label} data from NASDAQ API...`,
+      );
 
       // NASDAQ Stock Screener 내부 API
       const url = `https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=25000&exchange=${exchange.name}`;
-      
+
       const response = await fetch(url, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Accept": "application/json",
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Accept: "application/json",
         },
       });
 
@@ -185,16 +190,27 @@ export async function downloadUSStockCSVs(): Promise<{
         throw new Error("API 응답에 데이터가 없습니다.");
       }
 
-      console.log(`[downloadCSV] ${exchange.label}: ${rows.length} rows received`);
+      console.log(
+        `[downloadCSV] ${exchange.label}: ${rows.length} rows received`,
+      );
 
       // JSON → CSV 변환
       const csvHeaders = [
-        "Symbol", "Name", "Last Sale", "Net Change", "% Change",
-        "Market Cap", "Country", "IPO Year", "Volume", "Sector", "Industry",
+        "Symbol",
+        "Name",
+        "Last Sale",
+        "Net Change",
+        "% Change",
+        "Market Cap",
+        "Country",
+        "IPO Year",
+        "Volume",
+        "Sector",
+        "Industry",
       ];
-      
+
       const csvLines = [csvHeaders.join(",")];
-      
+
       for (const row of rows) {
         const values = [
           row.symbol || "",
@@ -214,7 +230,7 @@ export async function downloadUSStockCSVs(): Promise<{
 
       const csvContent = csvLines.join("\n");
       const filePath = join(dataDir, `${exchange.name}.csv`);
-      
+
       writeFileSync(filePath, csvContent, "utf-8");
       counts[exchange.name] = rows.length;
 
@@ -226,9 +242,111 @@ export async function downloadUSStockCSVs(): Promise<{
     }
   }
 
-  const totalCount = counts.nasdaq + counts.nyse + counts.amex;
+  // ETF 다운로드 (실패해도 stocks 동기화는 정상 진행)
+  // ETF API는 한 페이지에 최대 50개만 반환하므로 페이지네이션 필요
+  try {
+    console.log("[downloadCSV] Fetching ETF data from NASDAQ API (paginated)...");
 
-  if (totalCount === 0) {
+    const etfHeaders = {
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      Accept: "application/json",
+    };
+
+    const allEtfRows: Record<string, string>[] = [];
+    const pageSize = 50;
+    let offset = 0;
+    let totalRecords = 0;
+
+    // 첫 페이지로 totalRecords 확인 후 전체 페이지네이션
+    do {
+      const etfUrl = `https://api.nasdaq.com/api/screener/etf?tableonly=true&limit=${pageSize}&offset=${offset}`;
+      const etfResponse = await fetch(etfUrl, { headers: etfHeaders });
+
+      if (!etfResponse.ok) {
+        throw new Error(`HTTP ${etfResponse.status}: ${etfResponse.statusText}`);
+      }
+
+      const etfData = await etfResponse.json();
+      const records = etfData?.data?.records;
+
+      if (!records) {
+        throw new Error("ETF API 응답에 records가 없습니다.");
+      }
+
+      if (offset === 0) {
+        totalRecords = records.totalrecords || 0;
+        console.log(`[downloadCSV] ETF: total ${totalRecords} records, fetching in pages of ${pageSize}...`);
+      }
+
+      const rows = records?.data?.rows;
+      if (!rows || !Array.isArray(rows) || rows.length === 0) break;
+
+      allEtfRows.push(...rows);
+      offset += pageSize;
+
+      // 진행상황 로그 (500개마다)
+      if (allEtfRows.length % 500 < pageSize) {
+        console.log(`[downloadCSV] ETF: fetched ${allEtfRows.length}/${totalRecords}...`);
+      }
+    } while (offset < totalRecords);
+
+    if (allEtfRows.length === 0) {
+      throw new Error("ETF API 응답에 데이터가 없습니다.");
+    }
+
+    console.log(`[downloadCSV] ETF: ${allEtfRows.length} total rows received`);
+
+    // ETF JSON → CSV 변환 (stocks와 동일한 헤더 형식으로 저장)
+    const etfCsvHeaders = [
+      "Symbol",
+      "Name",
+      "Last Sale",
+      "Net Change",
+      "% Change",
+      "Market Cap",
+      "Country",
+      "IPO Year",
+      "Volume",
+      "Sector",
+      "Industry",
+    ];
+
+    const etfCsvLines = [etfCsvHeaders.join(",")];
+
+    for (const row of allEtfRows) {
+      const values = [
+        row.symbol || "",
+        `"${(row.companyName || row.name || "").replace(/"/g, '""')}"`,
+        row.lastsale || row.lastSalePrice || "",
+        row.netchange || row.netChange || "",
+        row.pctchange || row.percentageChange || "",
+        row.marketCap || "",
+        `"${(row.country || "").replace(/"/g, '""')}"`,
+        row.ipoyear || row.ipoYear || "",
+        row.volume || "",
+        `"${(row.sector || "").replace(/"/g, '""')}"`,
+        `"${(row.industry || "").replace(/"/g, '""')}"`,
+      ];
+      etfCsvLines.push(values.join(","));
+    }
+
+    const etfCsvContent = etfCsvLines.join("\n");
+    const etfFilePath = join(dataDir, "etf.csv");
+
+    writeFileSync(etfFilePath, etfCsvContent, "utf-8");
+    counts.etf = allEtfRows.length;
+
+    console.log(`[downloadCSV] ETF: saved to ${etfFilePath}`);
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error("[downloadCSV] ETF error:", errMsg);
+    errors.push(`ETF: ${errMsg}`);
+  }
+
+  const totalCount = counts.nasdaq + counts.nyse + counts.amex + counts.etf;
+
+  if (counts.nasdaq === 0 && counts.nyse === 0 && counts.amex === 0) {
     return {
       success: false,
       message: "모든 거래소 데이터 다운로드 실패",
@@ -237,9 +355,10 @@ export async function downloadUSStockCSVs(): Promise<{
     };
   }
 
-  const message = errors.length > 0
-    ? `${totalCount}개 종목 다운로드 완료 (일부 실패: ${errors.join(", ")})`
-    : `${totalCount}개 종목 CSV 다운로드 완료 (NASDAQ: ${counts.nasdaq}, NYSE: ${counts.nyse}, AMEX: ${counts.amex})`;
+  const message =
+    errors.length > 0
+      ? `${totalCount}개 종목 다운로드 완료 (일부 실패: ${errors.join(", ")})`
+      : `${totalCount}개 종목 CSV 다운로드 완료 (NASDAQ: ${counts.nasdaq}, NYSE: ${counts.nyse}, AMEX: ${counts.amex}, ETF: ${counts.etf})`;
 
   return {
     success: true,
@@ -254,7 +373,7 @@ export async function downloadUSStockCSVs(): Promise<{
  */
 export async function searchUSStocksLocal(
   query: string,
-  limit = 20
+  limit = 20,
 ): Promise<USStock[]> {
   if (!query || query.trim().length < 1) {
     return [];
@@ -265,7 +384,7 @@ export async function searchUSStocksLocal(
 
   return stocks
     .filter(
-      (stock) => stock.code.includes(q) || stock.name.toUpperCase().includes(q)
+      (stock) => stock.code.includes(q) || stock.name.toUpperCase().includes(q),
     )
     .slice(0, limit);
 }
