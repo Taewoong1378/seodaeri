@@ -46,6 +46,7 @@ import { StandaloneDataProvider } from '../../lib/data-provider';
 import { getUSDKRWRate } from '../../lib/exchange-rate-api';
 import { getHistoricalExchangeRates, getHistoricalMarketData } from '../../lib/historical-exchange-rate';
 import { enrichRowsWithExchangeRates, calculateMarketYields } from '../../lib/exchange-rate-enrichment';
+import { ALTERNATIVE_ASSET_CODES, getAlternativeAssetPrices } from '../../lib/alternative-asset-api';
 
 // 사용자별 캐시 태그 생성
 function getDashboardCacheTag(userId: string) {
@@ -274,6 +275,27 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     const portfolio: PortfolioItem[] = portfolioRows
       ? parsePortfolioData(portfolioRows)
       : [];
+
+    // 기타자산(암호화폐/금) 현재가 오버라이드
+    // 시트의 수식이 BTC 등의 현재가를 알 수 없으므로 스프레드시트 API로 대체
+    const altItems = portfolio.filter((item) => ALTERNATIVE_ASSET_CODES.has(item.ticker));
+    if (altItems.length > 0) {
+      try {
+        const altPrices = await getAlternativeAssetPrices();
+        for (const item of altItems) {
+          const altPrice = altPrices.find((a) => a.code === item.ticker);
+          if (altPrice && altPrice.price > 0) {
+            item.currentPrice = altPrice.price;
+            item.totalValue = altPrice.price * item.quantity;
+            const invested = item.avgPrice * item.quantity;
+            item.profit = item.totalValue - invested;
+            item.yieldPercent = invested > 0 ? (item.profit / invested) * 100 : 0;
+          }
+        }
+      } catch (error) {
+        console.error('[Dashboard] Alternative asset price override failed:', error);
+      }
+    }
 
     // '5. 계좌내역(누적)'에서 총자산, 원금, 수익률 계산
     // E열(0)=연도, F열(1)=월, H열(3)=계좌총액, I열(4)=입금액, Y열(20)=누적수익률
@@ -727,6 +749,26 @@ export async function syncPortfolio() {
   const portfolio = parsePortfolioData(portfolioRows || []);
   let portfolioCount = 0;
   let holdingsCount = 0;
+
+  // 기타자산 현재가 오버라이드 (sync 시에도 올바른 현재가로 캐시)
+  const syncAltItems = portfolio.filter((item) => ALTERNATIVE_ASSET_CODES.has(item.ticker));
+  if (syncAltItems.length > 0) {
+    try {
+      const altPrices = await getAlternativeAssetPrices();
+      for (const item of syncAltItems) {
+        const altPrice = altPrices.find((a) => a.code === item.ticker);
+        if (altPrice && altPrice.price > 0) {
+          item.currentPrice = altPrice.price;
+          item.totalValue = altPrice.price * item.quantity;
+          const invested = item.avgPrice * item.quantity;
+          item.profit = item.totalValue - invested;
+          item.yieldPercent = invested > 0 ? (item.profit / invested) * 100 : 0;
+        }
+      }
+    } catch (error) {
+      console.error('[syncSheetData] Alternative asset price override failed:', error);
+    }
+  }
 
   if (portfolio.length > 0) {
     // portfolio_cache 업데이트

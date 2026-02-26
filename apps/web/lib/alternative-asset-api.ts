@@ -10,7 +10,7 @@
  */
 
 const SPREADSHEET_ID = "1mhRnA1oB2OizL-jRtbBV-b2evYVJooMaVGyWIgQeBMM";
-const SHEET_GID = "282782223";
+const SHEET_GID = "475830661";
 
 // 5분 메모리 캐시
 const CACHE_DURATION_MS = 5 * 60 * 1000;
@@ -124,20 +124,25 @@ function parseAlternativeAssetCSV(csvText: string): AlternativeAsset[] {
 async function fetchAlternativeAssetCSV(): Promise<AlternativeAsset[]> {
   const csvUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${SHEET_GID}`;
 
-  console.log('[AlternativeAsset] Fetching from public spreadsheet');
+  console.log('[AlternativeAsset] Fetching from public spreadsheet, gid:', SHEET_GID);
 
   const response = await fetch(csvUrl, {
-    next: { revalidate: 300 }, // 5분 캐시
+    cache: 'no-store', // 메모리 캐시로 충분 — Next.js fetch 캐시 비활성화
+    redirect: 'follow',
   });
+
+  console.log(`[AlternativeAsset] Response status: ${response.status}, url: ${response.url}`);
 
   if (!response.ok) {
     throw new Error(`HTTP error: ${response.status}`);
   }
 
   const csvText = await response.text();
+  console.log(`[AlternativeAsset] CSV length: ${csvText.length}, first 200 chars: ${csvText.substring(0, 200)}`);
+
   const assets = parseAlternativeAssetCSV(csvText);
 
-  console.log(`[AlternativeAsset] Fetched ${assets.length} assets`);
+  console.log(`[AlternativeAsset] Parsed ${assets.length} assets:`, assets.map(a => `${a.code}=${a.price}`).join(', '));
   return assets;
 }
 

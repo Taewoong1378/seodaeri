@@ -220,7 +220,9 @@ export class StandaloneDataProvider implements DataProvider {
     // 기타자산 현재가 조회
     if (altTickers.length > 0) {
       try {
+        console.log(`[StandaloneProvider] Fetching alt asset prices for: ${altTickers.join(', ')}`);
         const altPrices = await getAlternativeAssetPrices();
+        console.log(`[StandaloneProvider] Got ${altPrices.length} alt prices:`, altPrices.map(a => `${a.code}=${a.price}`).join(', '));
         for (const alt of altPrices) {
           if (altTickers.includes(alt.code)) {
             prices.set(alt.code, {
@@ -319,7 +321,10 @@ export class StandaloneDataProvider implements DataProvider {
 
     for (const holding of holdings) {
       const priceData = prices.get(holding.ticker);
-      const currentPrice = priceData?.price || holding.avg_price || 0;
+      // 기타자산(암호화폐/금)은 avg_price를 현재가 폴백으로 사용하지 않음
+      // avg_price가 오래되거나 잘못된 값일 경우 현재가로 노출되는 버그 방지
+      const isAltAsset = ALTERNATIVE_ASSET_CODES.has(holding.ticker);
+      const currentPrice = priceData?.price || (isAltAsset ? 0 : (holding.avg_price || 0));
       const currency = (holding.currency as 'KRW' | 'USD') || (isKoreanStock(holding.ticker) ? 'KRW' : 'USD');
 
       const quantity = holding.quantity || 0;

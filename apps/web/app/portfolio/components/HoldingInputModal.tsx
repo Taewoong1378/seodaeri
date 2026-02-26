@@ -389,7 +389,7 @@ export function HoldingInputModal({
               </label>
               <Input
                 type="text"
-                inputMode="numeric"
+                inputMode="decimal"
                 value={quantity}
                 onChange={handleQuantityChange}
                 onFocus={handleInputFocus}

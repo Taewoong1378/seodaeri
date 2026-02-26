@@ -2,16 +2,21 @@
 
 import { Card, CardContent } from "@repo/design-system/components/card";
 import { cn } from "@repo/design-system/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   BarChart3,
   List,
+  Loader2,
   Pencil,
   PieChart,
   Plus,
+  Trash2,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
 import { useState } from "react";
+import { queryKeys } from "../../../lib/query-client";
+import { deleteHolding } from "../../actions/holding";
 import { type HoldingEditData, HoldingInputModal } from "./HoldingInputModal";
 import { PortfolioTreemap } from "./PortfolioTreemap";
 
@@ -49,15 +54,36 @@ function formatPercent(value: number): string {
   return `${prefix}${value.toFixed(2)}%`;
 }
 
+// 기타자산 수량 단위 (주 대신 g, BTC 등)
+const ALTERNATIVE_ASSET_UNITS: Record<string, string> = {
+  BTC: 'BTC',
+  ETH: 'ETH',
+  XRP: 'XRP',
+  SOL_CRYPTO: 'SOL',
+  GOLD: 'g',
+};
+
+function formatQuantityUnit(ticker: string, quantity: number): string {
+  const unit = ALTERNATIVE_ASSET_UNITS[ticker];
+  if (unit) {
+    // 소수점이 있으면 표시, 없으면 정수로
+    const formatted = quantity % 1 === 0 ? quantity.toLocaleString() : quantity.toLocaleString(undefined, { maximumFractionDigits: 8 });
+    return `${formatted}${unit}`;
+  }
+  return `${quantity.toLocaleString()}주`;
+}
+
 export function PortfolioClient({
   portfolio,
   isStandalone = false,
 }: PortfolioClientProps) {
+  const queryClient = useQueryClient();
   const [view, setView] = useState<"list" | "chart">("list");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editData, setEditData] = useState<HoldingEditData | undefined>(
     undefined
   );
+  const [deletingTicker, setDeletingTicker] = useState<string | null>(null);
 
   // 비중 순으로 정렬 (높은 비중부터)
   const sortedPortfolio = [...portfolio].sort((a, b) => b.weight - a.weight);
@@ -81,6 +107,24 @@ export function PortfolioClient({
   const handleModalClose = () => {
     setIsModalOpen(false);
     setEditData(undefined);
+  };
+
+  const handleDelete = async (e: React.MouseEvent, item: PortfolioItem) => {
+    e.stopPropagation();
+    if (!confirm(`${item.name} (${item.ticker})을(를) 삭제하시겠습니까?`)) return;
+
+    setDeletingTicker(item.ticker);
+    try {
+      const result = await deleteHolding(item.ticker);
+      if (result.success) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: queryKeys.portfolio, refetchType: 'all' }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' }),
+        ]);
+      }
+    } finally {
+      setDeletingTicker(null);
+    }
   };
 
   return (
@@ -231,7 +275,7 @@ export function PortfolioClient({
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-muted-foreground">
-                            {item.quantity.toLocaleString()}주
+                            {formatQuantityUnit(item.ticker, item.quantity)}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             ·
@@ -261,9 +305,23 @@ export function PortfolioClient({
                             {formatPercent(item.yieldPercent)}
                           </div>
                         </div>
-                        {/* 수정 힌트 아이콘 */}
-                        <div className="p-1.5 rounded-full bg-muted/50 text-muted-foreground">
-                          <Pencil size={14} />
+                        {/* 수정/삭제 버튼 */}
+                        <div className="flex items-center gap-1">
+                          <div className="p-1.5 rounded-full bg-muted/50 text-muted-foreground">
+                            <Pencil size={14} />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => handleDelete(e, item)}
+                            disabled={deletingTicker === item.ticker}
+                            className="p-1.5 rounded-full bg-muted/50 text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                          >
+                            {deletingTicker === item.ticker ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={14} />
+                            )}
+                          </button>
                         </div>
                       </div>
                     </div>
