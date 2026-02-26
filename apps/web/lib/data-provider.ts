@@ -242,6 +242,14 @@ export class StandaloneDataProvider implements DataProvider {
     // KIS API에서 가격을 못 가져온 종목은 DB 캐시에서 조회
     const missingTickers = allTickers.filter((t) => !prices.has(t));
     if (missingTickers.length > 0) {
+      console.log(`[StandaloneProvider] KIS API missing ${missingTickers.length} tickers: ${missingTickers.join(', ')}`);
+
+      // avg_price 맵 (캐시 오염 방지용)
+      const avgPriceMap = new Map<string, number>();
+      for (const h of holdings) {
+        avgPriceMap.set(h.ticker, h.avg_price || 0);
+      }
+
       const { data: cachedPrices } = await supabase
         .from('portfolio_cache')
         .select('ticker, current_price, currency')
@@ -251,6 +259,13 @@ export class StandaloneDataProvider implements DataProvider {
       if (cachedPrices) {
         for (const cached of cachedPrices) {
           if (cached.current_price && cached.current_price > 0) {
+            // 캐시 오염 방지: current_price == avg_price인 경우 무시
+            // (KIS API 실패 시 avg_price가 current_price로 저장된 무의미한 값)
+            const avgP = avgPriceMap.get(cached.ticker);
+            if (avgP && cached.current_price === avgP) {
+              console.log(`[StandaloneProvider] Skipping poisoned cache: ${cached.ticker} (current_price=${cached.current_price} == avg_price)`);
+              continue;
+            }
             prices.set(cached.ticker, {
               ticker: cached.ticker,
               price: cached.current_price,
@@ -363,10 +378,20 @@ export class StandaloneDataProvider implements DataProvider {
     }
 
     // 현재가 캐시 업데이트 (원본 가격으로 저장, KRW 환산값이 아닌 API 원본)
+    // 캐시 오염 방지: avg_price와 동일한 값은 저장하지 않음
     const apiPricedItems = portfolio
       .filter((item) => {
         const p = prices.get(item.ticker);
-        return p && p.source !== 'db-cache';
+        if (!p || p.source === 'db-cache' || p.source === 'global-cache') return false;
+        // avg_price와 같은 값은 캐시하지 않음 (KIS API 실패 시 폴백값이 캐시되는 것 방지)
+        const holding = holdings.find((h) => h.ticker === item.ticker);
+        const orig = originalPrices.get(item.ticker);
+        const realPrice = orig?.currentPrice ?? item.currentPrice;
+        if (holding && realPrice === (holding.avg_price || 0)) {
+          console.log(`[StandaloneProvider] Skip caching ${item.ticker}: price=${realPrice} equals avg_price`);
+          return false;
+        }
+        return true;
       })
       .map((item) => {
         const orig = originalPrices.get(item.ticker);
