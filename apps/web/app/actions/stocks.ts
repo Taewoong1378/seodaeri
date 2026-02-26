@@ -357,20 +357,47 @@ export async function searchStocksFromDB(
     }
 
     // ilike로 부분 일치 검색 (code, name, eng_name)
+    // 넉넉하게 가져온 후 정렬 (ETF가 알파벳순으로 앞에 와서 개별종목이 밀리는 문제 방지)
     const { data, error } = await queryBuilder
       .or(`code.ilike.%${q}%,name.ilike.%${q}%,eng_name.ilike.%${q}%`)
-      .order("market", { ascending: true })
-      .order("name", { ascending: true })
-      .limit(20);
+      .limit(50);
 
     if (error) {
       console.error("[searchStocks] Error:", error);
       throw error;
     }
 
+    // 정렬: 코드 정확히 일치 → 코드가 검색어로 시작 → 개별종목(비-ETF) 우선 → 이름순
+    const qUpper = q.toUpperCase();
+    const sorted = (data || []).sort((a, b) => {
+      const aCode = a.code.toUpperCase();
+      const bCode = b.code.toUpperCase();
+
+      // 1) 코드 정확히 일치
+      const aExact = aCode === qUpper;
+      const bExact = bCode === qUpper;
+      if (aExact && !bExact) return -1;
+      if (!aExact && bExact) return 1;
+
+      // 2) 코드가 검색어로 시작
+      const aStarts = aCode.startsWith(qUpper);
+      const bStarts = bCode.startsWith(qUpper);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+
+      // 3) 개별종목(비-ETF) 우선
+      const aIsEtf = a.market === "ETF";
+      const bIsEtf = b.market === "ETF";
+      if (!aIsEtf && bIsEtf) return -1;
+      if (aIsEtf && !bIsEtf) return 1;
+
+      // 4) 이름순
+      return a.name.localeCompare(b.name);
+    });
+
     return {
       success: true,
-      stocks: data || [],
+      stocks: sorted.slice(0, 20),
     };
   } catch (error) {
     console.error("[searchStocks] Error:", error);

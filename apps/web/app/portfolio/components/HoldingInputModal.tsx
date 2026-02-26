@@ -282,7 +282,7 @@ export function HoldingInputModal({
         </DialogHeader>
 
         {/* Body */}
-        <div className="p-5 space-y-4 min-w-0 overflow-hidden">
+        <div className="p-5 space-y-4 min-w-0 overflow-y-auto max-h-[60vh]">
           {/* 종목 검색 또는 수동 입력 */}
           {!isEditMode && !showManualInput ? (
             <>
