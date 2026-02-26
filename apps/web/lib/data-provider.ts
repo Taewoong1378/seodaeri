@@ -261,6 +261,53 @@ export class StandaloneDataProvider implements DataProvider {
       }
     }
 
+    // 여전히 가격이 없는 종목: 다른 유저의 portfolio_cache에서 최신 가격 조회
+    // (KIS API 장애 시 공유 캐시로 폴백 — 7일 이내, 통화 일치, avg_price와 다른 값만)
+    const stillMissing = allTickers.filter((t) => !prices.has(t));
+    if (stillMissing.length > 0) {
+      // 각 종목의 expected currency를 미리 구함
+      const holdingCurrencyMap = new Map<string, string>();
+      for (const h of holdings) {
+        holdingCurrencyMap.set(h.ticker, h.currency || (isKoreanStock(h.ticker) ? 'KRW' : 'USD'));
+      }
+
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      const { data: globalPrices } = await supabase
+        .from('portfolio_cache')
+        .select('ticker, current_price, currency, updated_at')
+        .in('ticker', stillMissing)
+        .gt('current_price', 0)
+        .gte('updated_at', sevenDaysAgo)
+        .order('updated_at', { ascending: false });
+
+      if (globalPrices) {
+        // 종목당 가장 최신 1건만 사용 (이미 updated_at DESC 정렬)
+        const used = new Set<string>();
+        for (const gp of globalPrices) {
+          if (used.has(gp.ticker)) continue;
+
+          const expectedCurrency = holdingCurrencyMap.get(gp.ticker);
+          // 통화 불일치 방지
+          if (expectedCurrency && gp.currency !== expectedCurrency) continue;
+
+          // avg_price와 동일한 값이면 건너뜀 (이전에 폴백으로 저장된 무의미한 값)
+          const holding = holdings.find((h) => h.ticker === gp.ticker);
+          if (holding && gp.current_price === holding.avg_price) continue;
+
+          used.add(gp.ticker);
+          prices.set(gp.ticker, {
+            ticker: gp.ticker,
+            price: gp.current_price ?? 0,
+            currency: (gp.currency as 'KRW' | 'USD') || 'KRW',
+            timestamp: Date.now(),
+            source: 'global-cache',
+          });
+          console.log(`[StandaloneProvider] Global cache hit: ${gp.ticker} = ${gp.current_price} (from ${gp.updated_at})`);
+        }
+      }
+    }
+
     // 환율 조회
     const exchangeRate = await getUSDKRWRate();
 
