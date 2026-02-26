@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@repo/database/server';
 import { type KRXStock, fetchAllStocks, searchStocks } from '../../../../lib/krx-api';
+import { searchAlternativeAssets } from '../../../../lib/alternative-asset-api';
 
 // KRX API fallback용 캐시 (Supabase에 데이터가 없을 때만 사용)
 let stocksCache: KRXStock[] = [];
@@ -10,7 +11,7 @@ const CACHE_DURATION = 1000 * 60 * 60; // 1시간
 /**
  * 종목 검색 API
  * GET /api/stocks/search?q=삼성
- * 
+ *
  * 1. 우선 Supabase stocks 테이블에서 검색
  * 2. Supabase에 데이터가 없으면 KRX API에서 직접 검색 (fallback)
  */
@@ -25,9 +26,17 @@ export async function GET(request: NextRequest) {
   const q = query.trim();
 
   try {
+    // 0. 대안 자산(암호화폐/금 등) 검색
+    const alternativeMatches = searchAlternativeAssets(q);
+    const altStocks = alternativeMatches.map(asset => ({
+      code: asset.code,
+      name: asset.name,
+      market: '기타자산',
+    }));
+
     // 1. Supabase에서 검색 시도
     const supabase = createServiceClient();
-    
+
     const { data: dbStocks, error: dbError } = await supabase
       .from('stocks')
       .select('code, name, market')
@@ -37,11 +46,16 @@ export async function GET(request: NextRequest) {
       .order('name', { ascending: true })
       .limit(20);
 
-    // Supabase에서 결과를 찾았으면 반환
+    // Supabase에서 결과를 찾았으면 대안 자산과 합쳐서 반환
     if (!dbError && dbStocks && dbStocks.length > 0) {
-      console.log(`[stocks/search] Found ${dbStocks.length} stocks from Supabase`);
+      // Deduplicate: remove any Supabase results that match alternative asset codes
+      const altCodes = new Set(altStocks.map(a => a.code));
+      const filteredDbStocks = dbStocks.filter(s => !altCodes.has(s.code));
+
+      const combined = [...altStocks, ...filteredDbStocks];
+      console.log(`[stocks/search] Found ${combined.length} stocks (${altStocks.length} alternative + ${filteredDbStocks.length} from Supabase)`);
       return NextResponse.json({
-        stocks: dbStocks,
+        stocks: combined,
         source: 'supabase',
       });
     }
@@ -51,8 +65,14 @@ export async function GET(request: NextRequest) {
       .from('stocks')
       .select('*', { count: 'exact', head: true });
 
-    // stocks 테이블에 데이터가 있는데 검색 결과가 없으면 빈 배열 반환
+    // stocks 테이블에 데이터가 있는데 검색 결과가 없으면 대안 자산만 반환
     if (totalCount && totalCount > 0) {
+      if (altStocks.length > 0) {
+        return NextResponse.json({
+          stocks: altStocks,
+          source: 'supabase',
+        });
+      }
       console.log(`[stocks/search] No match found in Supabase (total: ${totalCount} stocks)`);
       return NextResponse.json({
         stocks: [],
@@ -80,15 +100,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // KRX 캐시에서 검색
+    // KRX 캐시에서 검색 후 대안 자산과 합쳐서 반환
     const results = searchStocks(stocksCache, q);
+    const krxStocks = results.map((stock) => ({
+      code: stock.code,
+      name: stock.name,
+      market: stock.market,
+    }));
+
+    // Deduplicate KRX results against alternative assets
+    const altCodes = new Set(altStocks.map(a => a.code));
+    const filteredKrxStocks = krxStocks.filter(s => !altCodes.has(s.code));
+    const combined = [...altStocks, ...filteredKrxStocks];
 
     return NextResponse.json({
-      stocks: results.map((stock) => ({
-        code: stock.code,
-        name: stock.name,
-        market: stock.market,
-      })),
+      stocks: combined,
       source: 'krx',
     });
   } catch (error) {

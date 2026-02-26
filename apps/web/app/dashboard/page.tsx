@@ -6,7 +6,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { checkSheetConnection } from "../actions/onboarding";
-import { getDashboardData } from "../actions/dashboard";
 import { BottomNav } from "./components/BottomNav";
 import { DashboardContent } from "./components/DashboardContent";
 import { DashboardSkeleton } from "./components/DashboardSkeleton";
@@ -32,11 +31,6 @@ export default async function DashboardPage() {
       ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit`
       : null;
   }
-
-  // SSR 프리페치: 스플래시 스크린 중 데이터를 미리 로드
-  // WebView가 HTML을 받을 때 이미 데이터가 포함되어 있으므로
-  // 클라이언트 fetch 없이 즉시 렌더링 → App.Ready 즉시 전송 → 스플래시 빠르게 해제
-  const serverData = await getDashboardData().catch(() => null);
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-24">
@@ -73,7 +67,7 @@ export default async function DashboardPage() {
 
       <main className="p-4">
         <Suspense fallback={<DashboardSkeleton />}>
-          <DashboardContent serverData={serverData} />
+          <DashboardContent />
         </Suspense>
       </main>
 

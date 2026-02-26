@@ -12,6 +12,7 @@ import { getStockPrices, isKoreanStock, type StockPrice } from './stock-price-ap
 import type { AccountTrendData, MajorIndexYieldComparisonData, MonthlyProfitLoss } from './google-sheets';
 import type { HistoricalMarketData } from './historical-exchange-rate';
 import { calculateMarketYields } from './exchange-rate-enrichment';
+import { ALTERNATIVE_ASSET_CODES, getAlternativeAssetPrices } from './alternative-asset-api';
 
 // ============================================
 // 공통 타입 정의
@@ -28,6 +29,7 @@ export interface PortfolioItem {
   profitPercent: number;
   currency: 'KRW' | 'USD';
   weight?: number; // 포트폴리오 비중 (%)
+  avgPriceOriginal?: number; // 원본 통화 평단가 (편집용, KRW 환산 전)
 }
 
 export interface DashboardSummary {
@@ -207,12 +209,36 @@ export class StandaloneDataProvider implements DataProvider {
       return [];
     }
 
-    // 현재가 조회 (KIS API)
-    const tickers = holdings.map((h) => h.ticker);
-    const prices = await getStockPrices(tickers);
+    // 기타자산과 주식 분리
+    const allTickers = holdings.map((h) => h.ticker);
+    const altTickers = allTickers.filter((t) => ALTERNATIVE_ASSET_CODES.has(t));
+    const stockTickers = allTickers.filter((t) => !ALTERNATIVE_ASSET_CODES.has(t));
+
+    // 현재가 조회: 주식은 KIS API, 기타자산은 스프레드시트
+    const prices = stockTickers.length > 0 ? await getStockPrices(stockTickers) : new Map<string, StockPrice>();
+
+    // 기타자산 현재가 조회
+    if (altTickers.length > 0) {
+      try {
+        const altPrices = await getAlternativeAssetPrices();
+        for (const alt of altPrices) {
+          if (altTickers.includes(alt.code)) {
+            prices.set(alt.code, {
+              ticker: alt.code,
+              price: alt.price,
+              currency: 'KRW' as const,
+              timestamp: Date.now(),
+              source: 'spreadsheet',
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[StandaloneProvider] Alternative asset price fetch failed:', error);
+      }
+    }
 
     // KIS API에서 가격을 못 가져온 종목은 DB 캐시에서 조회
-    const missingTickers = tickers.filter((t) => !prices.has(t));
+    const missingTickers = allTickers.filter((t) => !prices.has(t));
     if (missingTickers.length > 0) {
       const { data: cachedPrices } = await supabase
         .from('portfolio_cache')
@@ -268,6 +294,7 @@ export class StandaloneDataProvider implements DataProvider {
         name: holding.name || holding.ticker,
         quantity,
         avgPrice: Math.round(avgPrice * rate),
+        avgPriceOriginal: avgPrice, // 원본 통화 값 (편집용)
         currentPrice: Math.round(currentPrice * rate),
         totalValue: Math.round(totalValue * rate),
         profit: Math.round(profit * rate),

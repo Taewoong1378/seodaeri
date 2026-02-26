@@ -34,15 +34,20 @@ interface HoldingInputModalProps {
 // 미국 마켓 여부 판별
 function isUSMarket(market?: string): boolean {
   if (!market) return false;
-  const usMarkets = ['NASDAQ', 'NYSE', 'AMEX'];
+  const usMarkets = ['NASDAQ', 'NYSE', 'AMEX', 'ETF'];
   return usMarkets.includes(market.toUpperCase());
 }
+
+// 기타자산 코드 (미국 티커로 오인 방지)
+const ALTERNATIVE_ASSET_CODES = new Set(['BTC', 'ETH', 'XRP', 'SOL_CRYPTO', 'GOLD']);
 
 // 티커로 미국 종목 여부 추정 (수동 입력 시 사용)
 function isLikelyUSTicker(ticker: string): boolean {
   // 미국 티커: 1-5글자 알파벳
   // 한국 티커: 6자리 숫자
   const cleaned = ticker.trim().toUpperCase();
+  // 기타자산 코드는 미국 티커가 아님
+  if (ALTERNATIVE_ASSET_CODES.has(cleaned)) return false;
   return /^[A-Z]{1,5}$/.test(cleaned);
 }
 

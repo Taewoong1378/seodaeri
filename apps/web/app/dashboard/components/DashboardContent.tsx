@@ -35,9 +35,9 @@ function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("ko-KR").format(Math.round(amount));
 }
 
-export function DashboardContent({ serverData }: { serverData?: import('../../../app/actions/dashboard').DashboardData | null }) {
+export function DashboardContent() {
   const { data: session } = useSession();
-  const { data, isLoading, error } = useDashboard(serverData);
+  const { data, isLoading, error } = useDashboard();
   const { data: goalSettings } = useGoalSettings();
   const [goalModalType, setGoalModalType] = useState<"finalAsset" | "annualDeposit">(
     "finalAsset"

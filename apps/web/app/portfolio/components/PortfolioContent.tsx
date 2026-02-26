@@ -1,9 +1,9 @@
 "use client";
 
 import { useDashboard } from "../../../hooks";
-import type { DashboardData } from "../../actions/dashboard";
 import { BenefitBanner } from "./BenefitBanner";
 import { PortfolioClient } from "./PortfolioClient";
+import { PortfolioSkeleton } from "./PortfolioSkeleton";
 
 function formatCurrency(amount: number, compact = false): string {
   if (compact && amount >= 100000000) {
@@ -18,14 +18,17 @@ function formatCurrency(amount: number, compact = false): string {
 interface PortfolioContentProps {
   sheetUrl: string | null;
   isStandalone: boolean;
-  serverData?: DashboardData | null;
 }
 
-export function PortfolioContent({ sheetUrl, isStandalone, serverData }: PortfolioContentProps) {
-  const { data } = useDashboard(serverData);
+export function PortfolioContent({ sheetUrl, isStandalone }: PortfolioContentProps) {
+  const { data, isLoading } = useDashboard();
 
-  const portfolio = data?.portfolio || [];
-  const totalAsset = data?.totalAsset || 0;
+  if (isLoading || !data) {
+    return <PortfolioSkeleton />;
+  }
+
+  const portfolio = data.portfolio || [];
+  const totalAsset = data.totalAsset || 0;
 
   // 시트의 투자비중 사용 (없으면 계산)
   const portfolioWithWeight = portfolio.map((item) => ({

@@ -20,6 +20,7 @@ interface PortfolioItem {
   name: string;
   quantity: number;
   avgPrice: number;
+  avgPriceOriginal?: number;
   currentPrice: number;
   totalValue: number;
   profit: number;
@@ -71,7 +72,7 @@ export function PortfolioClient({
       ticker: item.ticker,
       name: item.name,
       quantity: item.quantity,
-      avgPrice: item.avgPrice,
+      avgPrice: item.avgPriceOriginal ?? item.avgPrice,
       country: item.country || "한국",
     });
     setIsModalOpen(true);
