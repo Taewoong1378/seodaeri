@@ -1305,7 +1305,10 @@ export function parsePortfolioData(rows: any[]): PortfolioItem[] {
 
     const country = String(row[2] || '').trim();
     const quantity = parseNumber(row[5]);
-    const avgPrice = parseNumber(row[6]); // 원화 평단가
+    const avgPriceKRW = parseNumber(row[6]); // 원화 평단가 (G열)
+    const avgPriceUSD = parseNumber(row[7]); // 달러 평단가 (H열)
+    // 미국 주식: G열(원화)이 0이면 H열(달러)을 사용 (수동 추가 시 G열이 비어있을 수 있음)
+    const avgPrice = avgPriceKRW > 0 ? avgPriceKRW : (country === '미국' && avgPriceUSD > 0 ? avgPriceUSD : 0);
     const currentPrice = parseNumber(row[8]); // 원화 현재가
 
     // 평가액: 시트에서 직접 가져오거나 계산

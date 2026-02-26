@@ -787,12 +787,21 @@ export async function syncPortfolio() {
       .upsert(cacheData, { onConflict: 'user_id,ticker' });
 
     // holdings 테이블 업데이트
+    // avgPrice=0인 항목은 기존 DB값 유지 (시트에서 수동 추가한 미국주식의 원화평단가가 비어있을 수 있음)
+    const { data: existingHoldings } = await supabase
+      .from('holdings')
+      .select('ticker, avg_price')
+      .eq('user_id', userId);
+    const existingAvgPriceMap = new Map(
+      existingHoldings?.map((h) => [h.ticker, h.avg_price]) || []
+    );
+
     const holdingsData = portfolio.map((item) => ({
       user_id: userId,
       ticker: item.ticker,
       name: item.name,
       quantity: item.quantity,
-      avg_price: item.avgPrice,
+      avg_price: item.avgPrice > 0 ? item.avgPrice : (existingAvgPriceMap.get(item.ticker) || 0),
       currency: item.currency,
       updated_at: new Date().toISOString(),
     }));
