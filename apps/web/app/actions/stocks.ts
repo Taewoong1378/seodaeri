@@ -369,7 +369,7 @@ export async function searchStocksFromDB(
 
     // 정렬: 코드 정확히 일치 → 코드가 검색어로 시작 → 개별종목(비-ETF) 우선 → 이름순
     const qUpper = q.toUpperCase();
-    const sorted = (data || []).sort((a, b) => {
+    const sorted = (data || []).sort((a: { code: string; name: string; market: string }, b: { code: string; name: string; market: string }) => {
       const aCode = a.code.toUpperCase();
       const bCode = b.code.toUpperCase();
 
