@@ -271,9 +271,9 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       .filter((m) => m.year === thisYear)
       .reduce((sum, m) => sum + m.amount, 0);
 
-    // 포트폴리오 파싱
+    // 포트폴리오 파싱 (환율 전달: USD 평단가 → KRW 환산용)
     const portfolio: PortfolioItem[] = portfolioRows
-      ? parsePortfolioData(portfolioRows)
+      ? parsePortfolioData(portfolioRows, currentRate)
       : [];
 
     // 기타자산(암호화폐/금) 현재가 오버라이드
@@ -745,8 +745,9 @@ export async function syncPortfolio() {
     fetchSheetData(accessToken, spreadsheetId, "'6. 입금내역'!A:J"), // A:F -> A:J로 확장 (금액 컬럼 포함)
   ]);
 
-  // 1. 포트폴리오 파싱 및 저장
-  const portfolio = parsePortfolioData(portfolioRows || []);
+  // 1. 포트폴리오 파싱 및 저장 (환율 전달: USD 평단가 → KRW 환산용)
+  const syncExchangeRate = await getUSDKRWRate();
+  const portfolio = parsePortfolioData(portfolioRows || [], syncExchangeRate);
   let portfolioCount = 0;
   let holdingsCount = 0;
 
@@ -801,7 +802,11 @@ export async function syncPortfolio() {
       ticker: item.ticker,
       name: item.name,
       quantity: item.quantity,
-      avg_price: item.avgPrice > 0 ? item.avgPrice : (existingAvgPriceMap.get(item.ticker) || 0),
+      // avgPriceOriginal: USD 평단가 원본값 (DB에는 원본 통화로 저장)
+      // avgPrice: KRW 환산된 값 (표시/계산용)
+      avg_price: item.avgPriceOriginal
+        ? item.avgPriceOriginal
+        : (item.avgPrice > 0 ? item.avgPrice : (existingAvgPriceMap.get(item.ticker) || 0)),
       currency: item.currency,
       updated_at: new Date().toISOString(),
     }));
@@ -965,6 +970,7 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       currency: item.currency,
       quantity: item.quantity,
       avgPrice: item.avgPrice,
+      avgPriceOriginal: item.avgPriceOriginal,
       currentPrice: item.currentPrice,
       totalValue: item.totalValue,
       profit: item.profit,

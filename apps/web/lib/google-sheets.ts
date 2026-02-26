@@ -1270,6 +1270,7 @@ export interface PortfolioItem {
   currency: string;
   quantity: number;
   avgPrice: number;
+  avgPriceOriginal?: number; // 원본 통화 평단가 (USD 주식의 달러 평단가, 편집용)
   currentPrice: number;
   totalValue: number;
   profit: number;
@@ -1278,7 +1279,7 @@ export interface PortfolioItem {
   rowIndex: number; // 시트 행 번호 (업데이트용)
 }
 
-export function parsePortfolioData(rows: any[]): PortfolioItem[] {
+export function parsePortfolioData(rows: any[], exchangeRate?: number): PortfolioItem[] {
   if (!rows || rows.length <= 1) return [];
 
   const parseNumber = (val: any): number => {
@@ -1307,8 +1308,12 @@ export function parsePortfolioData(rows: any[]): PortfolioItem[] {
     const quantity = parseNumber(row[5]);
     const avgPriceKRW = parseNumber(row[6]); // 원화 평단가 (G열)
     const avgPriceUSD = parseNumber(row[7]); // 달러 평단가 (H열)
-    // 미국 주식: G열(원화)이 0이면 H열(달러)을 사용 (수동 추가 시 G열이 비어있을 수 있음)
-    const avgPrice = avgPriceKRW > 0 ? avgPriceKRW : (country === '미국' && avgPriceUSD > 0 ? avgPriceUSD : 0);
+    // 미국 주식: G열(원화)이 0이면 H열(달러)을 KRW로 환산하여 사용
+    // (수동 추가 시 G열이 비어있고 H열에만 달러 평단가가 있을 수 있음)
+    const usedUSDFallback = avgPriceKRW === 0 && country === '미국' && avgPriceUSD > 0;
+    const avgPrice = avgPriceKRW > 0
+      ? avgPriceKRW
+      : (usedUSDFallback ? Math.round(avgPriceUSD * (exchangeRate || 1400)) : 0);
     const currentPrice = parseNumber(row[8]); // 원화 현재가
 
     // 평가액: 시트에서 직접 가져오거나 계산
@@ -1338,6 +1343,7 @@ export function parsePortfolioData(rows: any[]): PortfolioItem[] {
       currency: country === '한국' ? 'KRW' : 'USD',
       quantity,
       avgPrice,
+      avgPriceOriginal: usedUSDFallback ? avgPriceUSD : undefined,
       currentPrice,
       totalValue,
       profit,

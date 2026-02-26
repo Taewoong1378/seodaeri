@@ -17,6 +17,7 @@ import {
 import { useState } from "react";
 import { queryKeys } from "../../../lib/query-client";
 import { deleteHolding } from "../../actions/holding";
+import { ConfirmDialog } from "../../transactions/components/ConfirmDialog";
 import { type HoldingEditData, HoldingInputModal } from "./HoldingInputModal";
 import { PortfolioTreemap } from "./PortfolioTreemap";
 
@@ -84,6 +85,8 @@ export function PortfolioClient({
     undefined
   );
   const [deletingTicker, setDeletingTicker] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<PortfolioItem | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // 비중 순으로 정렬 (높은 비중부터)
   const sortedPortfolio = [...portfolio].sort((a, b) => b.weight - a.weight);
@@ -109,14 +112,21 @@ export function PortfolioClient({
     setEditData(undefined);
   };
 
-  const handleDelete = async (e: React.MouseEvent, item: PortfolioItem) => {
+  const handleDeleteClick = (e: React.MouseEvent, item: PortfolioItem) => {
     e.stopPropagation();
-    if (!confirm(`${item.name} (${item.ticker})을(를) 삭제하시겠습니까?`)) return;
+    setDeleteTarget(item);
+    setIsDeleteDialogOpen(true);
+  };
 
-    setDeletingTicker(item.ticker);
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+
+    setDeletingTicker(deleteTarget.ticker);
     try {
-      const result = await deleteHolding(item.ticker);
+      const result = await deleteHolding(deleteTarget.ticker);
       if (result.success) {
+        setIsDeleteDialogOpen(false);
+        setDeleteTarget(null);
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: queryKeys.portfolio, refetchType: 'all' }),
           queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' }),
@@ -177,6 +187,26 @@ export function PortfolioClient({
         isOpen={isModalOpen}
         onClose={handleModalClose}
         editData={editData}
+      />
+
+      {/* 삭제 확인 다이얼로그 */}
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={(open) => {
+          setIsDeleteDialogOpen(open);
+          if (!open) setDeleteTarget(null);
+        }}
+        title="종목 삭제"
+        description={
+          deleteTarget
+            ? `${deleteTarget.name} (${deleteTarget.ticker})을(를) 삭제하시겠습니까?\n삭제된 내역은 복구할 수 없습니다.`
+            : ""
+        }
+        confirmText="삭제"
+        cancelText="취소"
+        onConfirm={handleDeleteConfirm}
+        isLoading={deletingTicker !== null}
+        variant="danger"
       />
 
       {/* Content */}
@@ -281,7 +311,9 @@ export function PortfolioClient({
                             ·
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            평단 {formatCurrency(item.avgPrice)}원
+                            평단 {item.country === '미국' && item.avgPriceOriginal
+                              ? `$${formatCurrency(item.avgPriceOriginal)}`
+                              : `${formatCurrency(item.avgPrice)}원`}
                           </span>
                         </div>
                       </div>
@@ -312,7 +344,7 @@ export function PortfolioClient({
                           </div>
                           <button
                             type="button"
-                            onClick={(e) => handleDelete(e, item)}
+                            onClick={(e) => handleDeleteClick(e, item)}
                             disabled={deletingTicker === item.ticker}
                             className="p-1.5 rounded-full bg-muted/50 text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
                           >

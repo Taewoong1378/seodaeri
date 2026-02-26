@@ -256,7 +256,7 @@ export function HoldingInputModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent
-        className="sm:max-w-[420px] bg-popover border-border rounded-[24px] p-0 gap-0 overflow-hidden"
+        className="sm:max-w-[420px] bg-popover border-border rounded-[24px] p-0 gap-0"
         style={{
           left: "50%",
           top: "50%",
@@ -282,7 +282,7 @@ export function HoldingInputModal({
         </DialogHeader>
 
         {/* Body */}
-        <div className="p-5 space-y-4 min-w-0 overflow-y-auto max-h-[60vh]">
+        <div className="p-5 space-y-4 min-w-0">
           {/* 종목 검색 또는 수동 입력 */}
           {!isEditMode && !showManualInput ? (
             <>

@@ -175,7 +175,7 @@ export function StockSearchInput({
         {/* 검색 결과 드롭다운 */}
         {showResults && results.length > 0 && (
           <div
-            className={`absolute z-50 w-full mt-2 rounded-lg shadow-xl max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in zoom-in-95 duration-200 ${
+            className={`absolute z-50 w-full mt-2 rounded-lg shadow-xl max-h-48 overflow-y-auto overflow-x-hidden overscroll-contain animate-in fade-in zoom-in-95 duration-200 ${
               darkTheme
                 ? "bg-[#1e293b] border border-white/10"
                 : "bg-popover border border-border"
