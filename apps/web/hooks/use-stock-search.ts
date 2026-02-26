@@ -22,9 +22,13 @@ export function useStockSearch(options: UseStockSearchOptions = {}) {
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // API 호출 (최소 2글자 이상)
+  // API 호출 (한글 1글자 이상, 영문 2글자 이상)
   const searchStocks = useCallback(async (searchQuery: string) => {
-    if (!searchQuery || searchQuery.length < 2) {
+    const trimmed = searchQuery.trim();
+    const hasKorean = /[가-힣]/.test(trimmed);
+    const minLength = hasKorean ? 1 : 2;
+
+    if (!trimmed || trimmed.length < minLength) {
       setResults([]);
       setShowResults(false);
       return;
