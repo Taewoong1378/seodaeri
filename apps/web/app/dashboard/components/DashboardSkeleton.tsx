@@ -4,7 +4,7 @@ export function DashboardSkeleton() {
   return (
     <div className="space-y-6">
       {/* SmallBannerCarousel placeholder */}
-      <div className="rounded-[20px] bg-muted/60 h-[76px] animate-pulse" />
+      <div className="rounded-[20px] bg-muted/60 h-28 animate-pulse" />
 
       {/* HeroCard placeholder */}
       <div className="rounded-[24px] shadow-sm border border-border bg-card">
