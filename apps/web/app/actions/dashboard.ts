@@ -1133,8 +1133,8 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       .from('deposits')
       .select('amount, type')
       .eq('user_id', userId)
-      .gte('date', `${currentYear}-01-01`)
-      .lte('date', `${currentYear}-12-31`);
+      .gte('deposit_date', `${currentYear}-01-01`)
+      .lte('deposit_date', `${currentYear}-12-31`);
 
     let thisYearDeposit = 0;
     for (const d of yearDeposits || []) {

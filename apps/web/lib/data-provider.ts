@@ -335,6 +335,28 @@ export class StandaloneDataProvider implements DataProvider {
     let totalValueKRW = 0;
 
     for (const holding of holdings) {
+      // CASH 특수 처리: quantity=원화금액, avg_price=달러금액
+      if (holding.ticker === 'CASH') {
+        const krwAmount = holding.quantity || 0;
+        const usdAmount = holding.avg_price || 0;
+        const totalValue = krwAmount + usdAmount * exchangeRate;
+        totalValueKRW += totalValue;
+
+        portfolio.push({
+          ticker: holding.ticker,
+          name: holding.name || '현금',
+          quantity: krwAmount,
+          avgPrice: usdAmount, // 달러 금액 (편집용으로 사용)
+          avgPriceOriginal: usdAmount, // 달러 금액 원본
+          currentPrice: Math.round(totalValue),
+          totalValue: Math.round(totalValue),
+          profit: 0,
+          profitPercent: 0,
+          currency: 'KRW',
+        });
+        continue;
+      }
+
       const priceData = prices.get(holding.ticker);
       // 기타자산(암호화폐/금)은 avg_price를 현재가 폴백으로 사용하지 않음
       // avg_price가 오래되거나 잘못된 값일 경우 현재가로 노출되는 버그 방지

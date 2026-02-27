@@ -1304,6 +1304,32 @@ export function parsePortfolioData(rows: any[], exchangeRate?: number): Portfoli
     // 빈 행 제외 (종목명도 없는 경우)
     if (!name) continue;
 
+    // CASH 특수 처리: F=원화금액, G=0, H=달러금액
+    if (ticker === 'CASH') {
+      const krwAmount = parseNumber(row[5]); // F열: 원화 금액
+      const usdAmount = parseNumber(row[7]); // H열: 달러 금액
+      const totalValue = krwAmount + usdAmount * (exchangeRate || 1400);
+
+      if (totalValue > 0) {
+        results.push({
+          ticker,
+          name,
+          country: '',
+          currency: 'KRW',
+          quantity: krwAmount,
+          avgPrice: usdAmount, // 달러 금액 (편집용)
+          avgPriceOriginal: usdAmount,
+          currentPrice: Math.round(totalValue),
+          totalValue: Math.round(totalValue),
+          profit: 0,
+          yieldPercent: 0,
+          weight: 0,
+          rowIndex: i + 1,
+        });
+      }
+      continue;
+    }
+
     const country = String(row[2] || '').trim();
     const quantity = parseNumber(row[5]);
     const avgPriceKRW = parseNumber(row[6]); // 원화 평단가 (G열)

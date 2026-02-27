@@ -89,7 +89,12 @@ export function PortfolioClient({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // 비중 순으로 정렬 (높은 비중부터)
-  const sortedPortfolio = [...portfolio].sort((a, b) => b.weight - a.weight);
+  // 현금은 항상 맨 아래, 나머지는 비중 순 정렬
+  const sortedPortfolio = [...portfolio].sort((a, b) => {
+    if (a.ticker === 'CASH' && b.ticker !== 'CASH') return 1;
+    if (a.ticker !== 'CASH' && b.ticker === 'CASH') return -1;
+    return b.weight - a.weight;
+  });
 
   const handleAddNew = () => {
     setEditData(undefined);
@@ -304,17 +309,37 @@ export function PortfolioClient({
                           </span>
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">
-                            {formatQuantityUnit(item.ticker, item.quantity)}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            ·
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            평단 {item.country === '미국' && item.avgPriceOriginal
-                              ? `$${formatCurrency(item.avgPriceOriginal)}`
-                              : `${formatCurrency(item.avgPrice)}원`}
-                          </span>
+                          {item.ticker === 'CASH' ? (
+                            <>
+                              {item.quantity > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  {formatCurrency(item.quantity)}원
+                                </span>
+                              )}
+                              {item.quantity > 0 && (item.avgPriceOriginal ?? 0) > 0 && (
+                                <span className="text-xs text-muted-foreground">+</span>
+                              )}
+                              {(item.avgPriceOriginal ?? 0) > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  ${formatCurrency(item.avgPriceOriginal!)}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-xs text-muted-foreground">
+                                {formatQuantityUnit(item.ticker, item.quantity)}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                ·
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                평단 {item.country === '미국' && item.avgPriceOriginal
+                                  ? `$${formatCurrency(item.avgPriceOriginal)}`
+                                  : `${formatCurrency(item.avgPrice)}원`}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -322,20 +347,22 @@ export function PortfolioClient({
                           <div className="font-semibold text-foreground">
                             {formatCurrency(item.totalValue, true)}원
                           </div>
-                          <div
-                            className={`flex items-center justify-end gap-1 text-xs ${
-                              item.yieldPercent >= 0
-                                ? "text-emerald-600"
-                                : "text-red-500"
-                            }`}
-                          >
-                            {item.yieldPercent >= 0 ? (
-                              <TrendingUp size={12} />
-                            ) : (
-                              <TrendingDown size={12} />
-                            )}
-                            {formatPercent(item.yieldPercent)}
-                          </div>
+                          {item.ticker !== 'CASH' && (
+                            <div
+                              className={`flex items-center justify-end gap-1 text-xs ${
+                                item.yieldPercent >= 0
+                                  ? "text-emerald-600"
+                                  : "text-red-500"
+                              }`}
+                            >
+                              {item.yieldPercent >= 0 ? (
+                                <TrendingUp size={12} />
+                              ) : (
+                                <TrendingDown size={12} />
+                              )}
+                              {formatPercent(item.yieldPercent)}
+                            </div>
+                          )}
                         </div>
                         {/* 수정/삭제 버튼 */}
                         <div className="flex items-center gap-1">

@@ -81,7 +81,7 @@ export async function fetchUSStocks(): Promise<USStock[]> {
     { path: join(dataDir, "nasdaq.csv"), market: "NASDAQ" },
     { path: join(dataDir, "nyse.csv"), market: "NYSE" },
     { path: join(dataDir, "amex.csv"), market: "AMEX" },
-    { path: join(dataDir, "etf.csv"), market: "ETF" },
+    { path: join(dataDir, "etf.csv"), market: "US_ETF" },
   ];
 
   const allStocks: USStock[] = [];

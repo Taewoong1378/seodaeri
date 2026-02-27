@@ -198,8 +198,16 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
     // 시트에 데이터 저장
     // D~H열만 수정 (C열은 수식이므로 건드리지 않음)
     // D열=종목코드, E열=종목명, F열=수량, G열=평단가(원화), H열=평단가(달러, 미국 종목만)
-    const avgPriceUSD = input.currency === 'USD' ? finalAvgPrice : '';
-    const avgPriceKRW = input.currency === 'KRW' ? finalAvgPrice : '';
+    // CASH 특수 처리: F=원화금액, G=0, H=달러금액
+    const isCash = input.ticker === 'CASH';
+    let sheetValues: (string | number)[];
+    if (isCash) {
+      sheetValues = [input.ticker, input.name, input.quantity, 0, input.avgPrice];
+    } else {
+      const avgPriceUSD = input.currency === 'USD' ? finalAvgPrice : '';
+      const avgPriceKRW = input.currency === 'KRW' ? finalAvgPrice : '';
+      sheetValues = [input.ticker, input.name, finalQuantity, avgPriceKRW, avgPriceUSD];
+    }
 
     const sheetResult = await batchUpdateSheet(
       session.accessToken,
@@ -207,7 +215,7 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
       [
         {
           range: `'3. 종목현황'!D${targetRow}:H${targetRow}`,
-          values: [[input.ticker, input.name, finalQuantity, avgPriceKRW, avgPriceUSD]],
+          values: [sheetValues],
         },
       ]
     );
@@ -222,8 +230,8 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
           user_id: dbUserId,
           ticker: input.ticker,
           name: input.name,
-          quantity: finalQuantity,
-          avg_price: finalAvgPrice,
+          quantity: isCash ? input.quantity : finalQuantity,
+          avg_price: isCash ? input.avgPrice : finalAvgPrice,
           currency: input.currency,
           updated_at: new Date().toISOString(),
         },
@@ -377,6 +385,18 @@ export interface HoldingRecord {
   quantity: number;
   avgPrice: number;
   currency: 'KRW' | 'USD';
+}
+
+/**
+ * 환율 조회 (클라이언트에서 사용)
+ */
+export async function getExchangeRate(): Promise<number> {
+  try {
+    const { getUSDKRWRate } = await import('../../lib/exchange-rate-api');
+    return await getUSDKRWRate();
+  } catch {
+    return 1400; // fallback
+  }
 }
 
 export async function getHoldings(): Promise<HoldingRecord[]> {

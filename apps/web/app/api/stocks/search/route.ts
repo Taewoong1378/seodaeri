@@ -65,8 +65,8 @@ export async function GET(request: NextRequest) {
         if (!aStarts && bStarts) return 1;
 
         // 3) 개별종목(비-ETF) 우선
-        const aIsEtf = a.market === 'ETF';
-        const bIsEtf = b.market === 'ETF';
+        const aIsEtf = a.market === 'ETF' || a.market === 'US_ETF';
+        const bIsEtf = b.market === 'ETF' || b.market === 'US_ETF';
         if (!aIsEtf && bIsEtf) return -1;
         if (aIsEtf && !bIsEtf) return 1;
 
