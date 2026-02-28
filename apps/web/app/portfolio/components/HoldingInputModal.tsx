@@ -226,12 +226,10 @@ export function HoldingInputModal({
         });
 
         if (result.success) {
-          await Promise.all([
-            queryClient.invalidateQueries({ queryKey: queryKeys.portfolio, refetchType: 'all' }),
-            queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' }),
-          ]);
           handleClose();
           onSuccess?.();
+          await queryClient.invalidateQueries({ queryKey: queryKeys.portfolio, refetchType: 'all' });
+          queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' });
         } else {
           setError(result.error || "저장에 실패했습니다.");
         }
@@ -284,12 +282,10 @@ export function HoldingInputModal({
       });
 
       if (result.success) {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: queryKeys.portfolio, refetchType: 'all' }),
-          queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' }),
-        ]);
         handleClose();
         onSuccess?.();
+        await queryClient.invalidateQueries({ queryKey: queryKeys.portfolio, refetchType: 'all' });
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' });
       } else {
         setError(result.error || "저장에 실패했습니다.");
       }
