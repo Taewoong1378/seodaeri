@@ -28,6 +28,7 @@ import {
 } from "../../actions/account-balance";
 import { deleteDeposit } from "../../actions/deposit";
 import { deleteDividend } from "../../actions/dividend";
+import type { TransactionsResult } from "../../actions/transactions";
 import { SmallBanner } from "../../dashboard/components/SmallBanner";
 import { AlertDialog, ConfirmDialog } from "./ConfirmDialog";
 import { EditTransactionModal, type EditType } from "./EditTransactionModal";
@@ -208,6 +209,13 @@ export function TransactionsClient({
         setDeleteBalanceTarget(null);
 
         if (result.success) {
+          // 낙관적 업데이트: 삭제된 계좌총액 즉시 제거
+          const deletedYearMonth = deleteBalanceTarget.yearMonth;
+          queryClient.setQueryData<AccountBalanceRecord[]>(
+            [...queryKeys.transactions, 'accountBalances'],
+            (old) => old ? old.filter(b => b.yearMonth !== deletedYearMonth) : []
+          );
+          // 백그라운드 리패치
           queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
           queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
         } else {
@@ -281,7 +289,16 @@ export function TransactionsClient({
       setDeleteTarget(null);
 
       if (result.success) {
-        // React Query 캐시 무효화로 데이터 재조회
+        // 낙관적 업데이트: 삭제된 거래내역 즉시 제거
+        const deletedId = tx.id;
+        queryClient.setQueryData<TransactionsResult>(
+          queryKeys.transactions,
+          (old) => {
+            if (!old || !old.transactions) return old;
+            return { ...old, transactions: old.transactions.filter(t => t.id !== deletedId) };
+          }
+        );
+        // 백그라운드 리패치
         queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
         queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
       } else {

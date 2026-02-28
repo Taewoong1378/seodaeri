@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { queryKeys } from "../../../lib/query-client";
+import type { DashboardData } from "../../actions/dashboard";
 import { deleteHolding } from "../../actions/holding";
 import { ConfirmDialog } from "../../transactions/components/ConfirmDialog";
 import { type HoldingEditData, HoldingInputModal } from "./HoldingInputModal";
@@ -131,11 +132,20 @@ export function PortfolioClient({
       const result = await deleteHolding(deleteTarget.ticker);
       if (result.success) {
         setIsDeleteDialogOpen(false);
+        // 낙관적 업데이트: 삭제된 종목 즉시 제거
+        const deletedTicker = deleteTarget.ticker;
+        queryClient.setQueryData<DashboardData | null>(queryKeys.dashboard, (old) => {
+          if (!old) return old;
+          const newPortfolio = old.portfolio.filter(p => p.ticker !== deletedTicker);
+          const totalAsset = newPortfolio.reduce((s, p) => s + p.totalValue, 0);
+          return {
+            ...old,
+            portfolio: newPortfolio.map(p => ({ ...p, weight: totalAsset > 0 ? (p.totalValue / totalAsset) * 100 : 0 })),
+            totalAsset,
+          };
+        });
         setDeleteTarget(null);
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: queryKeys.portfolio, refetchType: 'all' }),
-          queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' }),
-        ]);
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' });
       }
     } finally {
       setDeletingTicker(null);

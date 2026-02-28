@@ -71,19 +71,11 @@ export function useSaveDeposit() {
 
   return useMutation<SaveDepositResult, Error, DepositInput>({
     mutationFn: (input) => saveDeposit(input),
-    onSuccess: async (result) => {
-      // 성공한 경우에만 캐시 무효화 및 즉시 리패치
+    onSuccess: (result) => {
       if (result.success) {
-        await Promise.all([
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.transactions,
-            refetchType: 'all', // 비활성 쿼리도 리패치
-          }),
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.dashboard,
-            refetchType: 'all',
-          }),
-        ]);
+        // 트랜잭션 캐시는 즉시 무효화, 대시보드는 백그라운드 리패치
+        queryClient.invalidateQueries({ queryKey: queryKeys.transactions, refetchType: 'all' });
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' });
       }
     },
   });
@@ -97,18 +89,10 @@ export function useSaveDividend() {
 
   return useMutation<SaveDividendResult, Error, DividendInput>({
     mutationFn: (input) => saveDividend(input),
-    onSuccess: async (result) => {
+    onSuccess: (result) => {
       if (result.success) {
-        await Promise.all([
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.transactions,
-            refetchType: 'all',
-          }),
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.dashboard,
-            refetchType: 'all',
-          }),
-        ]);
+        queryClient.invalidateQueries({ queryKey: queryKeys.transactions, refetchType: 'all' });
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' });
       }
     },
   });
@@ -122,18 +106,10 @@ export function useSaveDividends() {
 
   return useMutation<SaveDividendResult, Error, DividendInput[]>({
     mutationFn: (inputs) => saveDividends(inputs),
-    onSuccess: async (result) => {
+    onSuccess: (result) => {
       if (result.success) {
-        await Promise.all([
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.transactions,
-            refetchType: 'all',
-          }),
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.dashboard,
-            refetchType: 'all',
-          }),
-        ]);
+        queryClient.invalidateQueries({ queryKey: queryKeys.transactions, refetchType: 'all' });
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' });
       }
     },
   });

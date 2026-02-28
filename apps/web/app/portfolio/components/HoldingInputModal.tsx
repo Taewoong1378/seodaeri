@@ -13,10 +13,15 @@ import { Briefcase, Loader2, Trash2, Wallet, X } from "lucide-react";
 import type { JSX } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { queryKeys } from "../../../lib/query-client";
-import { deleteHolding, getExchangeRate, saveHolding } from "../../actions/holding";
+import type { DashboardData } from "../../actions/dashboard";
+import {
+  deleteHolding,
+  getExchangeRate,
+  saveHolding,
+} from "../../actions/holding";
 import { StockSearchInput } from "../../components/StockSearchInput";
 
-export const CASH_TICKER = 'CASH';
+export const CASH_TICKER = "CASH";
 
 export interface HoldingEditData {
   ticker: string;
@@ -36,12 +41,18 @@ interface HoldingInputModalProps {
 // 미국 마켓 여부 판별
 function isUSMarket(market?: string): boolean {
   if (!market) return false;
-  const usMarkets = ['NASDAQ', 'NYSE', 'AMEX', 'US_ETF'];
+  const usMarkets = ["NASDAQ", "NYSE", "AMEX", "US_ETF"];
   return usMarkets.includes(market.toUpperCase());
 }
 
 // 기타자산 코드 (미국 티커로 오인 방지)
-const ALTERNATIVE_ASSET_CODES = new Set(['BTC', 'ETH', 'XRP', 'SOL_CRYPTO', 'GOLD']);
+const ALTERNATIVE_ASSET_CODES = new Set([
+  "BTC",
+  "ETH",
+  "XRP",
+  "SOL_CRYPTO",
+  "GOLD",
+]);
 
 // 티커로 미국 종목 여부 추정 (수동 입력 시 사용)
 function isLikelyUSTicker(ticker: string): boolean {
@@ -89,20 +100,28 @@ export function HoldingInputModal({
   const isCash = ticker.trim().toUpperCase() === CASH_TICKER;
 
   // 통화 결정: 현금은 항상 KRW, 그 외는 market 또는 티커 패턴으로 추정
-  const isUS = isCash ? false : (market ? isUSMarket(market) : isLikelyUSTicker(ticker));
+  const isUS = isCash
+    ? false
+    : market
+      ? isUSMarket(market)
+      : isLikelyUSTicker(ticker);
   const currency = isUS ? "USD" : "KRW";
 
   // 현금 모드: 환율 조회
   useEffect(() => {
     if (isCash && isOpen) {
-      getExchangeRate().then(rate => {
-        if (rate > 0) setExchangeRateVal(rate);
-      }).catch(() => {});
+      getExchangeRate()
+        .then((rate) => {
+          if (rate > 0) setExchangeRateVal(rate);
+        })
+        .catch(() => {});
     }
   }, [isCash, isOpen]);
 
   // 현금 합계 (원화 환산)
-  const cashTotal = parseFormattedNumber(cashKrw) + parseFormattedNumber(cashUsd) * exchangeRateVal;
+  const cashTotal =
+    parseFormattedNumber(cashKrw) +
+    parseFormattedNumber(cashUsd) * exchangeRateVal;
 
   // editData가 변경되면 폼 채우기
   useEffect(() => {
@@ -129,7 +148,7 @@ export function HoldingInputModal({
       setQuantity(formatted);
       setError(null);
     },
-    []
+    [],
   );
 
   const handleAvgPriceChange = useCallback(
@@ -138,7 +157,7 @@ export function HoldingInputModal({
       setAvgPrice(formatted);
       setError(null);
     },
-    []
+    [],
   );
 
   const handleCashKrwChange = useCallback(
@@ -146,7 +165,7 @@ export function HoldingInputModal({
       setCashKrw(formatNumber(e.target.value));
       setError(null);
     },
-    []
+    [],
   );
 
   const handleCashUsdChange = useCallback(
@@ -154,14 +173,17 @@ export function HoldingInputModal({
       setCashUsd(formatNumber(e.target.value));
       setError(null);
     },
-    []
+    [],
   );
 
-  const handleInputFocus = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
-    setTimeout(() => {
-      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
-  }, []);
+  const handleInputFocus = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>) => {
+      setTimeout(() => {
+        e.target.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 300);
+    },
+    [],
+  );
 
   const resetForm = useCallback(() => {
     setTicker("");
@@ -180,12 +202,15 @@ export function HoldingInputModal({
     onClose();
   }, [onClose, resetForm]);
 
-  const handleStockSelect = useCallback((code: string, selectedName: string, selectedMarket?: string) => {
-    setTicker(code);
-    setName(selectedName);
-    setMarket(selectedMarket);
-    setError(null);
-  }, []);
+  const handleStockSelect = useCallback(
+    (code: string, selectedName: string, selectedMarket?: string) => {
+      setTicker(code);
+      setName(selectedName);
+      setMarket(selectedMarket);
+      setError(null);
+    },
+    [],
+  );
 
   const handleStockClear = useCallback(() => {
     setTicker("");
@@ -222,14 +247,44 @@ export function HoldingInputModal({
           quantity: krwAmount,
           avgPrice: usdAmount,
           currency: "KRW",
-          mode: 'edit', // 현금은 항상 덮어쓰기
+          mode: "edit", // 현금은 항상 덮어쓰기
         });
 
         if (result.success) {
+          // 낙관적 업데이트: 캐시 즉시 반영
+          queryClient.setQueryData<DashboardData | null>(
+            queryKeys.dashboard,
+            (old) => {
+              if (!old) return old;
+              const portfolio = old.portfolio.filter(
+                (p) => p.ticker !== CASH_TICKER,
+              );
+              if (krwAmount > 0 || usdAmount > 0) {
+                portfolio.push({
+                  ticker: CASH_TICKER,
+                  name: "현금",
+                  country: "한국",
+                  currency: "KRW",
+                  quantity: krwAmount,
+                  avgPrice: usdAmount,
+                  currentPrice: 0,
+                  totalValue: krwAmount,
+                  profit: 0,
+                  yieldPercent: 0,
+                  weight: 0,
+                  rowIndex: 0,
+                });
+              }
+              return { ...old, portfolio };
+            },
+          );
           handleClose();
           onSuccess?.();
-          await queryClient.invalidateQueries({ queryKey: queryKeys.portfolio, refetchType: 'all' });
-          queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' });
+          // 백그라운드에서 정확한 서버 데이터로 갱신
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.dashboard,
+            refetchType: "all",
+          });
         } else {
           setError(result.error || "저장에 실패했습니다.");
         }
@@ -278,14 +333,45 @@ export function HoldingInputModal({
         quantity: quantityNum,
         avgPrice: avgPriceNum,
         currency,
-        mode: isEditMode ? 'edit' : 'add',
+        mode: isEditMode ? "edit" : "add",
       });
 
       if (result.success) {
+        // 낙관적 업데이트: 캐시 즉시 반영
+        queryClient.setQueryData<DashboardData | null>(queryKeys.dashboard, (old) => {
+          if (!old) return old;
+          const existing = old.portfolio.find(p => p.ticker === tickerVal);
+          let newPortfolio: typeof old.portfolio;
+          if (existing) {
+            newPortfolio = old.portfolio.map(p => {
+              if (p.ticker !== tickerVal) return p;
+              let newQty = quantityNum;
+              let newAvg = avgPriceNum;
+              if (!isEditMode) {
+                newQty = p.quantity + quantityNum;
+                newAvg = (p.quantity * p.avgPrice + quantityNum * avgPriceNum) / newQty;
+              }
+              const totalValue = newQty * p.currentPrice;
+              const profit = totalValue - newQty * newAvg;
+              const yieldPct = newAvg > 0 ? ((p.currentPrice / newAvg) - 1) * 100 : 0;
+              return { ...p, quantity: newQty, avgPrice: newAvg, totalValue, profit, yieldPercent: Math.round(yieldPct * 100) / 100 };
+            });
+          } else {
+            const totalValue = quantityNum * avgPriceNum;
+            newPortfolio = [...old.portfolio, {
+              ticker: tickerVal, name: nameVal, country: isUS ? '미국' : '한국', currency,
+              quantity: quantityNum, avgPrice: avgPriceNum, currentPrice: avgPriceNum,
+              totalValue, profit: 0, yieldPercent: 0, weight: 0, rowIndex: old.portfolio.length + 9,
+            }];
+          }
+          const totalAsset = newPortfolio.reduce((s, p) => s + p.totalValue, 0);
+          newPortfolio = newPortfolio.map(p => ({ ...p, weight: totalAsset > 0 ? (p.totalValue / totalAsset) * 100 : 0 }));
+          return { ...old, portfolio: newPortfolio, totalAsset };
+        });
         handleClose();
         onSuccess?.();
-        await queryClient.invalidateQueries({ queryKey: queryKeys.portfolio, refetchType: 'all' });
-        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' });
+        // 백그라운드에서 정확한 서버 데이터로 갱신
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: "all" });
       } else {
         setError(result.error || "저장에 실패했습니다.");
       }
@@ -320,12 +406,21 @@ export function HoldingInputModal({
       const result = await deleteHolding(editData.ticker);
 
       if (result.success) {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: queryKeys.portfolio, refetchType: 'all' }),
-          queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: 'all' }),
-        ]);
+        // 낙관적 업데이트: 삭제된 종목 즉시 제거
+        const deletedTicker = editData.ticker;
+        queryClient.setQueryData<DashboardData | null>(queryKeys.dashboard, (old) => {
+          if (!old) return old;
+          const newPortfolio = old.portfolio.filter(p => p.ticker !== deletedTicker);
+          const totalAsset = newPortfolio.reduce((s, p) => s + p.totalValue, 0);
+          return {
+            ...old,
+            portfolio: newPortfolio.map(p => ({ ...p, weight: totalAsset > 0 ? (p.totalValue / totalAsset) * 100 : 0 })),
+            totalAsset,
+          };
+        });
         handleClose();
         onSuccess?.();
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard, refetchType: "all" });
       } else {
         setError(result.error || "삭제에 실패했습니다.");
       }
@@ -337,15 +432,19 @@ export function HoldingInputModal({
   }, [editData?.ticker, queryClient, handleClose, onSuccess]);
 
   const isFormValid = isCash
-    ? (parseFormattedNumber(cashKrw) > 0 || parseFormattedNumber(cashUsd) > 0)
-    : (ticker.trim() &&
+    ? parseFormattedNumber(cashKrw) > 0 || parseFormattedNumber(cashUsd) > 0
+    : ticker.trim() &&
       name.trim() &&
       parseFormattedNumber(quantity) > 0 &&
-      parseFormattedNumber(avgPrice) > 0);
+      parseFormattedNumber(avgPrice) > 0;
 
   const modalTitle = isCash
-    ? (isEditMode ? "현금 수정" : "현금 추가")
-    : (isEditMode ? "종목 수정" : "종목 추가");
+    ? isEditMode
+      ? "현금 수정"
+      : "현금 추가"
+    : isEditMode
+      ? "종목 수정"
+      : "종목 추가";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -385,7 +484,10 @@ export function HoldingInputModal({
             /* 현금 모드: 원화/달러 입력 */
             <div className="space-y-3">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
+                <label
+                  htmlFor="cashKrw"
+                  className="text-sm font-medium text-muted-foreground"
+                >
                   원화 (₩)
                 </label>
                 <Input
@@ -399,7 +501,10 @@ export function HoldingInputModal({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
+                <label
+                  htmlFor="cashUsd"
+                  className="text-sm font-medium text-muted-foreground"
+                >
                   달러 ($)
                 </label>
                 <Input
@@ -412,10 +517,13 @@ export function HoldingInputModal({
                   className="text-right"
                 />
               </div>
-              {(parseFormattedNumber(cashKrw) > 0 || parseFormattedNumber(cashUsd) > 0) && (
+              {(parseFormattedNumber(cashKrw) > 0 ||
+                parseFormattedNumber(cashUsd) > 0) && (
                 <div className="p-3 bg-muted/50 rounded-lg space-y-1">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">합계 (원화환산)</span>
+                    <span className="text-muted-foreground">
+                      합계 (원화환산)
+                    </span>
                     <span className="font-semibold text-foreground">
                       {formatNumber(String(Math.round(cashTotal)))}원
                     </span>
@@ -470,7 +578,8 @@ export function HoldingInputModal({
                       onClick={() => setShowManualInput(true)}
                       className="w-full text-sm text-muted-foreground hover:text-foreground py-2 transition-colors"
                     >
-                      찾는 종목이 없나요? <span className="underline">직접 입력하기</span>
+                      찾는 종목이 없나요?{" "}
+                      <span className="underline">직접 입력하기</span>
                     </button>
                   </div>
                 </>
@@ -542,8 +651,10 @@ export function HoldingInputModal({
               {ticker && (
                 <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
                   <span className="text-sm text-muted-foreground">통화:</span>
-                  <span className={`text-sm font-medium ${isUS ? 'text-blue-600' : 'text-emerald-600'}`}>
-                    {isUS ? '미국 (USD)' : '한국 (KRW)'}
+                  <span
+                    className={`text-sm font-medium ${isUS ? "text-blue-600" : "text-emerald-600"}`}
+                  >
+                    {isUS ? "미국 (USD)" : "한국 (KRW)"}
                   </span>
                 </div>
               )}

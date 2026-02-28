@@ -13,7 +13,7 @@ import { Loader2, PiggyBank, X } from "lucide-react";
 import type { JSX } from "react";
 import { useCallback, useState } from "react";
 import { queryKeys } from "../../../lib/query-client";
-import { saveAccountBalance } from "../../actions/account-balance";
+import { type AccountBalanceRecord, saveAccountBalance } from "../../actions/account-balance";
 import { YearMonthPicker } from "./WheelPicker";
 
 interface AccountBalanceInputModalProps {
@@ -97,10 +97,28 @@ export function AccountBalanceInputModal({
       });
 
       if (result.success) {
-        // 캐시 무효화
+        // 낙관적 업데이트: 새 계좌총액 즉시 반영
+        const newRecord: AccountBalanceRecord = {
+          id: yearMonth,
+          yearMonth,
+          year: selectedYear,
+          month: selectedMonth,
+          balance: balanceNum,
+          displayDate: `${selectedYear}년 ${selectedMonth}월`,
+        };
+        queryClient.setQueryData<AccountBalanceRecord[]>(
+          [...queryKeys.transactions, 'accountBalances'],
+          (old) => {
+            if (!old) return [newRecord];
+            // 같은 연월이면 교체, 아니면 추가 후 정렬
+            const filtered = old.filter(b => b.yearMonth !== yearMonth);
+            return [...filtered, newRecord].sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
+          }
+        );
+        // 모달 즉시 닫기 + 백그라운드 리패치
+        handleClose();
         queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
         queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
-        handleClose();
       } else {
         setError(result.error || "저장에 실패했습니다.");
       }

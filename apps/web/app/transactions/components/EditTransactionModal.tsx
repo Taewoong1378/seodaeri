@@ -27,6 +27,7 @@ import {
 } from "../../actions/account-balance";
 import { updateDeposit } from "../../actions/deposit";
 import { updateDividend } from "../../actions/dividend";
+import type { TransactionsResult } from "../../actions/transactions";
 import { StockSearchInput } from "../../components/StockSearchInput";
 import { YearMonthPicker } from "./WheelPicker";
 
@@ -212,9 +213,55 @@ export function EditTransactionModal({
       }
 
       if (result.success) {
+        // 낙관적 업데이트: 수정된 데이터 즉시 반영
+        if (editType === "balance" && balanceData) {
+          const newYearMonth = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}`;
+          const newBalance = parseFormattedNumber(balance);
+          queryClient.setQueryData<AccountBalanceRecord[]>(
+            [...queryKeys.transactions, 'accountBalances'],
+            (old) => {
+              if (!old) return old;
+              return old.map(b =>
+                b.yearMonth === balanceData.yearMonth
+                  ? { ...b, yearMonth: newYearMonth, year: selectedYear, month: selectedMonth, balance: newBalance, displayDate: `${selectedYear}년 ${selectedMonth}월` }
+                  : b
+              ).sort((a, b) => b.yearMonth.localeCompare(a.yearMonth));
+            }
+          );
+        } else if (transactionData) {
+          queryClient.setQueryData<TransactionsResult>(
+            queryKeys.transactions,
+            (old) => {
+              if (!old?.transactions) return old;
+              return {
+                ...old,
+                transactions: old.transactions.map(t =>
+                  t.id === transactionData.id
+                    ? {
+                        ...t,
+                        ...(editType === "dividend" ? {
+                          trade_date: dividendDate,
+                          ticker: dividendTicker,
+                          name: dividendName,
+                          total_amount: parseFormattedNumber(dividendAmountKRW),
+                        } : {
+                          trade_date: depositDate,
+                          type: depositType,
+                          total_amount: parseFormattedNumber(depositAmount),
+                          account: depositAccount,
+                          name: depositMemo,
+                        }),
+                      }
+                    : t
+                ),
+              };
+            }
+          );
+        }
+        // 모달 즉시 닫기 + 백그라운드 리패치
+        handleClose();
         queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
         queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
-        handleClose();
       } else {
         setError(result.error || "수정에 실패했습니다.");
       }
