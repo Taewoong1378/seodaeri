@@ -317,7 +317,7 @@ export function DividendInputModal() {
             <Button
               size="icon"
               onClick={() => setIsOpen(true)}
-              className="h-14 w-14 rounded-full shadow-lg bg-primary hover:bg-primary/90 active:scale-95 text-primary-foreground absolute right-5 bottom-0 pointer-events-auto animate-in zoom-in duration-300 transition-all"
+              className="h-14 w-14 rounded-full shadow-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 active:bg-blue-800 text-white absolute right-5 bottom-0 pointer-events-auto animate-in zoom-in duration-300 transition-all border-4 border-white/20"
             >
               <Pen size={24} />
             </Button>
