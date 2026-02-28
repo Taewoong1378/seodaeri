@@ -1144,7 +1144,7 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
     // 누적수익률/연평균수익률 비교 데이터 계산 (Standalone)
     let yieldComparison: YieldComparisonData | null = null;
     let yieldComparisonDollar: YieldComparisonDollarData | null = null;
-    if (majorIndexYieldComparison && marketData && summary.totalYield !== 0) {
+    if (majorIndexYieldComparison && marketData) {
       const round1 = (n: number) => Math.round(n * 10) / 10;
 
       // 1. 올해 수익률: majorIndexYieldComparison 마지막 값
@@ -1165,7 +1165,7 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       let sp500KrwCumulative = 0;
       let nasdaqKrwCumulative = 0;
 
-      if (summary.investmentDays > 0) {
+      if (summary.investmentDays >= 0) {
         const startDate = new Date(Date.now() - summary.investmentDays * 24 * 60 * 60 * 1000);
         const startYY = String(startDate.getFullYear()).slice(2);
         const startMM = String(startDate.getMonth() + 1).padStart(2, '0');
@@ -1176,9 +1176,13 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
         const nowMM = String(nowDate.getMonth() + 1).padStart(2, '0');
         const nowKey = `${nowYY}.${nowMM}`;
 
+        // 시작월과 현재월이 같으면 → 전년 12월 기준으로 YTD 수익률 계산
+        const prevYearKey = `${String(new Date().getFullYear() - 1).slice(2)}.12`;
+
         const calcCumulative = (dataMap: Map<string, number> | undefined): number => {
           if (!dataMap) return 0;
-          const startVal = dataMap.get(startKey);
+          const effectiveStartKey = startKey === nowKey ? prevYearKey : startKey;
+          const startVal = dataMap.get(effectiveStartKey);
           const nowVal = dataMap.get(nowKey);
           if (!startVal || !nowVal || startVal === 0) return 0;
           return round1(((nowVal / startVal) - 1) * 100);
@@ -1221,7 +1225,7 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       yieldComparison = { cumulativeYield, thisYearYield, annualizedYield };
 
       // 환율 적용 수익률 비교 결과 생성
-      if (dollarCumulative !== 0 || sp500KrwCumulative !== 0 || nasdaqKrwCumulative !== 0) {
+      if (marketData.exchangeRates && marketData.sp500Krw && marketData.nasdaqKrw) {
         const prevYearKey = `${String(new Date().getFullYear() - 1).slice(2)}.12`;
         const nowKey2 = `${String(new Date().getFullYear()).slice(2)}.${String(new Date().getMonth() + 1).padStart(2, '0')}`;
         const ytdCalc = (dataMap: Map<string, number> | undefined): number => {

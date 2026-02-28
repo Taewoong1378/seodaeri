@@ -697,14 +697,16 @@ export class StandaloneDataProvider implements DataProvider {
       prevBalance = prevYear.balance || 0;
     }
 
-    // MonthlyProfitLoss 생성
+    // MonthlyProfitLoss 생성 (1월~현재월까지 항상 포함, 데이터 없는 달은 0)
     const result: MonthlyProfitLoss[] = [];
     let lastBalance = prevBalance;
+    const currentMonth = now.getMonth() + 1;
 
-    for (let m = 1; m <= 12; m++) {
+    for (let m = 1; m <= currentMonth; m++) {
       const balance = monthlyBalance.get(m);
       if (balance === undefined) {
-        // 데이터 없는 달은 건너뛰기 (lastBalance는 유지)
+        // 데이터 없는 달도 0으로 포함 (1월부터 항상 표시)
+        result.push({ month: `${m}월`, profit: 0, loss: 0 });
         continue;
       }
 
@@ -791,16 +793,16 @@ export class StandaloneDataProvider implements DataProvider {
         // 전체 입금 내역 조회 (누적 투자금 계산용)
         const { data: allDeposits } = await (supabase as any)
           .from('deposits')
-          .select('amount, type, date')
+          .select('amount, type, deposit_date')
           .eq('user_id', userId)
-          .order('date', { ascending: true });
+          .order('deposit_date', { ascending: true });
 
         // 월별 누적 투자금 계산 (YYYY-MM → 누적액)
         const cumulativeByYM = new Map<string, number>();
         let runningInvested = 0;
         for (const d of allDeposits || []) {
           runningInvested += d.type === 'DEPOSIT' ? (d.amount || 0) : -(d.amount || 0);
-          const ym = (d.date as string).slice(0, 7);
+          const ym = (d.deposit_date as string).slice(0, 7);
           cumulativeByYM.set(ym, runningInvested);
         }
 
