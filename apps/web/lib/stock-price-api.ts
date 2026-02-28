@@ -70,8 +70,10 @@ async function fetchKISPrice(ticker: string): Promise<StockPrice | null> {
   if (!appKey || !appSecret) return null;
 
   try {
-    // 종목코드 정리 (6자리로)
-    const code = ticker.replace(/^KR/, '').padStart(6, '0');
+    // 종목코드 정리 (6자리로) — ISIN 형식(KR7XXXXXX00X)도 처리
+    const code = /^KR\d{10}$/.test(ticker)
+      ? ticker.slice(3, 9)
+      : ticker.replace(/^KR/, '').padStart(6, '0');
 
     const response = await fetch(
       `${KIS_BASE_URL}/uapi/domestic-stock/v1/quotations/inquire-price?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${code}`,
@@ -364,9 +366,10 @@ function saveToCache(data: StockPrice): void {
  * 한국 주식인지 판단
  */
 export function isKoreanStock(ticker: string): boolean {
-  // 6자리 숫자이거나 KR로 시작하면 한국 주식
-  const code = ticker.replace(/^KR/, '');
-  return /^\d{6}$/.test(code);
+  // 6자리 숫자이거나 KR ISIN 형식(12자리)이면 한국 주식
+  if (/^\d{6}$/.test(ticker)) return true;
+  if (/^KR\d{10}$/.test(ticker)) return true;
+  return false;
 }
 
 /**

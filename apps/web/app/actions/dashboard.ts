@@ -1262,6 +1262,60 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       }
     }
 
+    // 5. 누적 수익률 비교 데이터 생성 (accountTrend + marketData)
+    const performanceComparison: PerformanceComparisonData[] = [];
+    if (accountTrend.length > 0 && marketData) {
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth() + 1;
+      const yyStr = String(currentYear).slice(-2);
+
+      // 지수 baseline: 전년 12월 (YTD 기준)
+      const baselineKey = `${String(currentYear - 1).slice(-2)}.12`;
+
+      const kospiStart = marketData.kospi?.get(baselineKey);
+      const sp500Start = marketData.sp500?.get(baselineKey);
+      const nasdaqStart = marketData.nasdaq?.get(baselineKey);
+      const sp500KrwStart = marketData.sp500Krw?.get(baselineKey);
+      const nasdaqKrwStart = marketData.nasdaqKrw?.get(baselineKey);
+      const round1 = (n: number) => Math.round(n * 10) / 10;
+
+      // accountTrend를 date 키로 빠르게 조회하기 위한 맵
+      const trendMap = new Map(accountTrend.map(t => [t.date, t]));
+
+      // 1월~현재월까지 항상 포함
+      for (let m = 1; m <= currentMonth; m++) {
+        const dateKey = `${yyStr}.${String(m).padStart(2, '0')}`;
+        const trend = trendMap.get(dateKey);
+
+        const portfolioReturn = trend && trend.cumulativeDeposit > 0
+          ? round1(((trend.totalAccount - trend.cumulativeDeposit) / trend.cumulativeDeposit) * 100)
+          : 0;
+
+        const kospiVal = marketData.kospi?.get(dateKey);
+        const sp500Val = marketData.sp500?.get(dateKey);
+        const nasdaqVal = marketData.nasdaq?.get(dateKey);
+        const sp500KrwVal = marketData.sp500Krw?.get(dateKey);
+        const nasdaqKrwVal = marketData.nasdaqKrw?.get(dateKey);
+
+        const item: PerformanceComparisonData = {
+          date: dateKey,
+          portfolio: portfolioReturn,
+          kospi: kospiStart && kospiVal ? round1(((kospiVal / kospiStart) - 1) * 100) : 0,
+          sp500: sp500Start && sp500Val ? round1(((sp500Val / sp500Start) - 1) * 100) : 0,
+          nasdaq: nasdaqStart && nasdaqVal ? round1(((nasdaqVal / nasdaqStart) - 1) * 100) : 0,
+        };
+
+        if (sp500KrwStart && sp500KrwVal) {
+          item.sp500Dollar = round1(((sp500KrwVal / sp500KrwStart) - 1) * 100);
+        }
+        if (nasdaqKrwStart && nasdaqKrwVal) {
+          item.nasdaqDollar = round1(((nasdaqKrwVal / nasdaqKrwStart) - 1) * 100);
+        }
+
+        performanceComparison.push(item);
+      }
+    }
+
     return {
       totalAsset: summary.totalAsset,
       totalYield: summary.totalYield,
@@ -1275,7 +1329,7 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       rollingAverageDividend,
       cumulativeDividend,
       portfolio,
-      performanceComparison: [], // Standalone에서는 지원 안함
+      performanceComparison,
       accountTrend,
       monthlyProfitLoss,
       yieldComparison,

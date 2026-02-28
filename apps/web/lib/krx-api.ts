@@ -248,7 +248,8 @@ async function fetchETFStocksForDate(basDd: string): Promise<KRXStock[]> {
   return data
     .filter((item) => item.ISU_CD && item.ISU_NM)
     .map((item) => ({
-      code: item.ISU_CD,
+      // ISU_CD는 ISIN 형식(예: KR7411060004) → 6자리 단축코드 추출
+      code: item.ISU_CD.length === 12 ? item.ISU_CD.slice(3, 9) : item.ISU_CD,
       name: item.ISU_NM,
       fullCode: item.ISU_CD,
       market: "ETF",
