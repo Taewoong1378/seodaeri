@@ -1064,8 +1064,8 @@ export function calculateRollingAverageDividend(dividends: DividendRecord[]): Ro
     data.push({ month: displayMonth, average });
   }
 
-  // 최근 30개월만 반환 (2년 반치 데이터)
-  const recentData = data.slice(-30);
+  // 전체 데이터 반환 (차트에서 스크롤/적응형 표시)
+  const recentData = data;
 
   console.log('[calculateRollingAverageDividend] Data points:', recentData.length);
 
@@ -1304,16 +1304,16 @@ export function parsePortfolioData(rows: any[], exchangeRate?: number): Portfoli
     // 빈 행 제외 (종목명도 없는 경우)
     if (!name) continue;
 
-    // CASH 특수 처리: F=원화금액, G=0, H=달러금액
+    // CASH 특수 처리: G=원화금액, H=달러금액 (F=수량은 무시)
     if (ticker === 'CASH' || ticker === '현금' || name === '현금') {
-      const krwAmount = parseNumber(row[5]); // F열: 원화 금액
-      const usdAmount = parseNumber(row[7]); // H열: 달러 금액
+      const krwAmount = parseNumber(row[6]); // G열: 평단가(원화) = 원화 현금
+      const usdAmount = parseNumber(row[7]); // H열: 평단가(달러) = 달러 현금
       const totalValue = krwAmount + usdAmount * (exchangeRate || 1400);
 
       if (totalValue > 0) {
         results.push({
-          ticker,
-          name,
+          ticker: 'CASH',
+          name: name || '현금',
           country: '',
           currency: 'KRW',
           quantity: krwAmount,

@@ -42,8 +42,20 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
   // 현재 월평균 (마지막 값)
   const currentAverage = data.data[data.data.length - 1]?.average || 0;
 
-  // 차트 너비 계산 (데이터 포인트 수에 따라)
-  const chartWidth = Math.max(data.data.length * 26, 600);
+  // 스크롤 필요 여부 및 차트 너비 계산
+  const needsScroll = data.data.length > 15;
+  const chartWidth = needsScroll ? data.data.length * 26 : undefined;
+
+  // 모달용 adaptive X축 ticks 계산
+  const totalMonths = data.data.length;
+  const modalXTicks = totalMonths > 48
+    ? data.data.filter(d => d.month.endsWith('.01')).map(d => d.month)
+    : totalMonths > 12
+      ? data.data.filter(d => {
+          const m = Number.parseInt(d.month.split('.')[1] ?? '0');
+          return m === 1 || m === 4 || m === 7 || m === 10;
+        }).map(d => d.month)
+      : undefined; // show all
 
   const renderChart = (isModal = false) => (
     <BarChart
@@ -62,7 +74,10 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
         angle={-45}
         textAnchor="end"
         height={isModal ? 60 : 50}
-        interval={isModal ? 0 : Math.floor(data.data.length / 15)}
+        {...(isModal
+          ? (modalXTicks !== undefined ? { ticks: modalXTicks as string[], interval: 0 as const } : { interval: 0 as const })
+          : { interval: Math.floor(data.data.length / 15) }
+        )}
       />
       <YAxis
         axisLine={false}
@@ -107,26 +122,33 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
           <ShareChartButton chartRef={hiddenChartRef} title="12개월 월평균 배당금" />
           <LandscapeChartModal title="12개월 월평균 배당금">
             <div className="flex flex-col w-full h-full">
-              <div className="flex-1 min-h-0 overflow-x-auto">
-                <div style={{ width: chartWidth, height: '100%' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    {renderChart(true)}
-                  </ResponsiveContainer>
-                </div>
+              <div className="flex-1 min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  {renderChart(true)}
+                </ResponsiveContainer>
               </div>
             </div>
           </LandscapeChartModal>
         </div>
       </div>
 
-      {/* Chart - Scrollable */}
-      <div className="h-[280px] overflow-x-auto scrollbar-hide">
-        <div style={{ width: chartWidth, height: '100%' }}>
+      {/* Chart - Scrollable if needed */}
+      {needsScroll ? (
+        <div className="h-[280px] overflow-x-auto scrollbar-hide">
+          <div style={{ width: chartWidth, height: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              {renderChart(false)}
+            </ResponsiveContainer>
+          </div>
+        </div>
+      ) : (
+        <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             {renderChart(false)}
           </ResponsiveContainer>
         </div>
-      </div>
+      )}
+
       {/* Hidden Chart for Capture */}
       <div
         ref={hiddenChartRef}

@@ -202,7 +202,7 @@ export function LandscapeChartModal({ title, children, trigger }: LandscapeChart
             }}
           >
             <div className="flex items-center justify-between mb-4 shrink-0">
-              <h2 className="text-xl font-bold text-foreground">{title}</h2>
+              <h2 className="text-xl font-bold text-foreground flex-1 text-center">{title}</h2>
               <Button
                 variant="ghost"
                 size="icon"
