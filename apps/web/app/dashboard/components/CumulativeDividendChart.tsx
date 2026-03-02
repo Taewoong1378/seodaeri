@@ -127,7 +127,7 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
           <p className="text-xs text-muted-foreground mt-0.5">총 누적: {formatCurrency(currentCumulative)}</p>
         </div>
         <div className="flex items-center gap-2">
-          <ShareChartButton chartRef={chartRef} title="배당금 누적 그래프" />
+          <ShareChartButton chartRef={hiddenChartRef} title="배당금 누적 그래프" />
           <LandscapeChartModal title="배당금 누적 그래프">
             <div className="flex flex-col w-full h-full">
               <div className="flex-1 min-h-0">
@@ -156,6 +156,33 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
           </ResponsiveContainer>
         </div>
       )}
+
+      {/* Hidden Chart for Capture */}
+      <div
+        ref={hiddenChartRef}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          zIndex: -50,
+          opacity: 0,
+          width: '800px',
+          height: '450px',
+          backgroundColor: '#ffffff',
+          padding: '20px',
+          pointerEvents: 'none',
+        }}
+      >
+        <div style={{ marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>배당금 누적 그래프</h3>
+          <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>총 누적: {formatCurrency(currentCumulative)}</p>
+        </div>
+        <div style={{ width: '100%', height: '350px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            {renderChart(true)}
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   );
 }
