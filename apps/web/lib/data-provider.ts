@@ -250,11 +250,14 @@ export class StandaloneDataProvider implements DataProvider {
         avgPriceMap.set(h.ticker, h.avg_price || 0);
       }
 
+      // 7일 이내 캐시만 사용 (stale 가격 방지)
+      const cacheMaxAge = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const { data: cachedPrices } = await supabase
         .from('portfolio_cache')
         .select('ticker, current_price, currency')
         .eq('user_id', userId)
-        .in('ticker', missingTickers);
+        .in('ticker', missingTickers)
+        .gte('updated_at', cacheMaxAge);
 
       if (cachedPrices) {
         for (const cached of cachedPrices) {

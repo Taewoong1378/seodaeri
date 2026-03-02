@@ -1380,6 +1380,8 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       investmentDays: summary.investmentDays,
       lastSyncAt: new Date().toISOString(),
       dividendByAccount,
+      // 이번달 수익률: monthlyYieldComparison의 MoM 계좌 수익률 사용 (전월 잔액 대비)
+      thisMonthYield: monthlyYieldComparison?.currentMonthYield?.account,
     };
   } catch (error) {
     console.error('[getStandaloneDashboardData] Error:', error);

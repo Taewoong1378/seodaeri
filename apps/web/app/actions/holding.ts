@@ -309,6 +309,13 @@ export async function deleteHolding(ticker: string): Promise<SaveHoldingResult> 
         return { success: false, error: '종목 삭제에 실패했습니다.' };
       }
 
+      // portfolio_cache도 정리 (stale 가격 방지)
+      await supabase
+        .from('portfolio_cache')
+        .delete()
+        .eq('user_id', dbUserId)
+        .eq('ticker', ticker);
+
       console.log('[deleteHolding] Standalone mode - Success!');
       revalidatePath('/portfolio');
       revalidatePath('/dashboard');
