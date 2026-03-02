@@ -132,9 +132,9 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
           </div>
         </div>
         <div className="flex-1 bg-muted/30 border border-border rounded-lg px-3 py-2 text-center">
-          <span className="text-[9px] text-muted-foreground block mb-0.5">연평균</span>
-          <div className="text-[12px] font-semibold text-muted-foreground">
-            {formatCurrency(Math.round(data.data.reduce((sum, d) => sum + d.amount, 0) / data.data.length))}
+          <span className="text-[9px] text-muted-foreground block mb-0.5">연평균 배당성장률</span>
+          <div className={`text-[12px] font-semibold ${data.cagr !== undefined && data.cagr >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+            {data.cagr !== undefined ? `${data.cagr.toFixed(1)}%` : '-'}
           </div>
         </div>
       </div>

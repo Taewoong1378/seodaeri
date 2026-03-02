@@ -979,6 +979,7 @@ export interface YearlyDividendSummaryData {
     year: string; // '2023년'
     amount: number;
   }[];
+  cagr?: number; // 연평균 배당성장률 (%, 예: 25.7)
 }
 
 /**
@@ -1170,9 +1171,21 @@ export function aggregateYearlyDividends(dividends: DividendRecord[]): YearlyDiv
     amount: Math.round(amount),
   }));
 
-  console.log('[aggregateYearlyDividends] Data:', data);
+  // 연평균 배당성장률 (CAGR) 계산: 시트 RATE 함수와 동일
+  // nper = yearsDiff + 1 (시트에서 첫 해를 period 1로 카운트)
+  let cagr: number | undefined;
+  if (years.length >= 2) {
+    const firstYear = years[0]!;
+    const lastYear = years[years.length - 1]!;
+    const nper = lastYear[0] - firstYear[0] + 1;
+    if (nper > 1 && firstYear[1] > 0 && lastYear[1] > 0) {
+      cagr = Math.round((Math.pow(lastYear[1] / firstYear[1], 1 / nper) - 1) * 1000) / 10; // 소수점 1자리 %
+    }
+  }
 
-  return { data };
+  console.log('[aggregateYearlyDividends] Data:', data, 'CAGR:', cagr);
+
+  return { data, cagr };
 }
 
 export function aggregateDividendsByYear(dividends: DividendRecord[]): DividendByYearData | null {
