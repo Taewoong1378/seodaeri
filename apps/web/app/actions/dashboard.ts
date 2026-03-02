@@ -958,11 +958,27 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
     const marketData = await getHistoricalMarketData();
 
     // 1. 포트폴리오 + 계좌추세 + 월별손익 병렬 조회
-    const [portfolioItems, accountTrend, monthlyProfitLoss] = await Promise.all([
+    const [portfolioItems, rawAccountTrend, monthlyProfitLoss] = await Promise.all([
       provider.getPortfolio(userId),
       provider.getAccountTrend(userId),
       provider.getMonthlyProfitLoss(userId),
     ]);
+
+    // accountTrend를 올해 1월부터 패딩 (투자 시작 전 월은 0으로 채움)
+    const accountTrend: AccountTrendData[] = (() => {
+      if (rawAccountTrend.length === 0) return rawAccountTrend;
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth() + 1;
+      const yyStr = String(currentYear).slice(-2);
+      const existingDates = new Set(rawAccountTrend.map(t => t.date));
+      const padded: AccountTrendData[] = [];
+      for (let m = 1; m <= currentMonth; m++) {
+        const dateKey = `${yyStr}.${String(m).padStart(2, '0')}`;
+        if (existingDates.has(dateKey)) break;
+        padded.push({ date: dateKey, totalAccount: 0, cumulativeDeposit: 0 });
+      }
+      return [...padded, ...rawAccountTrend];
+    })();
     const portfolio: PortfolioItem[] = portfolioItems.map((item, index) => ({
       ticker: item.ticker,
       name: item.name,
@@ -1166,23 +1182,20 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       let nasdaqKrwCumulative = 0;
 
       if (summary.investmentDays >= 0) {
-        const startDate = new Date(Date.now() - summary.investmentDays * 24 * 60 * 60 * 1000);
-        const startYY = String(startDate.getFullYear()).slice(2);
-        const startMM = String(startDate.getMonth() + 1).padStart(2, '0');
-        const startKey = `${startYY}.${startMM}`;
+        const startDate = new Date(Date.now() - (summary.investmentDays - 1) * 24 * 60 * 60 * 1000);
 
         const nowDate = new Date();
         const nowYY = String(nowDate.getFullYear()).slice(2);
         const nowMM = String(nowDate.getMonth() + 1).padStart(2, '0');
         const nowKey = `${nowYY}.${nowMM}`;
 
-        // 시작월과 현재월이 같으면 → 전년 12월 기준으로 YTD 수익률 계산
-        const prevYearKey = `${String(new Date().getFullYear() - 1).slice(2)}.12`;
+        // 지수 비교 baseline: 투자 시작 전월 말 기준 (2월 시작 → 1월 말, 1월 시작 → 전년 12월 말)
+        const baselineDate = new Date(startDate.getFullYear(), startDate.getMonth() - 1, 1);
+        const indexBaselineKey = `${String(baselineDate.getFullYear()).slice(2)}.${String(baselineDate.getMonth() + 1).padStart(2, '0')}`;
 
         const calcCumulative = (dataMap: Map<string, number> | undefined): number => {
           if (!dataMap) return 0;
-          const effectiveStartKey = startKey === nowKey ? prevYearKey : startKey;
-          const startVal = dataMap.get(effectiveStartKey);
+          const startVal = dataMap.get(indexBaselineKey);
           const nowVal = dataMap.get(nowKey);
           if (!startVal || !nowVal || startVal === 0) return 0;
           return round1(((nowVal / startVal) - 1) * 100);
@@ -1268,25 +1281,51 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       const currentYear = new Date().getFullYear();
       const currentMonth = new Date().getMonth() + 1;
       const yyStr = String(currentYear).slice(-2);
+      const round1 = (n: number) => Math.round(n * 10) / 10;
 
-      // 지수 baseline: 전년 12월 (YTD 기준)
-      const baselineKey = `${String(currentYear - 1).slice(-2)}.12`;
+      // accountTrend를 date 키로 빠르게 조회하기 위한 맵
+      const trendMap = new Map(accountTrend.map(t => [t.date, t]));
+
+      // 유저의 첫 데이터 월 찾기 (투자 시작월)
+      let startMonth = 1;
+      for (let m = 1; m <= currentMonth; m++) {
+        const dateKey = `${yyStr}.${String(m).padStart(2, '0')}`;
+        const trend = trendMap.get(dateKey);
+        if (trend && trend.cumulativeDeposit > 0) {
+          startMonth = m;
+          break;
+        }
+      }
+
+      // 지수 baseline: 투자 시작 전월 말 기준 (2월 시작 → 26.01, 1월 시작 → 25.12)
+      const baselineMonth = startMonth - 1;
+      const baselineYear = baselineMonth <= 0 ? currentYear - 1 : currentYear;
+      const effectiveBaselineMonth = baselineMonth <= 0 ? 12 : baselineMonth;
+      const baselineKey = `${String(baselineYear).slice(-2)}.${String(effectiveBaselineMonth).padStart(2, '0')}`;
 
       const kospiStart = marketData.kospi?.get(baselineKey);
       const sp500Start = marketData.sp500?.get(baselineKey);
       const nasdaqStart = marketData.nasdaq?.get(baselineKey);
       const sp500KrwStart = marketData.sp500Krw?.get(baselineKey);
       const nasdaqKrwStart = marketData.nasdaqKrw?.get(baselineKey);
-      const round1 = (n: number) => Math.round(n * 10) / 10;
-
-      // accountTrend를 date 키로 빠르게 조회하기 위한 맵
-      const trendMap = new Map(accountTrend.map(t => [t.date, t]));
 
       // 1월~현재월까지 항상 포함
       for (let m = 1; m <= currentMonth; m++) {
         const dateKey = `${yyStr}.${String(m).padStart(2, '0')}`;
-        const trend = trendMap.get(dateKey);
 
+        // 유저 데이터가 없는 월(투자 시작 전)은 전부 0%
+        if (m < startMonth) {
+          performanceComparison.push({
+            date: dateKey,
+            portfolio: 0,
+            kospi: 0,
+            sp500: 0,
+            nasdaq: 0,
+          });
+          continue;
+        }
+
+        const trend = trendMap.get(dateKey);
         const portfolioReturn = trend && trend.cumulativeDeposit > 0
           ? round1(((trend.totalAccount - trend.cumulativeDeposit) / trend.cumulativeDeposit) * 100)
           : 0;
