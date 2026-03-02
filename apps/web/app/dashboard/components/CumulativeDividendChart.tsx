@@ -41,8 +41,9 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
   // 현재 누적 배당금 (마지막 값)
   const currentCumulative = data.data[data.data.length - 1]?.cumulative || 0;
 
-  // 차트 너비 계산 (데이터 포인트 수에 따라)
-  const chartWidth = Math.max(data.data.length * 26, 600);
+  // 차트 너비 계산: 데이터가 적으면 컨테이너에 맞추기 (고정), 많으면 스크롤
+  const needsScroll = data.data.length > 15;
+  const chartWidth = needsScroll ? data.data.length * 26 : undefined;
 
   const renderChart = (isModal = false) => (
     <BarChart
@@ -106,26 +107,42 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
           <ShareChartButton chartRef={chartRef} title="배당금 누적 그래프" />
           <LandscapeChartModal title="배당금 누적 그래프">
             <div className="flex flex-col w-full h-full">
-              <div className="flex-1 min-h-0 overflow-x-auto">
-                <div style={{ width: chartWidth, height: '100%' }}>
+              {needsScroll ? (
+                <div className="flex-1 min-h-0 overflow-x-auto">
+                  <div style={{ width: chartWidth, height: '100%' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      {renderChart(true)}
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 min-h-0">
                   <ResponsiveContainer width="100%" height="100%">
                     {renderChart(true)}
                   </ResponsiveContainer>
                 </div>
-              </div>
+              )}
             </div>
           </LandscapeChartModal>
         </div>
       </div>
 
-      {/* Chart - Scrollable */}
-      <div className="h-[280px] overflow-x-auto scrollbar-hide">
-        <div style={{ width: chartWidth, height: '100%' }}>
+      {/* Chart - 데이터 적으면 고정, 많으면 스크롤 */}
+      {needsScroll ? (
+        <div className="h-[280px] overflow-x-auto scrollbar-hide">
+          <div style={{ width: chartWidth, height: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              {renderChart(false)}
+            </ResponsiveContainer>
+          </div>
+        </div>
+      ) : (
+        <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             {renderChart(false)}
           </ResponsiveContainer>
         </div>
-      </div>
+      )}
     </div>
   );
 }
