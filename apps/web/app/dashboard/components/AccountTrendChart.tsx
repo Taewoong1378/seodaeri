@@ -148,7 +148,7 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
     : totalMonths > 12
       // 1~4년: 분기별 (1/4/7/10월)
       ? displayData.filter(d => {
-          const m = Number.parseInt(d.date.split('.')[1]);
+          const m = Number.parseInt(d.date.split('.')[1] ?? '0');
           return m === 1 || m === 4 || m === 7 || m === 10;
         }).map(d => d.date)
       // 1년 이하: 매월
