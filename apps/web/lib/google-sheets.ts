@@ -1136,12 +1136,10 @@ export function calculateCumulativeDividend(dividends: DividendRecord[]): Cumula
     }
   }
 
-  // 최근 30개월만 반환 (2년 반치 데이터)
-  const recentData = data.slice(-30);
+  // 전체 데이터 반환 (차트에서 스크롤/적응형 표시)
+  console.log('[calculateCumulativeDividend] Data points:', data.length);
 
-  console.log('[calculateCumulativeDividend] Data points:', recentData.length);
-
-  return { data: recentData };
+  return { data };
 }
 
 export function aggregateYearlyDividends(dividends: DividendRecord[]): YearlyDividendSummaryData | null {
