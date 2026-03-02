@@ -1305,7 +1305,7 @@ export function parsePortfolioData(rows: any[], exchangeRate?: number): Portfoli
     if (!name) continue;
 
     // CASH 특수 처리: F=원화금액, G=0, H=달러금액
-    if (ticker === 'CASH') {
+    if (ticker === 'CASH' || ticker === '현금' || name === '현금') {
       const krwAmount = parseNumber(row[5]); // F열: 원화 금액
       const usdAmount = parseNumber(row[7]); // H열: 달러 금액
       const totalValue = krwAmount + usdAmount * (exchangeRate || 1400);

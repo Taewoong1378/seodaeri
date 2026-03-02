@@ -196,18 +196,66 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
     console.log('[saveHolding] Writing to row:', targetRow);
 
     // 시트에 데이터 저장
-    // D~H열만 수정 (C열은 수식이므로 건드리지 않음)
-    // D열=종목코드, E열=종목명, F열=수량, G열=평단가(원화), H열=평단가(달러, 미국 종목만)
-    // CASH 특수 처리: F=원화금액, G=0, H=달러금액
     const isCash = input.ticker === 'CASH';
-    let sheetValues: (string | number)[];
+
     if (isCash) {
-      sheetValues = [input.ticker, input.name, input.quantity, 0, input.avgPrice];
-    } else {
-      const avgPriceUSD = input.currency === 'USD' ? finalAvgPrice : '';
-      const avgPriceKRW = input.currency === 'KRW' ? finalAvgPrice : '';
-      sheetValues = [input.ticker, input.name, finalQuantity, avgPriceKRW, avgPriceUSD];
+      // CASH 특수 처리: "현금" 행을 찾아서 G열(원화), H열(달러)만 수정
+      let cashRow = -1;
+      if (existingData) {
+        for (let i = 8; i < existingData.length; i++) {
+          const row = existingData[i];
+          if (row && Array.isArray(row)) {
+            const rowTicker = String(row[0] || '').trim(); // D열
+            const rowName = String(row[1] || '').trim(); // E열
+            if (rowTicker === '현금' || rowName === '현금') {
+              cashRow = i + 1; // 1-based row number
+              console.log('[saveHolding] Found 현금 row at:', cashRow);
+              break;
+            }
+          }
+        }
+      }
+
+      if (cashRow === -1) {
+        console.error('[saveHolding] 현금 row not found in spreadsheet');
+        return { success: false, error: '스프레드시트에서 현금 행을 찾을 수 없습니다.' };
+      }
+
+      const krwAmount = input.quantity; // 원화
+      const usdAmount = input.avgPrice; // 달러
+
+      // G열(원화)과 H열(달러)만 수정
+      const sheetResult = await batchUpdateSheet(
+        session.accessToken,
+        user.spreadsheet_id,
+        [{
+          range: `'3. 종목현황'!G${cashRow}:H${cashRow}`,
+          values: [[krwAmount, usdAmount]],
+        }]
+      );
+      console.log('[saveHolding] Cash sheet write result:', sheetResult);
+
+      // DB에도 저장
+      await supabase.from('holdings').upsert({
+        user_id: dbUserId,
+        ticker: 'CASH',
+        name: '현금',
+        quantity: krwAmount,
+        avg_price: usdAmount,
+        currency: 'KRW',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,ticker' });
+
+      revalidatePath('/portfolio');
+      revalidatePath('/dashboard');
+      return { success: true };
     }
+
+    // 일반 종목: D~H열 수정 (C열은 수식이므로 건드리지 않음)
+    // D열=종목코드, E열=종목명, F열=수량, G열=평단가(원화), H열=평단가(달러, 미국 종목만)
+    const avgPriceUSD = input.currency === 'USD' ? finalAvgPrice : '';
+    const avgPriceKRW = input.currency === 'KRW' ? finalAvgPrice : '';
+    const sheetValues = [input.ticker, input.name, finalQuantity, avgPriceKRW, avgPriceUSD];
 
     const sheetResult = await batchUpdateSheet(
       session.accessToken,
@@ -230,8 +278,8 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
           user_id: dbUserId,
           ticker: input.ticker,
           name: input.name,
-          quantity: isCash ? input.quantity : finalQuantity,
-          avg_price: isCash ? input.avgPrice : finalAvgPrice,
+          quantity: finalQuantity,
+          avg_price: finalAvgPrice,
           currency: input.currency,
           updated_at: new Date().toISOString(),
         },
@@ -327,7 +375,7 @@ export async function deleteHolding(ticker: string): Promise<SaveHoldingResult> 
       return { success: false, error: 'Google 인증이 필요합니다.' };
     }
 
-    // Google Sheet에서 해당 종목 찾아서 D~H열만 비우기
+    // Google Sheet에서 해당 종목 찾아서 비우기
     const sheetName = '3. 종목현황';
     const rows = await fetchSheetData(
       session.accessToken,
@@ -336,24 +384,45 @@ export async function deleteHolding(ticker: string): Promise<SaveHoldingResult> 
     );
 
     if (rows && rows.length > 0) {
-      for (let i = 8; i < rows.length; i++) { // Row 9부터
-        const row = rows[i];
-        if (row && Array.isArray(row) && row.length >= 1) {
-          const rowTicker = String(row[0] || '').trim(); // D열 = index 0
-          if (rowTicker === ticker) {
-            console.log('[deleteHolding] Found at row:', i + 1, ', clearing D~H...');
-            // D~H열만 비우기 (C열은 수식이므로 건드리지 않음)
-            await batchUpdateSheet(
-              session.accessToken,
-              user.spreadsheet_id,
-              [
-                {
+      if (ticker === 'CASH') {
+        // CASH 특수 처리: "현금" 행의 G/H열만 비우기
+        for (let i = 8; i < rows.length; i++) {
+          const row = rows[i];
+          if (row && Array.isArray(row)) {
+            const rowTicker = String(row[0] || '').trim();
+            const rowName = String(row[1] || '').trim();
+            if (rowTicker === '현금' || rowName === '현금') {
+              console.log('[deleteHolding] Found 현금 at row:', i + 1, ', clearing G~H...');
+              await batchUpdateSheet(
+                session.accessToken,
+                user.spreadsheet_id,
+                [{
+                  range: `'${sheetName}'!G${i + 1}:H${i + 1}`,
+                  values: [['', '']],
+                }]
+              );
+              break;
+            }
+          }
+        }
+      } else {
+        // 일반 종목: D~H열 비우기
+        for (let i = 8; i < rows.length; i++) {
+          const row = rows[i];
+          if (row && Array.isArray(row) && row.length >= 1) {
+            const rowTicker = String(row[0] || '').trim();
+            if (rowTicker === ticker) {
+              console.log('[deleteHolding] Found at row:', i + 1, ', clearing D~H...');
+              await batchUpdateSheet(
+                session.accessToken,
+                user.spreadsheet_id,
+                [{
                   range: `'${sheetName}'!D${i + 1}:H${i + 1}`,
                   values: [['', '', '', '', '']],
-                },
-              ]
-            );
-            break;
+                }]
+              );
+              break;
+            }
           }
         }
       }
@@ -491,6 +560,21 @@ export async function getHoldings(): Promise<HoldingRecord[]> {
       const quantity = parseFloat(String(row[3] || '0').replace(/,/g, '')) || 0; // F열: 수량
       const avgPriceKRW = parseFloat(String(row[4] || '0').replace(/[₩,]/g, '')) || 0; // G열: 평단가(원화)
       const avgPriceUSD = parseFloat(String(row[5] || '0').replace(/[$,]/g, '')) || 0; // H열: 평단가(달러)
+
+      // "현금" 행 → CASH 티커로 매핑 (G=원화, H=달러)
+      if (ticker === '현금' || name === '현금') {
+        if (avgPriceKRW > 0 || avgPriceUSD > 0) {
+          results.push({
+            ticker: 'CASH',
+            name: '현금',
+            country: '한국',
+            quantity: avgPriceKRW, // 원화 금액
+            avgPrice: avgPriceUSD, // 달러 금액
+            currency: 'KRW',
+          });
+        }
+        continue;
+      }
 
       if (!ticker || quantity <= 0) continue;
 
