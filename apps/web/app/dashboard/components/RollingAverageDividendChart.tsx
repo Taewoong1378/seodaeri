@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   Bar,
   BarChart,
@@ -34,6 +34,14 @@ function formatCurrencyShort(amount: number): string {
 export function RollingAverageDividendChart({ data }: RollingAverageDividendChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
   const hiddenChartRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 스크롤을 우측 끝(최신)으로 이동
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+    }
+  }, [data.data.length]);
 
   // Y축 최대값 계산
   const maxValue = Math.max(...data.data.map(d => d.average), 0);
@@ -134,7 +142,7 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
 
       {/* Chart - Scrollable if needed */}
       {needsScroll ? (
-        <div className="h-[280px] overflow-x-auto scrollbar-hide">
+        <div ref={scrollRef} className="h-[280px] overflow-x-auto scrollbar-hide">
           <div style={{ width: chartWidth, height: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               {renderChart(false)}

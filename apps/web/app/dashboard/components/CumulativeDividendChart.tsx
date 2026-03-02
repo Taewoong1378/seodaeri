@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactElement, useRef } from 'react';
+import { type ReactElement, useEffect, useRef } from 'react';
 import {
   Bar,
   BarChart,
@@ -33,6 +33,15 @@ function formatCurrencyShort(amount: number): string {
 
 export function CumulativeDividendChart({ data }: CumulativeDividendChartProps): ReactElement {
   const chartRef = useRef<HTMLDivElement>(null);
+  const hiddenChartRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 스크롤을 우측 끝(최신)으로 이동
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+    }
+  }, [data.data.length]);
 
   // Y축 최대값 계산
   const maxValue = Math.max(...data.data.map(d => d.cumulative), 0);
@@ -133,7 +142,7 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
 
       {/* Chart - 데이터 적으면 고정, 많으면 스크롤 */}
       {needsScroll ? (
-        <div className="h-[280px] overflow-x-auto scrollbar-hide">
+        <div ref={scrollRef} className="h-[280px] overflow-x-auto scrollbar-hide">
           <div style={{ width: chartWidth, height: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               {renderChart(false)}
