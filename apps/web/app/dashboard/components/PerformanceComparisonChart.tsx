@@ -5,7 +5,6 @@ import {
     CartesianGrid,
     Line,
     LineChart,
-    ReferenceLine,
     ResponsiveContainer,
     Tooltip,
     XAxis,
@@ -118,11 +117,26 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
   const yMin = Math.floor(minValue / 20) * 20 - 20;
   const yMax = Math.ceil(maxValue / 20) * 20 + 20;
 
-  // X축 interval 계산 - 전체 기간을 한눈에
-  const tickInterval = chartDisplayData.length <= 12 ? 0
-    : chartDisplayData.length <= 24 ? 2
-    : chartDisplayData.length <= 36 ? 3
-    : Math.floor(chartDisplayData.length / 10);
+  // X축: 투자기간에 따라 라벨 간격 변경 (AccountTrendChart와 동일)
+  const totalMonths = chartDisplayData.length;
+  const xTicks = totalMonths > 48
+    ? chartDisplayData.filter(d => d.date.endsWith('.01')).map(d => d.date)
+    : totalMonths > 12
+      ? chartDisplayData.filter(d => {
+          const m = Number.parseInt(d.date.split('.')[1] ?? '0');
+          return m === 1 || m === 4 || m === 7 || m === 10;
+        }).map(d => d.date)
+      : undefined;
+
+  // 모달용 adaptive X축 ticks
+  const modalXTicks = totalMonths > 48
+    ? chartDisplayData.filter(d => d.date.endsWith('.01')).map(d => d.date)
+    : totalMonths > 12
+      ? chartDisplayData.filter(d => {
+          const m = Number.parseInt(d.date.split('.')[1] ?? '0');
+          return m === 1 || m === 4 || m === 7 || m === 10;
+        }).map(d => d.date)
+      : undefined;
 
   const rateModeLabel = rateMode === 'dollar' ? '환율 적용' : '기본';
 
@@ -154,7 +168,7 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
   );
 
   return (
-    <div ref={chartRef} className="space-y-4">
+    <div ref={chartRef} className="space-y-2">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           {/* 비교지수 선택 드롭다운 */}
@@ -279,27 +293,18 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                    {chartDisplayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
-                      <ReferenceLine
-                        key={marker.date}
-                        x={marker.date}
-                        stroke="#cbd5e1"
-                        label={{
-                          value: `20${marker.date.split('.')[0]}년`,
-                          position: 'insideTopLeft',
-                          angle: -90,
-                          fill: '#475569',
-                          fontSize: 12,
-                          dy: 30,
-                        }}
-                      />
-                    ))}
                     <XAxis
                       dataKey="date"
                       axisLine={{ stroke: '#cbd5e1' }}
                       tickLine={false}
                       tick={{ fill: '#64748b', fontSize: 12 }}
-                      tickFormatter={(value) => `${Number.parseInt(value.split('.')[1])}월`}
+                      {...(modalXTicks ? { ticks: modalXTicks, interval: 0 } : { interval: 0 })}
+                      tickFormatter={(value) => {
+                        const parts = value.split('.');
+                        const month = Number.parseInt(parts[1]);
+                        if (month === 1) return `'${parts[0]}`;
+                        return `${month}월`;
+                      }}
                     />
                     <YAxis
                       axisLine={false}
@@ -364,34 +369,19 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
       </div>
 
       {/* Chart - 전체 기간 한눈에 표시 */}
-      <div className="h-[240px]">
+      <div className="h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartDisplayData}
             margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-            {chartDisplayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
-              <ReferenceLine
-                key={marker.date}
-                x={marker.date}
-                stroke="#cbd5e1"
-                label={{
-                  value: `20${marker.date.split('.')[0]}년`,
-                  position: 'insideTopLeft',
-                  angle: -90,
-                  fill: '#475569',
-                  fontSize: 10,
-                  dy: 20,
-                }}
-              />
-            ))}
             <XAxis
               dataKey="date"
               axisLine={{ stroke: '#cbd5e1' }}
               tickLine={false}
               tick={{ fill: '#64748b', fontSize: 9 }}
-              interval={tickInterval}
+              {...(xTicks ? { ticks: xTicks, interval: 0 } : { interval: 0 })}
               tickFormatter={(value) => {
                 const parts = value.split('.');
                 const month = Number.parseInt(parts[1]);
@@ -448,119 +438,109 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
       {/* Hidden Chart for Capture */}
       <div
         ref={hiddenChartRef}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          zIndex: -50,
-          opacity: 0,
-          width: '800px',
-          height: '450px',
-          backgroundColor: '#ffffff',
-          padding: '20px',
-          pointerEvents: 'none',
-        }}
-      >
-        <div style={{ marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>수익률 비교</h3>
-          <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>{rateModeLabel} | vs 주요 지수</p>
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-start', columnGap: '24px', rowGap: '8px', marginBottom: '16px' }}>
-          {visibleLinesWithLabels.map((line) => (
-            <div key={line.dataKey} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div
-                style={{
-                  width: '24px',
-                  height: '2px',
-                  backgroundColor: line.color,
-                  backgroundImage: line.strokeDasharray ? 'none' : undefined,
-                }}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: -50,
+        opacity: 0,
+        width: '800px',
+        height: '450px',
+        backgroundColor: '#ffffff',
+        padding: '20px',
+        pointerEvents: 'none',
+      }}
+    >
+      <div style={{ marginBottom: '16px' }}>
+        <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>수익률 비교</h3>
+        <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>{rateModeLabel} | vs 주요 지수</p>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-start', columnGap: '24px', rowGap: '8px', marginBottom: '16px' }}>
+        {visibleLinesWithLabels.map((line) => (
+          <div key={line.dataKey} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div
+              style={{
+                width: '24px',
+                height: '2px',
+                backgroundColor: line.color,
+                backgroundImage: line.strokeDasharray ? 'none' : undefined,
+              }}
+            />
+            <span style={{ fontSize: '14px', color: '#64748b' }}>{line.name}</span>
+          </div>
+        ))}
+      </div>
+      <div className="w-full h-[350px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
+            data={chartDisplayData}
+            margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+          >
+            <defs>
+              <linearGradient id="portfolioGradientHidden" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity={0.1} />
+                <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <XAxis
+              dataKey="date"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#64748b', fontSize: 12 }}
+              {...(modalXTicks ? { ticks: modalXTicks, interval: 0 } : { interval: 0 })}
+              tickFormatter={(value) => {
+                const parts = value.split('.');
+                const month = Number.parseInt(parts[1]);
+                if (month === 1) return `'${parts[0]}`;
+                return `${month}월`;
+              }}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#64748b', fontSize: 12 }}
+              tickFormatter={(value) => `${value}%`}
+              domain={[yMin, yMax]}
+            />
+            {visibleLines.map((line) => (
+              <Line
+                key={line.dataKey}
+                type="monotone"
+                dataKey={line.dataKey}
+                name={line.dataKey}
+                stroke={line.color}
+                strokeWidth={line.strokeWidth || 2}
+                strokeDasharray={line.strokeDasharray}
+                dot={false}
+                activeDot={{ r: 6, fill: line.color, stroke: '#020617', strokeWidth: 2 }}
+                isAnimationActive={false}
               />
-              <span style={{ fontSize: '14px', color: '#64748b' }}>{line.name}</span>
-            </div>
-          ))}
-        </div>
-        <div className="w-full h-[350px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={chartDisplayData}
-              margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
-            >
-              <defs>
-                <linearGradient id="portfolioGradientHidden" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#ffffff" stopOpacity={0.1} />
-                  <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-              {chartDisplayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
-                <ReferenceLine
-                  key={marker.date}
-                  x={marker.date}
-                  stroke="#cbd5e1"
-                  label={{
-                    value: `20${marker.date.split('.')[0]}년`,
-                    position: 'insideTopLeft',
-                    angle: -90,
-                    fill: '#475569',
-                    fontSize: 12,
-                    dy: 30,
-                  }}
-                />
-              ))}
-              <XAxis
-                dataKey="date"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#64748b', fontSize: 12 }}
-                tickFormatter={(value) => `${Number.parseInt(value.split('.')[1])}월`}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#64748b', fontSize: 12 }}
-                tickFormatter={(value) => `${value}%`}
-                domain={[yMin, yMax]}
-              />
-              {visibleLines.map((line) => (
-                <Line
-                  key={line.dataKey}
-                  type="monotone"
-                  dataKey={line.dataKey}
-                  name={line.dataKey}
-                  stroke={line.color}
-                  strokeWidth={line.strokeWidth || 2}
-                  strokeDasharray={line.strokeDasharray}
-                  dot={false}
-                  activeDot={{ r: 6, fill: line.color, stroke: '#020617', strokeWidth: 2 }}
-                  isAnimationActive={false}
-                />
-              ))}
-              {/* Legend for captured image */}
-              <Tooltip
-                 contentStyle={{
-                   backgroundColor: '#ffffff',
-                   border: '1px solid #e2e8f0',
-                   borderRadius: '12px',
-                   boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-                   padding: '12px',
-                   color: '#1e293b',
-                 }}
-                 labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
-                 itemStyle={{ fontSize: 13, padding: '2px 0' }}
-                 formatter={(value: number, name: string) => {
-                   const lineConfig = LINES.find(l => l.dataKey === name);
-                   let label = lineConfig?.name || name;
-                   if (rateMode === 'dollar' && (name === 'sp500' || name === 'nasdaq')) {
-                     label += '(환율)';
-                   }
-                   return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
-                 }}
-                 labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
-               />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+            ))}
+            <Tooltip
+               contentStyle={{
+                 backgroundColor: '#ffffff',
+                 border: '1px solid #e2e8f0',
+                 borderRadius: '12px',
+                 boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                 padding: '12px',
+                 color: '#1e293b',
+               }}
+               labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
+               itemStyle={{ fontSize: 13, padding: '2px 0' }}
+               formatter={(value: number, name: string) => {
+                 const lineConfig = LINES.find(l => l.dataKey === name);
+                 let label = lineConfig?.name || name;
+                 if (rateMode === 'dollar' && (name === 'sp500' || name === 'nasdaq')) {
+                   label += '(환율)';
+                 }
+                 return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label];
+               }}
+               labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
+             />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
       </div>
     </div>
   );

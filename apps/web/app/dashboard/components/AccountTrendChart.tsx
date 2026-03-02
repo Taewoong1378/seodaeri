@@ -5,7 +5,6 @@ import {
     Area,
     AreaChart,
     CartesianGrid,
-    ReferenceLine,
     ResponsiveContainer,
     Tooltip,
     XAxis,
@@ -155,7 +154,7 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
       : undefined;
 
   return (
-    <div ref={chartRef} className="space-y-4">
+    <div ref={chartRef} className="space-y-2">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-foreground">월별 계좌추세</h4>
@@ -199,21 +198,6 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                {displayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
-                  <ReferenceLine
-                    key={marker.date}
-                    x={marker.date}
-                    stroke="#cbd5e1"
-                    label={{
-                      value: `20${marker.date.split('.')[0]}년`,
-                      position: 'insideTopLeft',
-                      angle: -90,
-                      fill: '#475569',
-                      fontSize: 12,
-                      dy: 30,
-                    }}
-                  />
-                ))}
                 <XAxis
                   dataKey="date"
                   axisLine={{ stroke: '#cbd5e1' }}
@@ -276,7 +260,7 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
       </div>
 
       {/* Chart - 전체 기간 한눈에 표시 */}
-      <div className="h-[220px]">
+      <div className="h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={displayData}
@@ -297,21 +281,6 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
               stroke="#e2e8f0"
               vertical={false}
             />
-            {displayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
-              <ReferenceLine
-                key={marker.date}
-                x={marker.date}
-                stroke="#cbd5e1"
-                label={{
-                  value: `20${marker.date.split('.')[0]}년`,
-                  position: 'insideTopLeft',
-                  angle: -90,
-                  fill: '#475569',
-                  fontSize: 10,
-                  dy: 20,
-                }}
-              />
-            ))}
             <XAxis
               dataKey="date"
               axisLine={{ stroke: '#cbd5e1' }}
@@ -373,125 +342,110 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
 
       {/* Hidden Chart for Capture */}
       <div
-        ref={hiddenChartRef}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          zIndex: -50,
-          opacity: 0,
-          width: '800px',
-          height: '450px',
-          backgroundColor: '#ffffff',
-          padding: '20px',
-          pointerEvents: 'none',
-        }}
-      >
-        <div style={{ marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>월별 계좌추세</h3>
-          <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>누적입금액 vs 계좌총액</p>
+      ref={hiddenChartRef}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: -50,
+        opacity: 0,
+        width: '800px',
+        height: '450px',
+        backgroundColor: '#ffffff',
+        padding: '20px',
+        pointerEvents: 'none',
+      }}
+    >
+      <div style={{ marginBottom: '16px' }}>
+        <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>월별 계좌추세</h3>
+        <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>누적입금액 vs 계좌총액</p>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '24px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '16px', height: '16px', borderRadius: '2px', backgroundColor: 'rgba(5, 150, 105, 0.7)' }} />
+          <span style={{ fontSize: '14px', color: '#64748b' }}>누적입금액</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '24px', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '16px', height: '16px', borderRadius: '2px', backgroundColor: 'rgba(5, 150, 105, 0.7)' }} />
-            <span style={{ fontSize: '14px', color: '#64748b' }}>누적입금액</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '16px', height: '16px', borderRadius: '2px', backgroundColor: 'rgba(163, 230, 53, 0.7)' }} />
-            <span style={{ fontSize: '14px', color: '#64748b' }}>계좌총액</span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '16px', height: '16px', borderRadius: '2px', backgroundColor: 'rgba(163, 230, 53, 0.7)' }} />
+          <span style={{ fontSize: '14px', color: '#64748b' }}>계좌총액</span>
         </div>
-        <div className="w-full h-[350px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={displayData}
-              margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
-            >
-              <defs>
-                <linearGradient id="depositGradientHidden" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#059669" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="#059669" stopOpacity={0.1} />
-                </linearGradient>
-                <linearGradient id="accountGradientHidden" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#a3e635" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="#a3e635" stopOpacity={0.1} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-              {displayData.filter((d) => d.date.endsWith('.01')).map((marker) => (
-                <ReferenceLine
-                  key={marker.date}
-                  x={marker.date}
-                  stroke="#cbd5e1"
-                  label={{
-                    value: `20${marker.date.split('.')[0]}년`,
-                    position: 'insideTopLeft',
-                    angle: -90,
-                    fill: '#475569',
-                    fontSize: 12,
-                    dy: 30,
-                  }}
-                />
-              ))}
-              <XAxis
-                dataKey="date"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#64748b', fontSize: 12 }}
-                {...(xTicks ? { ticks: xTicks, interval: 0 } : { interval: 0 })}
-                tickFormatter={(value) => {
-                  const parts = value.split('.');
-                  const month = Number.parseInt(parts[1]);
-                  if (month === 1) return `'${parts[0]}`;
-                  return `${month}월`;
-                }}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#64748b', fontSize: 12 }}
-                tickFormatter={(value) => formatCurrency(value)}
-                domain={[0, yMax]}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-                  padding: '12px',
-                  color: '#1e293b',
-                }}
-                labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
-                formatter={(value: number, name: string) => {
-                  const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액';
-                  return [`₩${value.toLocaleString()}`, label];
-                }}
-                labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
-              />
-              <Area
-                type="monotone"
-                dataKey="cumulativeDeposit"
-                stroke="#059669"
-                strokeWidth={2}
-                fill="url(#depositGradientHidden)"
-                dot={false}
-                activeDot={{ r: 6, fill: '#059669', stroke: '#020617', strokeWidth: 2 }}
-                isAnimationActive={false}
-              />
-              <Area
-                type="monotone"
-                dataKey="totalAccount"
-                stroke="#a3e635"
-                strokeWidth={2}
-                fill="url(#accountGradientHidden)"
-                dot={false}
-                activeDot={{ r: 6, fill: '#a3e635', stroke: '#020617', strokeWidth: 2 }}
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+      </div>
+      <div className="w-full h-[350px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart
+            data={displayData}
+            margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+          >
+            <defs>
+              <linearGradient id="depositGradientHidden" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#059669" stopOpacity={0.5} />
+                <stop offset="100%" stopColor="#059669" stopOpacity={0.1} />
+              </linearGradient>
+              <linearGradient id="accountGradientHidden" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#a3e635" stopOpacity={0.5} />
+                <stop offset="100%" stopColor="#a3e635" stopOpacity={0.1} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <XAxis
+              dataKey="date"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#64748b', fontSize: 12 }}
+              {...(xTicks ? { ticks: xTicks, interval: 0 } : { interval: 0 })}
+              tickFormatter={(value) => {
+                const parts = value.split('.');
+                const month = Number.parseInt(parts[1]);
+                if (month === 1) return `'${parts[0]}`;
+                return `${month}월`;
+              }}
+            />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#64748b', fontSize: 12 }}
+              tickFormatter={(value) => formatCurrency(value)}
+              domain={[0, yMax]}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                padding: '12px',
+                color: '#1e293b',
+              }}
+              labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
+              formatter={(value: number, name: string) => {
+                const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액';
+                return [`₩${value.toLocaleString()}`, label];
+              }}
+              labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
+            />
+            <Area
+              type="monotone"
+              dataKey="cumulativeDeposit"
+              stroke="#059669"
+              strokeWidth={2}
+              fill="url(#depositGradientHidden)"
+              dot={false}
+              activeDot={{ r: 6, fill: '#059669', stroke: '#020617', strokeWidth: 2 }}
+              isAnimationActive={false}
+            />
+            <Area
+              type="monotone"
+              dataKey="totalAccount"
+              stroke="#a3e635"
+              strokeWidth={2}
+              fill="url(#accountGradientHidden)"
+              dot={false}
+              activeDot={{ r: 6, fill: '#a3e635', stroke: '#020617', strokeWidth: 2 }}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
       </div>
     </div>
   );

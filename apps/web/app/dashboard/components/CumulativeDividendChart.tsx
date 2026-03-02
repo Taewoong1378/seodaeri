@@ -69,7 +69,7 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
     <BarChart
       data={data.data}
       margin={isModal
-        ? { top: 20, right: 30, left: 20, bottom: 60 }
+        ? { top: 20, right: 30, left: 20, bottom: 40 }
         : { top: 10, right: 10, left: 0, bottom: 40 }
       }
     >
@@ -119,7 +119,7 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
   );
 
   return (
-    <div ref={chartRef} className="space-y-4">
+    <div ref={chartRef} className="space-y-2">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -142,7 +142,7 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
 
       {/* Chart - 데이터 적으면 고정, 많으면 스크롤 */}
       {needsScroll ? (
-        <div ref={scrollRef} className="h-[280px] overflow-x-auto scrollbar-hide">
+        <div ref={scrollRef} className="h-[250px] overflow-x-auto scrollbar-hide">
           <div style={{ width: chartWidth, height: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               {renderChart(false)}
@@ -150,7 +150,7 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
           </div>
         </div>
       ) : (
-        <div className="h-[280px]">
+        <div className="h-[250px]">
           <ResponsiveContainer width="100%" height="100%">
             {renderChart(false)}
           </ResponsiveContainer>
@@ -160,28 +160,28 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
       {/* Hidden Chart for Capture */}
       <div
         ref={hiddenChartRef}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          zIndex: -50,
-          opacity: 0,
-          width: '800px',
-          height: '450px',
-          backgroundColor: '#ffffff',
-          padding: '20px',
-          pointerEvents: 'none',
-        }}
-      >
-        <div style={{ marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>배당금 누적 그래프</h3>
-          <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>총 누적: {formatCurrency(currentCumulative)}</p>
-        </div>
-        <div style={{ width: '100%', height: '350px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            {renderChart(true)}
-          </ResponsiveContainer>
-        </div>
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: -50,
+        opacity: 0,
+        width: '800px',
+        height: '450px',
+        backgroundColor: '#ffffff',
+        padding: '20px',
+        pointerEvents: 'none',
+      }}
+    >
+      <div style={{ marginBottom: '16px' }}>
+        <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>배당금 누적 그래프</h3>
+        <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>총 누적: {formatCurrency(currentCumulative)}</p>
+      </div>
+      <div style={{ width: '100%', height: '350px' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          {renderChart(true)}
+        </ResponsiveContainer>
+      </div>
       </div>
     </div>
   );

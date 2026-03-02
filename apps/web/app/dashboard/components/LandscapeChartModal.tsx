@@ -188,28 +188,28 @@ export function LandscapeChartModal({ title, children, trigger }: LandscapeChart
 
               // Safe Area Handling
               paddingTop: isPortrait
-                ? 'calc(1.5rem + env(safe-area-inset-right))'
-                : 'calc(1.5rem + env(safe-area-inset-top))',
+                ? 'calc(1rem + env(safe-area-inset-right))'
+                : 'calc(1rem + env(safe-area-inset-top))',
               paddingBottom: isPortrait
                 ? 'calc(1.5rem + env(safe-area-inset-left))'
-                : 'calc(1.5rem + env(safe-area-inset-bottom))',
+                : 'calc(0.75rem + env(safe-area-inset-bottom))',
               paddingLeft: isPortrait
-                ? 'calc(1.5rem + env(safe-area-inset-top))'
-                : 'calc(1.5rem + env(safe-area-inset-left))',
+                ? 'calc(1rem + env(safe-area-inset-top))'
+                : 'calc(1rem + env(safe-area-inset-left))',
               paddingRight: isPortrait
-                ? 'calc(1.5rem + env(safe-area-inset-bottom))'
-                : 'calc(1.5rem + env(safe-area-inset-right))',
+                ? 'calc(0.75rem + env(safe-area-inset-bottom))'
+                : 'calc(0.75rem + env(safe-area-inset-right))',
             }}
           >
-            <div className="flex items-center justify-between mb-4 shrink-0">
+            <div className="flex items-center justify-between mb-2 shrink-0">
               <h2 className="text-xl font-bold text-foreground flex-1 text-center">{title}</h2>
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-muted-foreground hover:text-foreground bg-muted/50 backdrop-blur-sm rounded-full"
+                className="h-11 w-11 text-muted-foreground hover:text-foreground bg-muted/50 backdrop-blur-sm rounded-full"
                 onClick={() => setIsOpen(false)}
               >
-                <X size={24} />
+                <X size={28} />
               </Button>
             </div>
 

@@ -213,7 +213,7 @@ export function DashboardContent() {
                 {/* Account Trend Chart (누적입금액 vs 계좌총액) */}
                 {displayData.accountTrend.length > 0 && (
                   <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
-                    <CardContent className="p-4">
+                    <CardContent className="px-4 pt-4 pb-2">
                       <AccountTrendChart
                         data={displayData.accountTrend}
                         currentTotalAsset={displayData.totalAsset}
@@ -235,7 +235,7 @@ export function DashboardContent() {
                       </span>
                     </div>
                     <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
-                      <CardContent className="p-4">
+                      <CardContent className="px-4 pt-4 pb-2">
                         <PerformanceComparisonChart
                           data={displayData.performanceComparison}
                         />
@@ -500,7 +500,7 @@ export function DashboardContent() {
               {/* Rolling Average Dividend Chart (12개월 월평균 배당금) */}
               {activeDividendData?.rollingAverageDividend && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
-                  <CardContent className="p-4">
+                  <CardContent className="px-4 pt-4 pb-2">
                     <RollingAverageDividendChart
                       data={activeDividendData.rollingAverageDividend}
                     />
@@ -511,7 +511,7 @@ export function DashboardContent() {
               {/* Cumulative Dividend Chart (배당금 누적 그래프) */}
               {activeDividendData?.cumulativeDividend && (
                 <Card className="border-border bg-card shadow-sm rounded-[24px] overflow-hidden">
-                  <CardContent className="p-4">
+                  <CardContent className="px-4 pt-4 pb-2">
                     <CumulativeDividendChart
                       data={activeDividendData.cumulativeDividend}
                     />
