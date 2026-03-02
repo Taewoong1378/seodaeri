@@ -89,9 +89,9 @@ export function DividendChart({ data }: DividendChartProps) {
             dataKey="month"
             axisLine={{ stroke: '#cbd5e1' }}
             tickLine={false}
-            tick={{ fill: '#64748b', fontSize: showYAxis ? 12 : 10, fontWeight: 500 }}
+            tick={{ fill: '#64748b', fontSize: showYAxis ? 12 : 9, fontWeight: 500 }}
             dy={8}
-            tickFormatter={(value) => value.replace('월', '')}
+            interval={0}
           />
           {showYAxis && (
             <YAxis
@@ -146,15 +146,15 @@ export function DividendChart({ data }: DividendChartProps) {
       </div>
 
       {/* Year Selector & Total */}
-      <div className="flex items-center justify-between">
-        {/* Year Selector */}
-        <div className="flex items-center gap-1">
+      <div className="space-y-2">
+        {/* Year Selector - 스크롤 가능, 터치 즉시 반응 */}
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide" style={{ touchAction: 'pan-x' }}>
           {availableYears.map(year => (
             <button
               key={year}
               type="button"
-              onClick={() => setSelectedYear(year)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+              onPointerUp={() => setSelectedYear(year)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all shrink-0 ${
                 selectedYear === year
                   ? 'bg-blue-500/20 text-blue-500 ring-1 ring-blue-500/30'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -173,7 +173,7 @@ export function DividendChart({ data }: DividendChartProps) {
       </div>
 
       {/* Chart */}
-      {renderChart("220px", true)}
+      {renderChart("280px", false)}
 
       {/* Hidden Chart for Capture */}
       <div

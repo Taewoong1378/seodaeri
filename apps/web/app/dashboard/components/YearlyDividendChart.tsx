@@ -59,10 +59,9 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
       <YAxis
         axisLine={false}
         tickLine={false}
-        tick={{ fill: '#64748b', fontSize: isModal ? 11 : 9 }}
-        tickFormatter={formatCurrencyShort}
+        tick={false}
         domain={[0, yMax]}
-        width={isModal ? 70 : 55}
+        width={10}
       />
       <Tooltip
         cursor={{ fill: 'rgba(16, 185, 129, 0.1)' }}
