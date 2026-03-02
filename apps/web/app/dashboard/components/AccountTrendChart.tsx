@@ -128,25 +128,31 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
     });
   }
 
-  // Y축 범위 계산 (데이터 크기에 맞게 유동적으로)
+  // Y축 범위 계산 (계좌총자산에 맞게 ~10% 여유)
   const allValues = displayData.flatMap(d => [d.cumulativeDeposit, d.totalAccount]);
   const maxValue = Math.max(...allValues);
   const yMax = (() => {
-    if (maxValue <= 0) return 100000; // 데이터 없으면 10만
-    // 최대값의 약 1.3배를 보기 좋은 단위로 올림
-    const padded = maxValue * 1.3;
-    if (padded <= 500000) return Math.ceil(padded / 100000) * 100000; // ~50만: 10만 단위
-    if (padded <= 5000000) return Math.ceil(padded / 500000) * 500000; // ~500만: 50만 단위
-    if (padded <= 50000000) return Math.ceil(padded / 5000000) * 5000000; // ~5천만: 500만 단위
-    if (padded <= 500000000) return Math.ceil(padded / 50000000) * 50000000; // ~5억: 5천만 단위
-    return Math.ceil(padded / 100000000) * 100000000; // 5억+: 1억 단위
+    if (maxValue <= 0) return 100000;
+    const padded = maxValue * 1.1;
+    // 자릿수에 맞는 단위로 올림 (magnitude/2 단위)
+    const magnitude = 10 ** Math.floor(Math.log10(padded));
+    const unit = magnitude / 2;
+    return Math.ceil(padded / unit) * unit;
   })();
 
-  // X축 interval 계산 - 전체 기간을 한눈에 보여주되 라벨이 겹치지 않도록
-  const tickInterval = displayData.length <= 12 ? 0
-    : displayData.length <= 24 ? 2
-    : displayData.length <= 36 ? 3
-    : Math.floor(displayData.length / 10);
+  // X축: 투자기간에 따라 라벨 간격 변경 (구글 파이낸스 스타일)
+  const totalMonths = displayData.length;
+  const xTicks = totalMonths > 48
+    // 4년+: 연도별 (1월만 표시)
+    ? displayData.filter(d => d.date.endsWith('.01')).map(d => d.date)
+    : totalMonths > 12
+      // 1~4년: 분기별 (1/4/7/10월)
+      ? displayData.filter(d => {
+          const m = Number.parseInt(d.date.split('.')[1]);
+          return m === 1 || m === 4 || m === 7 || m === 10;
+        }).map(d => d.date)
+      // 1년 이하: 매월
+      : undefined;
 
   return (
     <div ref={chartRef} className="space-y-4">
@@ -213,7 +219,13 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                   axisLine={{ stroke: '#cbd5e1' }}
                   tickLine={false}
                   tick={{ fill: '#64748b', fontSize: 12 }}
-                  tickFormatter={(value) => `${Number.parseInt(value.split('.')[1])}월`}
+                  {...(xTicks ? { ticks: xTicks, interval: 0 } : { interval: 0 })}
+                  tickFormatter={(value) => {
+                    const parts = value.split('.');
+                    const month = Number.parseInt(parts[1]);
+                    if (month === 1) return `'${parts[0]}`;
+                    return `${month}월`;
+                  }}
                 />
                 <YAxis
                   axisLine={false}
@@ -305,11 +317,10 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
               axisLine={{ stroke: '#cbd5e1' }}
               tickLine={false}
               tick={{ fill: '#64748b', fontSize: 9 }}
-              interval={tickInterval}
+              {...(xTicks ? { ticks: xTicks, interval: 0 } : { interval: 0 })}
               tickFormatter={(value) => {
                 const parts = value.split('.');
                 const month = Number.parseInt(parts[1]);
-                // 1월이면 연도도 표시
                 if (month === 1) return `'${parts[0]}`;
                 return `${month}월`;
               }}
@@ -427,7 +438,13 @@ export function AccountTrendChart({ data, currentTotalAsset, currentTotalInveste
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: '#64748b', fontSize: 12 }}
-                tickFormatter={(value) => `${Number.parseInt(value.split('.')[1])}월`}
+                {...(xTicks ? { ticks: xTicks, interval: 0 } : { interval: 0 })}
+                tickFormatter={(value) => {
+                  const parts = value.split('.');
+                  const month = Number.parseInt(parts[1]);
+                  if (month === 1) return `'${parts[0]}`;
+                  return `${month}월`;
+                }}
               />
               <YAxis
                 axisLine={false}
