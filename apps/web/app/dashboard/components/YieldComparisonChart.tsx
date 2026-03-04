@@ -125,14 +125,15 @@ function SingleBarChart({
   };
 
   const makeLabelRenderer = () => (props: any) => {
-    const { x, y, width, value, index } = props;
+    const { x, y, width, height, value, index } = props;
     if (value === undefined || value === null) return null;
     const entry = chartData[index];
     const color = getBarColor(entry?.name || "", value);
+    const isNegative = value < 0;
     return (
       <text
         x={x + width / 2}
-        y={y - 5}
+        y={isNegative ? y + Math.abs(height) + labelFontSize + 2 : y - 5}
         fill={color}
         textAnchor="middle"
         fontSize={labelFontSize}

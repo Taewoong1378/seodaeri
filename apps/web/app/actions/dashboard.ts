@@ -1061,19 +1061,41 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       provider.getMonthlyProfitLoss(userId),
     ]);
 
-    // accountTrend를 올해 1월부터 패딩 (투자 시작 전 월은 0으로 채움)
+    // accountTrend: 첫 데이터 월의 한 달 전부터 0으로 시작
+    // 예: 1월 입금 → 25.12부터 0, 3월 입금 → 26.02부터 0
     const accountTrend: AccountTrendData[] = (() => {
       if (rawAccountTrend.length === 0) return rawAccountTrend;
       const currentYear = new Date().getFullYear();
       const currentMonth = new Date().getMonth() + 1;
       const yyStr = String(currentYear).slice(-2);
       const existingDates = new Set(rawAccountTrend.map(t => t.date));
-      const padded: AccountTrendData[] = [];
+
+      // 첫 데이터 월 찾기
+      let firstDataMonth = currentMonth;
       for (let m = 1; m <= currentMonth; m++) {
         const dateKey = `${yyStr}.${String(m).padStart(2, '0')}`;
-        if (existingDates.has(dateKey)) break;
+        if (existingDates.has(dateKey)) {
+          firstDataMonth = m;
+          break;
+        }
+      }
+
+      const padded: AccountTrendData[] = [];
+
+      // 한 달 전(baseline)을 0으로 추가
+      const baselineMonth = firstDataMonth - 1;
+      if (baselineMonth <= 0) {
+        // 1월 시작 → 전년 12월을 baseline으로
+        const prevYearStr = String(currentYear - 1).slice(-2);
+        padded.push({ date: `${prevYearStr}.12`, totalAccount: 0, cumulativeDeposit: 0 });
+      }
+
+      // 1월부터 첫 데이터 월 전까지 0으로 패딩
+      for (let m = 1; m < firstDataMonth; m++) {
+        const dateKey = `${yyStr}.${String(m).padStart(2, '0')}`;
         padded.push({ date: dateKey, totalAccount: 0, cumulativeDeposit: 0 });
       }
+
       return [...padded, ...rawAccountTrend];
     })();
     const portfolio: PortfolioItem[] = portfolioItems.map((item, index) => ({
@@ -1405,6 +1427,16 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       const nasdaqStart = marketData.nasdaq?.get(baselineKey);
       const sp500KrwStart = marketData.sp500Krw?.get(baselineKey);
       const nasdaqKrwStart = marketData.nasdaqKrw?.get(baselineKey);
+
+      // baseline 월(첫 입금 전월)을 0% 시작점으로 추가
+      // 예: 1월 시작 → 25.12를 0%로, 3월 시작 → 26.02를 0%로
+      if (baselineMonth <= 0) {
+        // 전년 12월
+        performanceComparison.push({
+          date: baselineKey,
+          portfolio: 0, kospi: 0, sp500: 0, nasdaq: 0,
+        });
+      }
 
       // 1월~현재월까지 항상 포함
       for (let m = 1; m <= currentMonth; m++) {
