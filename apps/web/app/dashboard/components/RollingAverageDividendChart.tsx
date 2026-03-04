@@ -69,7 +69,7 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
     <BarChart
       data={data.data}
       margin={isModal
-        ? { top: 20, right: 30, left: 20, bottom: 20 }
+        ? { top: 10, right: 10, left: 10, bottom: 5 }
         : { top: 10, right: 10, left: 0, bottom: 40 }
       }
     >
@@ -81,7 +81,7 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
         tick={{ fill: '#64748b', fontSize: isModal ? 10 : 8 }}
         angle={-45}
         textAnchor="end"
-        height={isModal ? 60 : 50}
+        height={isModal ? 45 : 50}
         {...(isModal
           ? (modalXTicks !== undefined ? { ticks: modalXTicks as string[], interval: 0 as const } : { interval: 0 as const })
           : { interval: Math.floor(data.data.length / 15) }
@@ -108,6 +108,7 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
         labelStyle={{ color: '#64748b', fontSize: 12, marginBottom: 8 }}
         formatter={(value: number) => [formatCurrency(value), '12개월 평균']}
         labelFormatter={(label) => `${label}`}
+        {...(isModal ? { trigger: 'click' as const } : {})}
       />
       <Bar
         dataKey="average"
