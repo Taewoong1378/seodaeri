@@ -70,7 +70,7 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
       data={data.data}
       margin={isModal
         ? { top: 10, right: 10, left: 10, bottom: 5 }
-        : { top: 10, right: 10, left: 0, bottom: 40 }
+        : { top: 10, right: 10, left: 0, bottom: 5 }
       }
     >
       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
@@ -81,7 +81,7 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
         tick={{ fill: '#64748b', fontSize: isModal ? 10 : 8 }}
         angle={-45}
         textAnchor="end"
-        height={isModal ? 45 : 50}
+        height={isModal ? 45 : 35}
         {...(isModal
           ? (modalXTicks !== undefined ? { ticks: modalXTicks as string[], interval: 0 as const } : { interval: 0 as const })
           : { interval: Math.floor(data.data.length / 15) }

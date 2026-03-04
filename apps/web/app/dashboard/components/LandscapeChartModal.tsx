@@ -43,10 +43,17 @@ export function LandscapeChartModal({ title, children, trigger }: LandscapeChart
       return wrapper.getBoundingClientRect();
     };
 
-    const correctXY = (clientX: number, clientY: number, rect: DOMRect) => ({
-      clientX: clientY - rect.top + rect.left,
-      clientY: rect.right + rect.top - clientX,
-    });
+    // 90° CW 회전 후 getBoundingClientRect()는 width↔height가 뒤바뀜.
+    // Recharts가 ratio = mouseOffset / rect.width 로 데이터 인덱스를 계산하므로,
+    // 단순 좌표 변환이 아닌 aspect ratio 보정이 필요함.
+    const correctXY = (clientX: number, clientY: number, rect: DOMRect) => {
+      const localX = clientY - rect.top;   // 화면 Y → 로컬 X (시간축)
+      const localY = rect.right - clientX; // 화면 X → 로컬 Y (값축)
+      return {
+        clientX: localX * rect.width / rect.height + rect.left,
+        clientY: localY * rect.height / rect.width + rect.top,
+      };
+    };
 
     const handleTouch = (e: Event) => {
       if (isRedispatching) return;
@@ -189,7 +196,7 @@ export function LandscapeChartModal({ title, children, trigger }: LandscapeChart
       )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="fixed left-0 top-0 w-screen h-screen max-w-none m-0 p-0 translate-x-0 translate-y-0 bg-background border-none rounded-none flex items-center justify-center overflow-hidden z-[100] data-[state=open]:slide-in-from-bottom-0 data-[state=closed]:slide-out-to-bottom-0">
+        <DialogContent className="fixed left-0 top-0 w-screen h-screen max-w-none m-0 p-0 translate-x-0 translate-y-0 bg-background border-none rounded-none flex items-center justify-center overflow-visible z-[100] data-[state=open]:slide-in-from-bottom-0 data-[state=closed]:slide-out-to-bottom-0">
           <DialogTitle className="sr-only">{title} 전체화면</DialogTitle>
 
 
@@ -233,9 +240,9 @@ export function LandscapeChartModal({ title, children, trigger }: LandscapeChart
               </Button>
             </div>
 
-            <div ref={chartAreaRef} className="flex-1 min-h-0 w-full relative">
+            <div ref={chartAreaRef} className="flex-1 min-h-0 w-full relative overflow-visible">
               {/* Chart Container - passes dimensions to children */}
-              <div className="absolute inset-0">
+              <div className="absolute inset-0 overflow-visible">
                 {children}
               </div>
             </div>

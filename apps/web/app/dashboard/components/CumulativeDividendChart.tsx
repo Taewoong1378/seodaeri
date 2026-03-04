@@ -69,8 +69,8 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
     <BarChart
       data={data.data}
       margin={isModal
-        ? { top: 20, right: 30, left: 20, bottom: 40 }
-        : { top: 10, right: 10, left: 0, bottom: 40 }
+        ? { top: 10, right: 10, left: 10, bottom: 5 }
+        : { top: 10, right: 10, left: 0, bottom: 5 }
       }
     >
       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
@@ -81,7 +81,7 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
         tick={{ fill: '#64748b', fontSize: isModal ? 10 : 8 }}
         angle={-45}
         textAnchor="end"
-        height={isModal ? 60 : 50}
+        height={isModal ? 45 : 35}
         {...(isModal
           ? (modalXTicks !== undefined ? { ticks: modalXTicks as string[], interval: 0 as const } : { interval: 0 as const })
           : { interval: Math.floor(data.data.length / 15) }
@@ -108,6 +108,7 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
         labelStyle={{ color: '#64748b', fontSize: 12, marginBottom: 8 }}
         formatter={(value: number) => [formatCurrency(value), '누적 배당금']}
         labelFormatter={(label) => `${label}`}
+        {...(isModal ? { trigger: 'click' as const } : {})}
       />
       <Bar
         dataKey="cumulative"

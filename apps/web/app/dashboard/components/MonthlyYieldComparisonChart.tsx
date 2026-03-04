@@ -108,14 +108,14 @@ export function MonthlyYieldComparisonChart({ data }: MonthlyYieldComparisonChar
                         tickFormatter={(value) => `${value}%`}
                       />
                       <Tooltip
-                        cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+                        cursor={{ fill: 'rgba(16, 185, 129, 0.1)' }}
                         contentStyle={{
-                          backgroundColor: 'hsl(var(--popover))',
-                          border: '1px solid hsl(var(--border))',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e2e8f0',
                           borderRadius: '12px',
                           boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
                           padding: '12px',
-                          color: 'hsl(var(--popover-foreground))',
+                          color: '#1e293b',
                         }}
                         labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
                         formatter={(value: number, name: string) => {
