@@ -108,7 +108,7 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
         labelStyle={{ color: '#64748b', fontSize: 12, marginBottom: 8 }}
         formatter={(value: number) => [formatCurrency(value), '12개월 평균']}
         labelFormatter={(label) => `${label}`}
-        {...(isModal ? { trigger: 'click' as const } : {})}
+        {...(isModal ? {} : {})}
       />
       <Bar
         dataKey="average"

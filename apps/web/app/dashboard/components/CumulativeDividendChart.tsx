@@ -108,7 +108,7 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
         labelStyle={{ color: '#64748b', fontSize: 12, marginBottom: 8 }}
         formatter={(value: number) => [formatCurrency(value), '누적 배당금']}
         labelFormatter={(label) => `${label}`}
-        {...(isModal ? { trigger: 'click' as const } : {})}
+        {...(isModal ? {} : {})}
       />
       <Bar
         dataKey="cumulative"
