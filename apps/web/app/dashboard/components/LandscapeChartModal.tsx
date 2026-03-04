@@ -79,14 +79,34 @@ export function LandscapeChartModal({ title, children, trigger }: LandscapeChart
 
       isRedispatching = true;
       try {
+        const correctedTouches = mapTouches(te.touches);
         const newEvent = new TouchEvent(te.type, {
           bubbles: true,
           cancelable: true,
-          touches: mapTouches(te.touches),
+          touches: correctedTouches,
           changedTouches: mapTouches(te.changedTouches),
           targetTouches: mapTouches(te.targetTouches),
         });
         target.dispatchEvent(newEvent);
+
+        // Recharts uses mousemove for Tooltip; browser won't synthesize
+        // mouse events from programmatic touch events, so emit one manually
+        if (te.type === 'touchmove' || te.type === 'touchstart') {
+          const t0 = correctedTouches[0];
+          if (t0) {
+            target.dispatchEvent(new MouseEvent('mousemove', {
+              bubbles: true,
+              cancelable: true,
+              clientX: t0.clientX,
+              clientY: t0.clientY,
+            }));
+          }
+        } else if (te.type === 'touchend') {
+          target.dispatchEvent(new MouseEvent('mouseleave', {
+            bubbles: true,
+            cancelable: true,
+          }));
+        }
       } catch { /* Touch constructor unavailable */ }
       isRedispatching = false;
     };

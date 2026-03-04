@@ -8,7 +8,6 @@ import {
   appendSheetData,
   deleteSheetRow,
   fetchSheetData,
-  insertRowInDateOrder,
 } from "../../lib/google-sheets";
 
 export interface DividendInput {
@@ -131,18 +130,14 @@ export async function saveDividend(
       input.account || "", // K: 계좌 유형
     ];
 
-    // 날짜 순서에 맞는 위치에 삽입
-    console.log("[saveDividend] Inserting row:", rowData);
+    // 기존 데이터 마지막 행 다음에 추가 (append API가 자동으로 마지막 행 감지)
+    console.log("[saveDividend] Appending row:", rowData);
 
-    await insertRowInDateOrder(
+    await appendSheetData(
       session.accessToken,
       user.spreadsheet_id,
-      "7. 배당내역",
       "'7. 배당내역'!A:K",
-      1, // B열(1)에 날짜가 있음
-      input.date,
-      rowData,
-      1, // 헤더 1행
+      [rowData]
     );
 
     console.log("[saveDividend] Success!");

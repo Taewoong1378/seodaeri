@@ -520,6 +520,46 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       ? parsePerformanceComparisonData(enrichedRows || performanceRows!)
       : [];
 
+    // Fallback: 시트의 지수 데이터가 모두 0이면 공개 마켓 데이터로 보강
+    if (performanceComparison.length > 0 && marketData) {
+      const hasIndexData = performanceComparison.some(d => d.kospi !== 0 || d.sp500 !== 0 || d.nasdaq !== 0);
+      if (!hasIndexData) {
+        const firstDate = performanceComparison[0]!.date;
+        const [firstYY, firstMM] = firstDate.split('.').map(Number) as [number, number];
+        const baseMonth = (firstMM || 1) - 1;
+        const baseYear = baseMonth <= 0 ? (firstYY || 0) - 1 : (firstYY || 0);
+        const effectiveMonth = baseMonth <= 0 ? 12 : baseMonth;
+        const baselineKey = `${String(baseYear).padStart(2, '0')}.${String(effectiveMonth).padStart(2, '0')}`;
+
+        const kospiStart = marketData.kospi?.get(baselineKey);
+        const sp500Start = marketData.sp500?.get(baselineKey);
+        const nasdaqStart = marketData.nasdaq?.get(baselineKey);
+        const sp500KrwStart = marketData.sp500Krw?.get(baselineKey);
+        const nasdaqKrwStart = marketData.nasdaqKrw?.get(baselineKey);
+        const round1 = (n: number) => Math.round(n * 10) / 10;
+
+        for (const item of performanceComparison) {
+          const kospiVal = marketData.kospi?.get(item.date);
+          const sp500Val = marketData.sp500?.get(item.date);
+          const nasdaqVal = marketData.nasdaq?.get(item.date);
+
+          item.kospi = kospiStart && kospiVal ? round1(((kospiVal / kospiStart) - 1) * 100) : 0;
+          item.sp500 = sp500Start && sp500Val ? round1(((sp500Val / sp500Start) - 1) * 100) : 0;
+          item.nasdaq = nasdaqStart && nasdaqVal ? round1(((nasdaqVal / nasdaqStart) - 1) * 100) : 0;
+
+          if (sp500KrwStart) {
+            const sp500KrwVal = marketData.sp500Krw?.get(item.date);
+            if (sp500KrwVal) item.sp500Dollar = round1(((sp500KrwVal / sp500KrwStart) - 1) * 100);
+          }
+          if (nasdaqKrwStart) {
+            const nasdaqKrwVal = marketData.nasdaqKrw?.get(item.date);
+            if (nasdaqKrwVal) item.nasdaqDollar = round1(((nasdaqKrwVal / nasdaqKrwStart) - 1) * 100);
+          }
+        }
+        console.log('[getDashboardData] Index data enriched from public market data (sheet had no index data)');
+      }
+    }
+
     // 계좌 추세 파싱 (같은 performanceRows에서)
     const accountTrend: AccountTrendData[] = performanceRows
       ? parseAccountTrendData(performanceRows)
@@ -531,9 +571,66 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       : [];
 
     // 수익률 비교 바 차트 데이터 파싱 (같은 performanceRows에서)
-    const yieldComparison: YieldComparisonData | null = performanceRows
+    let yieldComparison: YieldComparisonData | null = performanceRows
       ? parseYieldComparisonData(performanceRows)
       : null;
+
+    // Fallback: 시트의 지수 데이터가 0이면 공개 마켓 데이터로 보강
+    if (yieldComparison && marketData) {
+      const ty = yieldComparison.thisYearYield;
+      const hasIndexYield = ty.kospi !== 0 || ty.sp500 !== 0 || ty.nasdaq !== 0;
+      if (!hasIndexYield) {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        const prevDecKey = `${String(currentYear - 1).slice(-2)}.12`;
+        const currentKey = `${String(currentYear).slice(-2)}.${String(currentMonth).padStart(2, '0')}`;
+
+        const kospiPrev = marketData.kospi?.get(prevDecKey);
+        const sp500Prev = marketData.sp500?.get(prevDecKey);
+        const nasdaqPrev = marketData.nasdaq?.get(prevDecKey);
+        const kospiCur = marketData.kospi?.get(currentKey);
+        const sp500Cur = marketData.sp500?.get(currentKey);
+        const nasdaqCur = marketData.nasdaq?.get(currentKey);
+
+        if (kospiPrev && kospiCur) ty.kospi = ((kospiCur / kospiPrev) - 1) * 100;
+        if (sp500Prev && sp500Cur) ty.sp500 = ((sp500Cur / sp500Prev) - 1) * 100;
+        if (nasdaqPrev && nasdaqCur) ty.nasdaq = ((nasdaqCur / nasdaqPrev) - 1) * 100;
+
+        // 누적/연평균도 보강
+        const ay = yieldComparison.annualizedYield;
+        if (ay.kospi === 0 || ay.sp500 === 0 || ay.nasdaq === 0) {
+          // 첫 데이터 날짜에서 baseline 찾기
+          let firstDateKey: string | null = null;
+          if (performanceRows) {
+            for (const row of performanceRows) {
+              if (!row || !Array.isArray(row)) continue;
+              const d = String(row[0] || '').trim();
+              if (/^\d{2}\.\d{2}$/.test(d)) { firstDateKey = d; break; }
+            }
+          }
+          if (firstDateKey) {
+            const [fy] = firstDateKey.split('.').map(Number);
+            const firstYear = 2000 + (fy || 0);
+            const years = Math.max(1, currentYear - firstYear);
+            const baseKey = `${String(fy! - 1).padStart(2, '0')}.12`;
+            const kospiBase = marketData.kospi?.get(baseKey);
+            const sp500Base = marketData.sp500?.get(baseKey);
+            const nasdaqBase = marketData.nasdaq?.get(baseKey);
+
+            const calcAnnualized = (cur: number, base: number) => {
+              const total = cur / base;
+              if (total <= 0 || years <= 0) return 0;
+              return (total ** (1 / years) - 1) * 100;
+            };
+            if (kospiBase && kospiCur) ay.kospi = calcAnnualized(kospiCur, kospiBase);
+            if (sp500Base && sp500Cur) ay.sp500 = calcAnnualized(sp500Cur, sp500Base);
+            if (nasdaqBase && nasdaqCur) ay.nasdaq = calcAnnualized(nasdaqCur, nasdaqBase);
+          }
+        }
+        console.log('[getDashboardData] YieldComparison enriched from public market data');
+      }
+    }
 
     // 수익률 비교 달러환율 적용 파싱 (확장된 범위에서 달러 컬럼 포함)
     const yieldComparisonDollar: YieldComparisonDollarData | null = enrichedRows

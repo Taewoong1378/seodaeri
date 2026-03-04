@@ -69,7 +69,7 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
     <BarChart
       data={data.data}
       margin={isModal
-        ? { top: 20, right: 30, left: 20, bottom: 40 }
+        ? { top: 20, right: 30, left: 20, bottom: 20 }
         : { top: 10, right: 10, left: 0, bottom: 40 }
       }
     >

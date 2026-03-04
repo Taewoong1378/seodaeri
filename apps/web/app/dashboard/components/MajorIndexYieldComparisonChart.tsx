@@ -164,7 +164,7 @@ export function MajorIndexYieldComparisonChart({
     const option = SERIES_OPTIONS.find(o => o.key === name);
     let label = name === "account" ? "내 투자" : (option?.label || name);
     if (rateMode === "dollar" && (name === "sp500" || name === "nasdaq" || name === "gold" || name === "bitcoin")) {
-      label += "(환율)";
+      // 환율 모드에서도 라벨 그대로 사용 (간결하게)
     }
     return [
       `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`,
@@ -312,7 +312,7 @@ export function MajorIndexYieldComparisonChart({
           if (!opt) return null;
           let label = opt.label;
           if (rateMode === "dollar" && (key === "sp500" || key === "nasdaq" || key === "gold" || key === "bitcoin")) {
-            label += "(환율)";
+            // 환율 모드에서도 라벨 그대로 사용 (간결하게)
           }
           return (
             <div key={key} className="flex items-center gap-1.5">
@@ -520,7 +520,7 @@ export function MajorIndexYieldComparisonChart({
           const val = values[latestIdx] ?? 0;
           let label = opt.label;
           if (rateMode === "dollar" && (key === "sp500" || key === "nasdaq" || key === "gold" || key === "bitcoin")) {
-            label += "(환율)";
+            // 환율 모드에서도 라벨 그대로 사용 (간결하게)
           }
           return (
             <div key={key} className="bg-muted/30 border border-border rounded-xl px-3 py-2.5 text-center">

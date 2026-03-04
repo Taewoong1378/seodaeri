@@ -3,7 +3,7 @@
 import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
 import { revalidatePath } from 'next/cache';
-import { appendSheetData, deleteSheetRow, extractAccountsFromDeposits, fetchSheetData, insertRowInDateOrder } from '../../lib/google-sheets';
+import { appendSheetData, deleteSheetRow, extractAccountsFromDeposits, fetchSheetData } from '../../lib/google-sheets';
 
 export interface DepositInput {
   date: string; // YYYY-MM-DD
@@ -98,24 +98,20 @@ export async function saveDeposit(input: DepositInput): Promise<SaveDepositResul
     const rowData = [
       input.date, // A: 일자
       year, // B: 연도
-      `${month}월`, // C: 월
-      `${day}일`, // D: 일
+      `${Number(month)}월`, // C: 월
+      `${Number(day)}일`, // D: 일
       input.type === 'DEPOSIT' ? '입금' : '출금', // E: 구분
       input.account || '일반계좌1', // F: 계좌(증권사)
       input.type === 'DEPOSIT' ? `₩${input.amount.toLocaleString()}` : `-₩${input.amount.toLocaleString()}`, // G: 금액
       input.memo || '', // H: 비고
     ];
 
-    // 날짜 순서에 맞는 위치에 삽입
-    await insertRowInDateOrder(
+    // 기존 데이터 마지막 행 다음에 추가 (append API가 자동으로 마지막 행 감지)
+    await appendSheetData(
       session.accessToken,
       user.spreadsheet_id,
-      '6. 입금내역',
       "'6. 입금내역'!A:H",
-      0, // A열(0)에 날짜가 있음
-      input.date,
-      rowData,
-      1 // 헤더 1행
+      [rowData]
     );
 
     revalidatePath('/dashboard');

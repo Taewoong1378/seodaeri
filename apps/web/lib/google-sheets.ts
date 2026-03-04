@@ -1055,8 +1055,8 @@ export function calculateRollingAverageDividend(dividends: DividendRecord[]): Ro
       }
     }
 
-    // 12개월 평균 (또는 가용한 월 수로 평균)
-    const average = count > 0 ? Math.round(sum / Math.min(count, 12)) : 0;
+    // 항상 12로 나누어 12개월 평균 계산 (시트 BE열 수식과 동일)
+    const average = count > 0 ? Math.round(sum / 12) : 0;
 
     // YY.MM 형식으로 변환
     const [yearStr, monthStr] = currentKey.split('-');
@@ -1065,8 +1065,9 @@ export function calculateRollingAverageDividend(dividends: DividendRecord[]): Ro
     data.push({ month: displayMonth, average });
   }
 
-  // 전체 데이터 반환 (차트에서 스크롤/적응형 표시)
-  const recentData = data;
+  // 첫 배당 입금 월부터 데이터 시작 (앞쪽 0값 제거)
+  const firstNonZeroIndex = data.findIndex(d => d.average > 0);
+  const recentData = firstNonZeroIndex > 0 ? data.slice(firstNonZeroIndex) : data;
 
   console.log('[calculateRollingAverageDividend] Data points:', recentData.length);
 
