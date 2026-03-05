@@ -1,6 +1,6 @@
 import { auth } from "@repo/auth/server";
 import { Card, CardContent } from "@repo/design-system/components/card";
-import { ChevronRight, ExternalLink, Shield, User } from "lucide-react";
+import { ChevronRight, ExternalLink, MessageSquarePlus, Shield, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -99,7 +99,7 @@ export default async function SettingsPage() {
             )}
             <Link
               href="/privacy"
-              className="flex items-center justify-between p-4 hover:bg-muted transition-colors"
+              className="flex items-center justify-between p-4 border-b border-border hover:bg-muted transition-colors"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
@@ -116,6 +116,27 @@ export default async function SettingsPage() {
               </div>
               <ChevronRight size={20} className="text-muted-foreground" />
             </Link>
+            <a
+              href="https://forms.gle/nVBcG4Ue3bnuVVpV8"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between p-4 hover:bg-muted transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                  <MessageSquarePlus size={20} className="text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    문의 및 제안
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    기능 요청, 버그 제보, 의견 보내기
+                  </p>
+                </div>
+              </div>
+              <ChevronRight size={20} className="text-muted-foreground" />
+            </a>
           </CardContent>
         </Card>
 
