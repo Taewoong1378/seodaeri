@@ -992,7 +992,7 @@ export interface RollingAverageDividendData {
   }[];
 }
 
-export function calculateRollingAverageDividend(dividends: DividendRecord[]): RollingAverageDividendData | null {
+export function calculateRollingAverageDividend(dividends: DividendRecord[], startMonth?: string): RollingAverageDividendData | null {
   if (!dividends || dividends.length === 0) return null;
 
   // 월별 배당금 집계
@@ -1015,10 +1015,22 @@ export function calculateRollingAverageDividend(dividends: DividendRecord[]): Ro
   const sortedMonths = Array.from(monthlyMap.keys()).sort();
   if (sortedMonths.length === 0) return null;
 
-  // 첫 번째 배당 월부터 마지막 배당 월까지 모든 월 생성 (실제 데이터가 있는 범위만)
-  const firstMonth = sortedMonths[0];
+  // startMonth(YY.MM 형식)가 제공되면 그것을 시작 시점으로 사용
+  let rangeStart: string;
+  if (startMonth) {
+    // YY.MM → YYYY-MM 변환
+    const [yy, mm] = startMonth.split('.');
+    rangeStart = `20${yy}-${mm}`;
+  } else {
+    rangeStart = sortedMonths[0] ?? '2023-01';
+  }
+
+  // 시작월과 첫 배당월 중 더 이른 것을 사용
+  const firstMonth = sortedMonths[0] ?? '2023-01';
+  const effectiveFirst = rangeStart < firstMonth ? rangeStart : firstMonth;
+
   const lastMonth = sortedMonths[sortedMonths.length - 1];
-  const [firstYear, firstMon] = (firstMonth ?? '2023-01').split('-').map(Number);
+  const [firstYear, firstMon] = effectiveFirst.split('-').map(Number);
   const [lastYear, lastMon] = (lastMonth ?? '2025-12').split('-').map(Number);
 
   const allMonths: string[] = [];
@@ -1065,9 +1077,13 @@ export function calculateRollingAverageDividend(dividends: DividendRecord[]): Ro
     data.push({ month: displayMonth, average });
   }
 
-  // 첫 배당 입금 월부터 데이터 시작 (앞쪽 0값 제거)
-  const firstNonZeroIndex = data.findIndex(d => d.average > 0);
-  const recentData = firstNonZeroIndex > 0 ? data.slice(firstNonZeroIndex) : data;
+  // startMonth가 명시적으로 주어졌으면 해당 시점부터 전체 표시
+  // 그렇지 않으면 첫 배당 입금 월부터 데이터 시작 (앞쪽 0값 제거)
+  let recentData = data;
+  if (!startMonth) {
+    const firstNonZeroIndex = data.findIndex(d => d.average > 0);
+    if (firstNonZeroIndex > 0) recentData = data.slice(firstNonZeroIndex);
+  }
 
   console.log('[calculateRollingAverageDividend] Data points:', recentData.length);
 
@@ -1243,11 +1259,11 @@ export interface DividendAccountData {
   cumulativeDividend: CumulativeDividendData | null;
 }
 
-export function computeDividendAccountData(dividends: DividendRecord[]): DividendAccountData {
+export function computeDividendAccountData(dividends: DividendRecord[], startMonth?: string): DividendAccountData {
   const monthlyDividends = aggregateMonthlyDividends(dividends);
   const dividendByYear = aggregateDividendsByYear(dividends);
   const yearlyDividendSummary = aggregateYearlyDividends(dividends);
-  const rollingAverageDividend = calculateRollingAverageDividend(dividends);
+  const rollingAverageDividend = calculateRollingAverageDividend(dividends, startMonth);
   const cumulativeDividend = calculateCumulativeDividend(dividends);
 
   const now = new Date();
