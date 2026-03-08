@@ -116,94 +116,89 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
   const isNativeApp = bridge.isReactNative();
 
   /**
-   * 네이티브 앱에서의 공유 처리
-   * JPEG 압축 + pixelRatio 축소로 postMessage 크기 최적화
-   * 실패 시 pixelRatio를 더 낮춰 재시도
+   * Web Share API로 공유 시도 (웹 + WebView 공통)
+   * 모던 WebView(iOS 15+, Android Chrome)에서 navigator.share 지원
    */
-  const handleNativeShare = async (mode: "landscape" | "vertical") => {
-    if (!chartRef.current || isCapturing) return;
-
-    setIsCapturing(true);
-
+  const shareViaWebAPI = async (
+    blob: Blob,
+    fileName: string
+  ): Promise<boolean> => {
     try {
-      let { dataUrl, mimeType } = await captureChart(chartRef.current, true);
-
-      if (mode === "vertical") {
-        dataUrl = await rotateImage(dataUrl, mimeType);
-      }
-
-      bridge.shareImage({
-        title: `Gulim_${title}`,
-        imageBase64: dataUrl,
-        mimeType,
-      });
-
-      setIsOpen(false);
-    } catch (firstError) {
-      console.warn("Native share first attempt failed, retrying with lower quality:", firstError);
-      // Fallback: pixelRatio 1 + JPEG 0.7
-      try {
-        let fallbackUrl = await toPng(chartRef.current, {
-          backgroundColor: "#ffffff",
-          pixelRatio: 1,
-          cacheBust: true,
-          style: CAPTURE_STYLE,
-        });
-        fallbackUrl = await convertToJpeg(fallbackUrl, 0.7);
-
-        if (mode === "vertical") {
-          fallbackUrl = await rotateImage(fallbackUrl, "image/jpeg");
-        }
-
-        bridge.shareImage({
-          title: `Gulim_${title}`,
-          imageBase64: fallbackUrl,
-          mimeType: "image/jpeg",
-        });
-
-        setIsOpen(false);
-      } catch (retryError) {
-        console.error("Native share fallback also failed:", retryError);
-        toast.error("공유에 실패했습니다. 다시 시도해주세요.");
-      }
-    } finally {
-      setIsCapturing(false);
-    }
-  };
-
-  /**
-   * 웹 브라우저에서의 공유 처리
-   * Web Share API 또는 다운로드 fallback
-   */
-  const handleWebShare = async (mode: "landscape" | "vertical") => {
-    if (!chartRef.current || isCapturing) return;
-
-    setIsCapturing(true);
-
-    try {
-      const { dataUrl } = await captureChart(chartRef.current, false);
-
-      let finalDataUrl = dataUrl;
-      if (mode === "vertical") {
-        finalDataUrl = await rotateImage(dataUrl, "image/png");
-      }
-
-      const res = await fetch(finalDataUrl);
-      const blob = await res.blob();
-      const file = new File([blob], `${title}.png`, { type: "image/png" });
-
+      const file = new File([blob], fileName, { type: blob.type });
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: `Gulim - ${title}`,
           files: [file],
         });
+        return true;
+      }
+    } catch (error) {
+      // 사용자 취소(AbortError)는 성공으로 처리
+      if ((error as Error).name === "AbortError") return true;
+      console.warn("Web Share API failed:", error);
+    }
+    return false;
+  };
+
+  /**
+   * Bridge를 통한 네이티브 공유 (Web Share API 실패 시 fallback)
+   * JPEG 압축으로 postMessage 크기 최적화
+   */
+  const shareViaBridge = async (dataUrl: string, mimeType: string) => {
+    bridge.shareImage({
+      title: `Gulim_${title}`,
+      imageBase64: dataUrl,
+      mimeType,
+    });
+  };
+
+  /**
+   * 통합 공유 핸들러
+   * 1. 이미지 캡처 (네이티브: JPEG 압축, 웹: PNG)
+   * 2. Web Share API 시도 (웹/WebView 공통)
+   * 3. 실패 시: 네이티브 → bridge fallback, 웹 → 다운로드 fallback
+   */
+  const handleShare = async (mode: "landscape" | "vertical") => {
+    if (!chartRef.current || isCapturing) return;
+
+    setIsCapturing(true);
+
+    try {
+      const useNativeOptimization = isNativeApp;
+      let { dataUrl, mimeType } = await captureChart(
+        chartRef.current,
+        useNativeOptimization
+      );
+
+      if (mode === "vertical") {
+        dataUrl = await rotateImage(dataUrl, mimeType);
+      }
+
+      // data URL → Blob 변환
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const ext = mimeType === "image/jpeg" ? "jpg" : "png";
+      const fileName = `Gulim_${title}_${mode}_${
+        new Date().toISOString().split("T")[0]
+      }.${ext}`;
+
+      // 1차: Web Share API (웹/WebView 공통)
+      const shared = await shareViaWebAPI(blob, fileName);
+      if (shared) {
+        setIsOpen(false);
+        return;
+      }
+
+      // 2차 fallback
+      if (isNativeApp) {
+        // 네이티브: bridge 경유 (이미 JPEG 압축 상태)
+        await shareViaBridge(dataUrl, mimeType);
       } else {
+        // 웹: 다운로드
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `Gulim_${title}_${mode}_${
-          new Date().toISOString().split("T")[0]
-        }.png`;
+        link.download = fileName;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -213,15 +208,11 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
       setIsOpen(false);
     } catch (error) {
       console.error("Share failed:", error);
-      if ((error as Error).name !== "AbortError") {
-        toast.error("공유에 실패했습니다. 다시 시도해주세요.");
-      }
+      toast.error("공유에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setIsCapturing(false);
     }
   };
-
-  const handleShare = isNativeApp ? handleNativeShare : handleWebShare;
 
   return (
     <>
