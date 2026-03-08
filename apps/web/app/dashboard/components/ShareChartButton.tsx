@@ -18,29 +18,73 @@ interface ShareChartButtonProps {
   title: string;
 }
 
+const CAPTURE_STYLE = {
+  opacity: "1",
+  visibility: "visible" as const,
+  position: "static" as const,
+  transform: "none",
+  left: "auto",
+  top: "auto",
+};
+
 /**
- * 차트를 이미지로 캡처하는 공통 함수
+ * 차트를 이미지로 캡처 (네이티브: JPEG 0.85 + pixelRatio 1.5, 웹: PNG + pixelRatio 2)
+ * postMessage 크기 제한 대응을 위해 네이티브에서는 JPEG로 압축
  */
-async function captureChart(element: HTMLDivElement): Promise<string> {
-  return toPng(element, {
+async function captureChart(
+  element: HTMLDivElement,
+  forNative: boolean
+): Promise<{ dataUrl: string; mimeType: string }> {
+  if (forNative) {
+    // 네이티브: Canvas로 JPEG 변환하여 크기 축소
+    const pngUrl = await toPng(element, {
+      backgroundColor: "#ffffff",
+      pixelRatio: 1.5,
+      cacheBust: true,
+      style: CAPTURE_STYLE,
+    });
+    const jpegUrl = await convertToJpeg(pngUrl, 0.85);
+    return { dataUrl: jpegUrl, mimeType: "image/jpeg" };
+  }
+  // 웹: 고해상도 PNG
+  const dataUrl = await toPng(element, {
     backgroundColor: "#ffffff",
     pixelRatio: 2,
     cacheBust: true,
-    style: {
-      opacity: "1",
-      visibility: "visible",
-      position: "static",
-      transform: "none",
-      left: "auto",
-      top: "auto",
-    },
+    style: CAPTURE_STYLE,
+  });
+  return { dataUrl, mimeType: "image/png" };
+}
+
+/**
+ * PNG data URL → JPEG data URL 변환 (canvas 활용)
+ */
+function convertToJpeg(dataUrl: string, quality: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(dataUrl); return; }
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
   });
 }
 
 /**
- * 가로 이미지를 세로로 회전하는 함수 (data URL → 회전된 data URL)
+ * 가로 이미지를 세로로 회전 (data URL → 회전된 data URL)
  */
-async function rotateImage(dataUrl: string): Promise<string> {
+async function rotateImage(
+  dataUrl: string,
+  outputMime: string
+): Promise<string> {
   const img = new Image();
   img.src = dataUrl;
 
@@ -54,12 +98,16 @@ async function rotateImage(dataUrl: string): Promise<string> {
 
   const ctx = canvas.getContext("2d");
   if (ctx) {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.rotate((90 * Math.PI) / 180);
     ctx.drawImage(img, -img.width / 2, -img.height / 2);
   }
 
-  return canvas.toDataURL("image/png");
+  return outputMime === "image/jpeg"
+    ? canvas.toDataURL("image/jpeg", 0.85)
+    : canvas.toDataURL("image/png");
 }
 
 export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
@@ -69,7 +117,8 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
 
   /**
    * 네이티브 앱에서의 공유 처리
-   * base64 이미지를 네이티브 브릿지를 통해 공유 시트로 전달
+   * JPEG 압축 + pixelRatio 축소로 postMessage 크기 최적화
+   * 실패 시 pixelRatio를 더 낮춰 재시도
    */
   const handleNativeShare = async (mode: "landscape" | "vertical") => {
     if (!chartRef.current || isCapturing) return;
@@ -77,24 +126,46 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
     setIsCapturing(true);
 
     try {
-      let dataUrl = await captureChart(chartRef.current);
+      let { dataUrl, mimeType } = await captureChart(chartRef.current, true);
 
-      // 세로 모드일 경우 회전
       if (mode === "vertical") {
-        dataUrl = await rotateImage(dataUrl);
+        dataUrl = await rotateImage(dataUrl, mimeType);
       }
 
-      // 네이티브 브릿지를 통해 이미지 공유
       bridge.shareImage({
         title: `Gulim_${title}`,
         imageBase64: dataUrl,
-        mimeType: "image/png",
+        mimeType,
       });
 
       setIsOpen(false);
-    } catch (error) {
-      console.error("Native share failed:", error);
-      toast.error("공유에 실패했습니다. 다시 시도해주세요.");
+    } catch (firstError) {
+      console.warn("Native share first attempt failed, retrying with lower quality:", firstError);
+      // Fallback: pixelRatio 1 + JPEG 0.7
+      try {
+        let fallbackUrl = await toPng(chartRef.current, {
+          backgroundColor: "#ffffff",
+          pixelRatio: 1,
+          cacheBust: true,
+          style: CAPTURE_STYLE,
+        });
+        fallbackUrl = await convertToJpeg(fallbackUrl, 0.7);
+
+        if (mode === "vertical") {
+          fallbackUrl = await rotateImage(fallbackUrl, "image/jpeg");
+        }
+
+        bridge.shareImage({
+          title: `Gulim_${title}`,
+          imageBase64: fallbackUrl,
+          mimeType: "image/jpeg",
+        });
+
+        setIsOpen(false);
+      } catch (retryError) {
+        console.error("Native share fallback also failed:", retryError);
+        toast.error("공유에 실패했습니다. 다시 시도해주세요.");
+      }
     } finally {
       setIsCapturing(false);
     }
@@ -110,32 +181,24 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
     setIsCapturing(true);
 
     try {
-      const dataUrl = await captureChart(chartRef.current);
+      const { dataUrl } = await captureChart(chartRef.current, false);
 
-      // DataURL을 Blob으로 변환
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-
-      let finalBlob = blob;
-
-      // Vertical 모드일 경우 회전 처리
+      let finalDataUrl = dataUrl;
       if (mode === "vertical") {
-        const rotatedDataUrl = await rotateImage(dataUrl);
-        const rotatedRes = await fetch(rotatedDataUrl);
-        finalBlob = await rotatedRes.blob();
+        finalDataUrl = await rotateImage(dataUrl, "image/png");
       }
 
-      const file = new File([finalBlob], `${title}.png`, { type: "image/png" });
+      const res = await fetch(finalDataUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `${title}.png`, { type: "image/png" });
 
-      // Web Share API 지원 확인
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: `Gulim - ${title}`,
           files: [file],
         });
       } else {
-        // Web Share API 미지원 시 다운로드
-        const url = URL.createObjectURL(finalBlob);
+        const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
         link.download = `Gulim_${title}_${mode}_${
@@ -150,7 +213,6 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
       setIsOpen(false);
     } catch (error) {
       console.error("Share failed:", error);
-      // 사용자가 공유를 취소한 경우는 무시
       if ((error as Error).name !== "AbortError") {
         toast.error("공유에 실패했습니다. 다시 시도해주세요.");
       }
