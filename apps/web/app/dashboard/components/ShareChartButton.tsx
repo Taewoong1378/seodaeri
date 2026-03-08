@@ -170,6 +170,15 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
         useNativeOptimization
       );
 
+      // 진단: 캡처 결과 확인
+      const captureSize = Math.round(dataUrl.length / 1024);
+      console.log(`[Share] capture: ${captureSize}KB, native=${isNativeApp}`);
+
+      if (!dataUrl || dataUrl.length < 100) {
+        toast.error(`캡처 실패: 이미지가 비어있습니다 (${dataUrl.length}B)`);
+        return;
+      }
+
       if (mode === "vertical") {
         dataUrl = await rotateImage(dataUrl, mimeType);
       }
@@ -183,6 +192,15 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
       }.${ext}`;
 
       // 1차: Web Share API (웹/WebView 공통)
+      const hasShare = typeof navigator.share === "function";
+      let canShareFiles = false;
+      try {
+        const file = new File([blob], fileName, { type: blob.type });
+        canShareFiles = hasShare && navigator.canShare({ files: [file] });
+      } catch { /* canShare not supported */ }
+
+      console.log(`[Share] WebShareAPI: share=${hasShare}, canShareFiles=${canShareFiles}`);
+
       const shared = await shareViaWebAPI(blob, fileName);
       if (shared) {
         setIsOpen(false);
@@ -191,7 +209,8 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
 
       // 2차 fallback
       if (isNativeApp) {
-        // 네이티브: bridge 경유 (이미 JPEG 압축 상태)
+        console.log(`[Share] Bridge fallback: ${captureSize}KB payload`);
+        toast(`공유 준비 중... (${captureSize}KB)`, { duration: 2000 });
         await shareViaBridge(dataUrl, mimeType);
       } else {
         // 웹: 다운로드
@@ -208,7 +227,7 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
       setIsOpen(false);
     } catch (error) {
       console.error("Share failed:", error);
-      toast.error("공유에 실패했습니다. 다시 시도해주세요.");
+      toast.error(`공유 실패: ${(error as Error).message || "알 수 없는 오류"}`);
     } finally {
       setIsCapturing(false);
     }
