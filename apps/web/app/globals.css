@@ -1,7 +1,5 @@
 @import 'tailwindcss';
 
-@source "../../../packages/design-system/src";
-
 @theme {
   --color-background: #F5F5F5; /* Soft White */
   --color-foreground: #1B261D; /* Dark Moss Charcoal */
