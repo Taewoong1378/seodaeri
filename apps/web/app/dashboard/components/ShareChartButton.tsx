@@ -209,9 +209,25 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
 
       // 2차 fallback
       if (isNativeApp) {
-        console.log(`[Share] Bridge fallback: ${captureSize}KB payload`);
-        toast(`공유 준비 중... (${captureSize}KB)`, { duration: 2000 });
-        await shareViaBridge(dataUrl, mimeType);
+        // Android WebView에서 bridge postMessage가 동작하지 않는 경우가 있음
+        // iOS: bridge 우선, Android: 다운로드 방식 우선 (시스템이 파일 처리)
+        const isAndroid = /android/i.test(navigator.userAgent);
+        console.log(`[Share] Native fallback: android=${isAndroid}, ${captureSize}KB`);
+
+        if (isAndroid) {
+          // Android: Blob URL 다운로드 → 시스템 다운로드 매니저가 처리
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(url), 3000);
+        } else {
+          // iOS: bridge 경유
+          await shareViaBridge(dataUrl, mimeType);
+        }
       } else {
         // 웹: 다운로드
         const url = URL.createObjectURL(blob);
