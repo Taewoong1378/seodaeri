@@ -103,7 +103,7 @@ export default function RootLayout({
         <SessionProvider>
           <QueryProvider>
             {children}
-            <Toaster />
+            <Toaster offset={80} />
           </QueryProvider>
         </SessionProvider>
       </body>
