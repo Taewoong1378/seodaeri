@@ -12,7 +12,7 @@ import {
 import { toPng } from "html-to-image";
 import { Monitor, Share2, Smartphone } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { type RefObject, useState } from "react";
+import { type RefObject, useEffect, useState } from "react";
 
 interface ShareChartButtonProps {
   chartRef: RefObject<HTMLDivElement | null>;
@@ -28,37 +28,24 @@ const CAPTURE_STYLE = {
   top: "auto",
 };
 
-/**
- * 차트를 이미지로 캡처 (PNG)
- * 네이티브: pixelRatio 1.5 (postMessage 크기 최적화)
- * 웹: pixelRatio 2 (고해상도)
- */
+/** 차트를 PNG로 캡처 */
 async function captureChart(
   element: HTMLDivElement,
   forNative: boolean
-): Promise<{ dataUrl: string; mimeType: string }> {
-  const dataUrl = await toPng(element, {
+): Promise<string> {
+  return toPng(element, {
     backgroundColor: "#ffffff",
     pixelRatio: forNative ? 1.5 : 2,
     cacheBust: true,
     style: CAPTURE_STYLE,
   });
-  return { dataUrl, mimeType: "image/png" };
 }
 
-/**
- * 가로 이미지를 세로로 회전 (data URL → 회전된 data URL)
- */
-async function rotateImage(
-  dataUrl: string,
-  outputMime: string
-): Promise<string> {
+/** 가로 이미지를 세로로 회전 */
+async function rotateImage(dataUrl: string): Promise<string> {
   const img = new Image();
   img.src = dataUrl;
-
-  await new Promise((resolve) => {
-    img.onload = resolve;
-  });
+  await new Promise((resolve) => { img.onload = resolve; });
 
   const canvas = document.createElement("canvas");
   canvas.width = img.height;
@@ -73,9 +60,31 @@ async function rotateImage(
     ctx.drawImage(img, -img.width / 2, -img.height / 2);
   }
 
-  return outputMime === "image/jpeg"
-    ? canvas.toDataURL("image/jpeg", 0.85)
-    : canvas.toDataURL("image/png");
+  return canvas.toDataURL("image/png");
+}
+
+/** Web Share API 시도 (3초 타임아웃) */
+async function tryWebShare(
+  blob: Blob,
+  fileName: string,
+  shareTitle: string
+): Promise<boolean> {
+  if (typeof navigator.share !== "function") return false;
+
+  try {
+    const file = new File([blob], fileName, { type: blob.type });
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), 3000)
+    );
+    await Promise.race([
+      navigator.share({ title: shareTitle, files: [file] }),
+      timeout,
+    ]);
+    return true;
+  } catch (error) {
+    if ((error as Error).name === "AbortError") return true;
+  }
+  return false;
 }
 
 export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
@@ -92,51 +101,24 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
     return emails.length > 0 && !!session?.user?.email && emails.includes(session.user.email);
   })();
 
-  /**
-   * Web Share API로 공유 시도 (웹 + WebView 공통)
-   * 모던 WebView(iOS 15+, Android Chrome)에서 navigator.share 지원
-   */
-  const shareViaWebAPI = async (
-    blob: Blob,
-    fileName: string
-  ): Promise<boolean> => {
-    if (typeof navigator.share !== "function") return false;
+  // 네이티브 → WebView 진단 콜백 등록 (관리자만)
+  useEffect(() => {
+    if (!isAdmin || !isNativeApp) return;
+    const handler = (msg: string) => toast.info(`[Native] ${msg}`, { duration: 5000 });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__shareImageDebug = handler;
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__shareImageDebug = undefined;
+    };
+  }, [isAdmin, isNativeApp]);
 
-    try {
-      const file = new File([blob], fileName, { type: blob.type });
-      // 3초 타임아웃 (Android WebView에서 hang 방지)
-      const sharePromise = navigator.share({
-        title: `Gulim - ${title}`,
-        files: [file],
-      });
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("timeout")), 3000)
-      );
-      await Promise.race([sharePromise, timeoutPromise]);
-      return true;
-    } catch (error) {
-      if ((error as Error).name === "AbortError") return true;
-      console.warn("Web Share API failed:", error);
-    }
-    return false;
-  };
-
-  /**
-   * 통합 공유 핸들러
-   * 1. 이미지 캡처 (PNG)
-   * 2. Web Share API 시도 (웹/네이티브 공통, 3초 타임아웃)
-   * 3. 실패 시: 네이티브 → bridge, 웹 → 다운로드
-   */
   const handleShare = async (mode: "landscape" | "vertical") => {
     if (!chartRef.current || isCapturing) return;
-
     setIsCapturing(true);
 
     try {
-      let { dataUrl, mimeType } = await captureChart(
-        chartRef.current,
-        isNativeApp
-      );
+      let dataUrl = await captureChart(chartRef.current, isNativeApp);
 
       if (!dataUrl || dataUrl.length < 100) {
         toast.error("캡처 실패: 이미지가 비어있습니다");
@@ -144,41 +126,33 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
       }
 
       if (mode === "vertical") {
-        dataUrl = await rotateImage(dataUrl, mimeType);
+        dataUrl = await rotateImage(dataUrl);
       }
 
-      // data URL → Blob
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      const fileName = `Gulim_${title}_${mode}_${
-        new Date().toISOString().split("T")[0]
-      }.png`;
-
-      // 1차: Web Share API (웹/WebView 공통, 타임아웃 적용)
-      const shared = await shareViaWebAPI(blob, fileName);
-      if (shared) {
-        setIsOpen(false);
-        return;
-      }
-
-      // 2차 fallback
       if (isNativeApp) {
-        // 네이티브: bridge
+        // 네이티브: bridge로 공유
         bridge.shareImage({
           title: `Gulim_${title}`,
           imageBase64: dataUrl,
-          mimeType,
+          mimeType: "image/png",
         });
       } else {
-        // 웹: 다운로드
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        // 웹: Web Share API → 다운로드 fallback
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const fileName = `Gulim_${title}_${mode}_${new Date().toISOString().split("T")[0]}.png`;
+
+        const shared = await tryWebShare(blob, fileName, `Gulim - ${title}`);
+        if (!shared) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
       }
 
       setIsOpen(false);
@@ -190,10 +164,10 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
     }
   };
 
-  /** 진단: 1x1 PNG로 bridge 공유 테스트 */
+  /** 진단: 테스트 이미지로 bridge 공유 (관리자만) */
   const handleTestShare = () => {
-    // 1x1 빨간 PNG (아주 작은 테스트 이미지)
-    const testPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
+    const testPng =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
     toast.info(`테스트: bridge 호출 (${testPng.length}B)`);
     bridge.shareImage({
       title: "test_share",
@@ -216,7 +190,7 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent
-          className="sm:max-w-[425px] bg-background border-border text-foreground z-[100] fixed rounded-[24px] p-6 shadow-xl"
+          className="sm:max-w-[425px] bg-background border-border text-foreground z-100 fixed rounded-[24px] p-6 shadow-xl"
           style={{
             left: "50%",
             top: "50%",
@@ -270,7 +244,7 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
               </div>
             </button>
           </div>
-          {/* 진단용 테스트 버튼 - 관리자만 표시 (추후 제거) */}
+          {/* 진단용 테스트 버튼 - 관리자 + 네이티브만 표시 */}
           {isNativeApp && isAdmin && (
             <button
               type="button"

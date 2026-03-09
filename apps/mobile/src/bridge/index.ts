@@ -42,7 +42,8 @@ export function createMessageHandler(webViewRef: WebViewRef) {
 
         case 'UI.ShareImage':
           await handleShareImage(
-            message.payload as BridgePayloads['UI.ShareImage']
+            message.payload as BridgePayloads['UI.ShareImage'],
+            webViewRef
           )
           break
 

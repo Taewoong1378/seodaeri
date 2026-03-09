@@ -2,6 +2,7 @@ import { Platform, Share } from 'react-native'
 import * as FileSystem from 'expo-file-system'
 import * as Sharing from 'expo-sharing'
 import type { BridgePayloads } from '../shared-types'
+import type { WebViewRef } from './types'
 
 export async function handleShare(payload: BridgePayloads['UI.Share']) {
   try {
@@ -27,13 +28,26 @@ export async function handleShare(payload: BridgePayloads['UI.Share']) {
 }
 
 export async function handleShareImage(
-  payload: BridgePayloads['UI.ShareImage']
+  payload: BridgePayloads['UI.ShareImage'],
+  webViewRef?: WebViewRef
 ) {
+  // WebView로 진단 메시지 전송 (토스트로 표시됨)
+  const report = (msg: string) => {
+    console.log(`[ShareImage] ${msg}`)
+    webViewRef?.current?.injectJavaScript(
+      `window.__shareImageDebug && window.__shareImageDebug(${JSON.stringify(msg)});true;`
+    )
+  }
+
   try {
     const mimeType = payload.mimeType || 'image/png'
     const extension = mimeType === 'image/jpeg' ? 'jpg' : 'png'
-    const fileName = `${payload.title.replace(/[^a-zA-Z0-9가-힣]/g, '_')}_${Date.now()}.${extension}`
+    // ASCII-only 파일명 (Android FileProvider 호환성)
+    const safeTitle = payload.title.replace(/[^a-zA-Z0-9]/g, '_')
+    const fileName = `${safeTitle}_${Date.now()}.${extension}`
     const filePath = `${FileSystem.cacheDirectory}${fileName}`
+
+    report(`file=${fileName}, dataLen=${payload.imageBase64.length}`)
 
     // base64 데이터에서 data URL prefix 제거
     const base64Data = payload.imageBase64.replace(
@@ -41,25 +55,42 @@ export async function handleShareImage(
       ''
     )
 
+    if (!base64Data || base64Data.length < 10) {
+      report(`ERROR: base64 too short (${base64Data.length})`)
+      return
+    }
+
     // base64 → 임시 파일 저장
     await FileSystem.writeAsStringAsync(filePath, base64Data, {
       encoding: FileSystem.EncodingType.Base64,
     })
 
+    const fileInfo = await FileSystem.getInfoAsync(filePath)
+    if (!fileInfo.exists) {
+      report('ERROR: file not found after write')
+      return
+    }
+    report(`written: ${fileInfo.exists ? fileInfo.size : 0}B`)
+
     // expo-sharing을 통해 네이티브 공유 시트 열기
     const isAvailable = await Sharing.isAvailableAsync()
+    report(`sharing available=${isAvailable}`)
+
     if (isAvailable) {
       await Sharing.shareAsync(filePath, {
         mimeType,
         dialogTitle: payload.title,
       })
     } else {
-      // expo-sharing 불가 시 fallback: React Native Share API로 파일 URI 공유
-      await Share.share({
-        title: payload.title,
-        url: Platform.OS === 'ios' ? filePath : `file://${filePath}`,
-      })
+      // expo-sharing 불가 시 fallback: React Native Share API
+      if (Platform.OS === 'ios') {
+        await Share.share({ title: payload.title, url: filePath })
+      } else {
+        await Share.share({ title: payload.title, message: filePath })
+      }
     }
+
+    report('share complete')
 
     // 공유 완료 후 임시 파일 정리
     try {
@@ -68,6 +99,7 @@ export async function handleShareImage(
       // 정리 실패는 무시
     }
   } catch (error) {
-    console.error('Share image error:', error)
+    const msg = error instanceof Error ? error.message : String(error)
+    report(`ERROR: ${msg}`)
   }
 }
