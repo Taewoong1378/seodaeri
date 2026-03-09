@@ -11,6 +11,7 @@ import {
 } from "@repo/design-system/components/dialog";
 import { toPng } from "html-to-image";
 import { Monitor, Share2, Smartphone } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { type RefObject, useState } from "react";
 
 interface ShareChartButtonProps {
@@ -81,6 +82,15 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const isNativeApp = bridge.isReactNative();
+  const { data: session } = useSession();
+
+  const isAdmin = (() => {
+    const emails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
+      .split(",")
+      .map((e) => e.trim())
+      .filter(Boolean);
+    return emails.length > 0 && !!session?.user?.email && emails.includes(session.user.email);
+  })();
 
   /**
    * Web Share API로 공유 시도 (웹 + WebView 공통)
@@ -180,6 +190,18 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
     }
   };
 
+  /** 진단: 1x1 PNG로 bridge 공유 테스트 */
+  const handleTestShare = () => {
+    // 1x1 빨간 PNG (아주 작은 테스트 이미지)
+    const testPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==";
+    toast.info(`테스트: bridge 호출 (${testPng.length}B)`);
+    bridge.shareImage({
+      title: "test_share",
+      imageBase64: testPng,
+      mimeType: "image/png",
+    });
+  };
+
   return (
     <>
       <Button
@@ -248,6 +270,16 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
               </div>
             </button>
           </div>
+          {/* 진단용 테스트 버튼 - 관리자만 표시 (추후 제거) */}
+          {isNativeApp && isAdmin && (
+            <button
+              type="button"
+              onClick={handleTestShare}
+              className="w-full py-2 text-xs text-muted-foreground underline"
+            >
+              [진단] 테스트 이미지 공유
+            </button>
+          )}
           {isCapturing && (
             <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center rounded-lg z-50">
               <div className="flex flex-col items-center gap-3">
