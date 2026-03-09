@@ -45,7 +45,9 @@ async function captureChart(
 async function rotateImage(dataUrl: string): Promise<string> {
   const img = new Image();
   img.src = dataUrl;
-  await new Promise((resolve) => { img.onload = resolve; });
+  await new Promise((resolve) => {
+    img.onload = resolve;
+  });
 
   const canvas = document.createElement("canvas");
   canvas.width = img.height;
@@ -63,30 +65,6 @@ async function rotateImage(dataUrl: string): Promise<string> {
   return canvas.toDataURL("image/png");
 }
 
-/** Web Share API 시도 (3초 타임아웃) */
-async function tryWebShare(
-  blob: Blob,
-  fileName: string,
-  shareTitle: string
-): Promise<boolean> {
-  if (typeof navigator.share !== "function") return false;
-
-  try {
-    const file = new File([blob], fileName, { type: blob.type });
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("timeout")), 3000)
-    );
-    await Promise.race([
-      navigator.share({ title: shareTitle, files: [file] }),
-      timeout,
-    ]);
-    return true;
-  } catch (error) {
-    if ((error as Error).name === "AbortError") return true;
-  }
-  return false;
-}
-
 export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -98,13 +76,18 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
       .split(",")
       .map((e) => e.trim())
       .filter(Boolean);
-    return emails.length > 0 && !!session?.user?.email && emails.includes(session.user.email);
+    return (
+      emails.length > 0 &&
+      !!session?.user?.email &&
+      emails.includes(session.user.email)
+    );
   })();
 
   // 네이티브 → WebView 진단 콜백 등록 (관리자만)
   useEffect(() => {
     if (!isAdmin || !isNativeApp) return;
-    const handler = (msg: string) => toast.info(`[Native] ${msg}`, { duration: 5000 });
+    const handler = (msg: string) =>
+      toast.info(`[Native] ${msg}`, { duration: 5000 });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).__shareImageDebug = handler;
     return () => {
@@ -129,30 +112,47 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
         dataUrl = await rotateImage(dataUrl);
       }
 
+      // data URL → Blob → File
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const fileName = `Gulim_${title}_${mode}_${new Date().toISOString().split("T")[0]}.png`;
+      const file = new File([blob], fileName, { type: "image/png" });
+
+      // 1차: Web Share API (iOS WebView, 웹 브라우저에서 동작)
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({
+            title: `Gulim - ${title}`,
+            files: [file],
+          });
+          setIsOpen(false);
+          return;
+        } catch (error) {
+          if ((error as Error).name === "AbortError") {
+            setIsOpen(false);
+            return;
+          }
+          console.warn("Web Share API failed:", error);
+        }
+      }
+
+      // 2차: 네이티브 bridge fallback (Android 등 Web Share API 미지원)
       if (isNativeApp) {
-        // 네이티브: bridge로 공유
         bridge.shareImage({
           title: `Gulim_${title}`,
           imageBase64: dataUrl,
           mimeType: "image/png",
         });
       } else {
-        // 웹: Web Share API → 다운로드 fallback
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-        const fileName = `Gulim_${title}_${mode}_${new Date().toISOString().split("T")[0]}.png`;
-
-        const shared = await tryWebShare(blob, fileName, `Gulim - ${title}`);
-        if (!shared) {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = fileName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-        }
+        // 3차: 웹 다운로드 fallback
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       }
 
       setIsOpen(false);

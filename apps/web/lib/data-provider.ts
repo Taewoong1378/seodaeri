@@ -365,6 +365,9 @@ export class StandaloneDataProvider implements DataProvider {
       // avg_price가 오래되거나 잘못된 값일 경우 현재가로 노출되는 버그 방지
       const isAltAsset = ALTERNATIVE_ASSET_CODES.has(holding.ticker);
       const currentPrice = priceData?.price || (isAltAsset ? 0 : (holding.avg_price || 0));
+      if (!priceData?.price && !isAltAsset && holding.avg_price) {
+        console.warn(`[Portfolio] No live price for ${holding.ticker}, falling back to avgPrice=${holding.avg_price}`);
+      }
       const currency = (holding.currency as 'KRW' | 'USD') || (isKoreanStock(holding.ticker) ? 'KRW' : 'USD');
 
       const quantity = holding.quantity || 0;

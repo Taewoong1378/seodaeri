@@ -55,7 +55,7 @@ export function PortfolioContent({ sheetUrl, isStandalone }: PortfolioContentPro
         </div>
         <div className="flex items-baseline gap-2">
           <span className="text-3xl font-bold text-foreground tracking-tight">
-            {formatCurrency(totalAsset, true)}
+            {formatCurrency(totalAsset)}
           </span>
           <span className="text-sm text-muted-foreground font-medium">
             원
@@ -67,7 +67,7 @@ export function PortfolioContent({ sheetUrl, isStandalone }: PortfolioContentPro
               투자원금
             </span>
             <span className="text-foreground font-medium">
-              {formatCurrency(data?.totalInvested ?? 0, true)}원
+              {formatCurrency(data?.totalInvested ?? 0)}원
             </span>
           </div>
           <div className="w-px h-8 bg-border" />
@@ -80,7 +80,7 @@ export function PortfolioContent({ sheetUrl, isStandalone }: PortfolioContentPro
                 (data?.totalProfit ?? 0) >= 0 ? "text-emerald-600" : "text-red-500"
               }`}
             >
-              {formatCurrency(data?.totalProfit ?? 0, true)}원
+              {formatCurrency(data?.totalProfit ?? 0)}원
             </span>
           </div>
         </div>

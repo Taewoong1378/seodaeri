@@ -152,7 +152,7 @@ interface KISOverseasPriceResponse {
  */
 function getUSExchangeCode(ticker: string): string {
   // 대표적인 ETF들은 AMEX
-  const amexTickers = ['SPY', 'QQQ', 'IVV', 'VOO', 'VTI', 'DIA', 'IWM', 'EEM', 'VEA', 'VWO', 'GLD', 'SLV', 'USO', 'TLT', 'HYG', 'LQD', 'XLF', 'XLK', 'XLE', 'XLV', 'XLI', 'XLY', 'XLP', 'XLB', 'XLU', 'XLRE'];
+  const amexTickers = ['SPY', 'QQQ', 'IVV', 'VOO', 'VTI', 'DIA', 'IWM', 'EEM', 'VEA', 'VWO', 'GLD', 'SLV', 'USO', 'TLT', 'HYG', 'LQD', 'XLF', 'XLK', 'XLE', 'XLV', 'XLI', 'XLY', 'XLP', 'XLB', 'XLU', 'XLRE', 'QLD', 'TQQQ', 'SQQQ', 'UPRO', 'SPXU', 'SOXL', 'SOXS', 'LABU', 'LABD', 'UVXY', 'SVXY', 'ARKK', 'ARKG', 'ARKW', 'ARKF', 'SCHD', 'JEPI', 'JEPQ', 'VIG', 'VYM', 'DGRO'];
   if (amexTickers.includes(ticker.toUpperCase())) {
     return 'AMS';
   }
