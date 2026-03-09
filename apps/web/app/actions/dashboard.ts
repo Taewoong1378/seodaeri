@@ -1236,7 +1236,8 @@ async function getStandaloneDashboardData(
 
       const padded: AccountTrendData[] = [];
 
-      // 한 달 전(baseline)을 0으로 추가
+      // 첫 데이터 월 한 달 전(baseline)만 0으로 추가
+      // 예: 3월 시작 → 2월만 0, 1월 시작 → 전년 12월만 0
       const baselineMonth = firstDataMonth - 1;
       if (baselineMonth <= 0) {
         // 1월 시작 → 전년 12월을 baseline으로
@@ -1246,11 +1247,8 @@ async function getStandaloneDashboardData(
           totalAccount: 0,
           cumulativeDeposit: 0,
         });
-      }
-
-      // 1월부터 첫 데이터 월 전까지 0으로 패딩
-      for (let m = 1; m < firstDataMonth; m++) {
-        const dateKey = `${yyStr}.${String(m).padStart(2, "0")}`;
+      } else {
+        const dateKey = `${yyStr}.${String(baselineMonth).padStart(2, "0")}`;
         padded.push({ date: dateKey, totalAccount: 0, cumulativeDeposit: 0 });
       }
 
