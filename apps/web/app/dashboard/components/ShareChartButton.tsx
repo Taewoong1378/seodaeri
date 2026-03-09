@@ -94,11 +94,15 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
 
     try {
       const file = new File([blob], fileName, { type: blob.type });
-      // canShare 체크 없이 직접 호출 (Android WebView에서 canShare가 false여도 share는 동작할 수 있음)
-      await navigator.share({
+      // 3초 타임아웃 (Android WebView에서 hang 방지)
+      const sharePromise = navigator.share({
         title: `Gulim - ${title}`,
         files: [file],
       });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), 3000)
+      );
+      await Promise.race([sharePromise, timeoutPromise]);
       return true;
     } catch (error) {
       if ((error as Error).name === "AbortError") return true;
@@ -109,69 +113,62 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
 
   /**
    * 통합 공유 핸들러
+   * 1. 이미지 캡처 (PNG)
+   * 2. Web Share API 시도 (웹/네이티브 공통, 3초 타임아웃)
+   * 3. 실패 시: 네이티브 → bridge, 웹 → 다운로드
    */
   const handleShare = async (mode: "landscape" | "vertical") => {
     if (!chartRef.current || isCapturing) return;
 
     setIsCapturing(true);
-    // 진단 모드: 각 단계별 토스트 표시
-    const debug = (step: string) => toast.info(`[${step}]`, { duration: 4000 });
 
     try {
-      debug(`1. 캡처 시작 (native=${isNativeApp})`);
-
       let { dataUrl, mimeType } = await captureChart(
         chartRef.current,
         isNativeApp
       );
 
-      const captureSize = Math.round(dataUrl.length / 1024);
-      debug(`2. 캡처 완료: ${captureSize}KB`);
-
       if (!dataUrl || dataUrl.length < 100) {
-        toast.error(`캡처 실패: 이미지가 비어있습니다 (${dataUrl.length}B)`);
+        toast.error("캡처 실패: 이미지가 비어있습니다");
         return;
       }
 
       if (mode === "vertical") {
         dataUrl = await rotateImage(dataUrl, mimeType);
-        debug(`3. 회전 완료: ${Math.round(dataUrl.length / 1024)}KB`);
       }
 
+      // data URL → Blob
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const fileName = `Gulim_${title}_${mode}_${
+        new Date().toISOString().split("T")[0]
+      }.png`;
+
+      // 1차: Web Share API (웹/WebView 공통, 타임아웃 적용)
+      const shared = await shareViaWebAPI(blob, fileName);
+      if (shared) {
+        setIsOpen(false);
+        return;
+      }
+
+      // 2차 fallback
       if (isNativeApp) {
-        debug("4. Bridge 호출 중...");
-        const hasWebView = !!window.ReactNativeWebView;
-        debug(`5. ReactNativeWebView=${hasWebView}`);
-
-        try {
-          bridge.shareImage({
-            title: `Gulim_${title}`,
-            imageBase64: dataUrl,
-            mimeType,
-          });
-          debug("6. Bridge postMessage 완료");
-        } catch (bridgeError) {
-          toast.error(`Bridge 오류: ${(bridgeError as Error).message}`);
-        }
+        // 네이티브: bridge
+        bridge.shareImage({
+          title: `Gulim_${title}`,
+          imageBase64: dataUrl,
+          mimeType,
+        });
       } else {
-        // 웹: Web Share API 시도 → 실패 시 다운로드
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-        const fileName = `Gulim_${title}_${mode}_${
-          new Date().toISOString().split("T")[0]
-        }.png`;
-
-        const shared = await shareViaWebAPI(blob, fileName);
-        if (!shared) {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = fileName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-        }
+        // 웹: 다운로드
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       }
 
       setIsOpen(false);
