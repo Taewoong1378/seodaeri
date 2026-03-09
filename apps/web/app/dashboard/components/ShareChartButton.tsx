@@ -28,54 +28,21 @@ const CAPTURE_STYLE = {
 };
 
 /**
- * 차트를 이미지로 캡처 (네이티브: JPEG 0.85 + pixelRatio 1.5, 웹: PNG + pixelRatio 2)
- * postMessage 크기 제한 대응을 위해 네이티브에서는 JPEG로 압축
+ * 차트를 이미지로 캡처 (PNG)
+ * 네이티브: pixelRatio 1.5 (postMessage 크기 최적화)
+ * 웹: pixelRatio 2 (고해상도)
  */
 async function captureChart(
   element: HTMLDivElement,
   forNative: boolean
 ): Promise<{ dataUrl: string; mimeType: string }> {
-  if (forNative) {
-    // 네이티브: Canvas로 JPEG 변환하여 크기 축소
-    const pngUrl = await toPng(element, {
-      backgroundColor: "#ffffff",
-      pixelRatio: 1.5,
-      cacheBust: true,
-      style: CAPTURE_STYLE,
-    });
-    const jpegUrl = await convertToJpeg(pngUrl, 0.85);
-    return { dataUrl: jpegUrl, mimeType: "image/jpeg" };
-  }
-  // 웹: 고해상도 PNG
   const dataUrl = await toPng(element, {
     backgroundColor: "#ffffff",
-    pixelRatio: 2,
+    pixelRatio: forNative ? 1.5 : 2,
     cacheBust: true,
     style: CAPTURE_STYLE,
   });
   return { dataUrl, mimeType: "image/png" };
-}
-
-/**
- * PNG data URL → JPEG data URL 변환 (canvas 활용)
- */
-function convertToJpeg(dataUrl: string, quality: number): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) { resolve(dataUrl); return; }
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL("image/jpeg", quality));
-    };
-    img.onerror = reject;
-    img.src = dataUrl;
-  });
 }
 
 /**
@@ -186,10 +153,9 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
       // data URL → Blob 변환
       const res = await fetch(dataUrl);
       const blob = await res.blob();
-      const ext = mimeType === "image/jpeg" ? "jpg" : "png";
       const fileName = `Gulim_${title}_${mode}_${
         new Date().toISOString().split("T")[0]
-      }.${ext}`;
+      }.png`;
 
       if (isNativeApp) {
         // 네이티브 앱: bridge로 직접 공유 (WebView에서 navigator.share가 hang할 수 있음)
