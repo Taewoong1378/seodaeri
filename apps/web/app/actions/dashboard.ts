@@ -518,6 +518,12 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     }
     if (totalInvested === 0) {
       for (const item of portfolio) {
+        if (item.ticker === 'CASH') {
+          // CASH 특수 처리: quantity=원화금액, avgPrice=달러금액(KRW환산후)
+          // totalValue가 이미 올바른 현금 합계이므로 그대로 사용
+          totalInvested += item.totalValue;
+          continue;
+        }
         totalInvested += item.avgPrice * item.quantity;
       }
     }
