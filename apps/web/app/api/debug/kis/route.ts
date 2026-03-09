@@ -3,7 +3,7 @@ import { auth } from '@repo/auth/server';
 import { createServiceClient } from '@repo/database/server';
 import { NextRequest, NextResponse } from 'next/server';
 
-const ADMIN_EMAILS = ['taewoong.jang@gmail.com'];
+const ADMIN_EMAILS = ['xodndxnxn@gmail.com', 'gulim.app00@gmail.com'];
 
 /**
  * KIS API 진단 엔드포인트
@@ -15,7 +15,11 @@ export async function GET(req: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.email || !ADMIN_EMAILS.includes(session.user.email)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({
+        error: 'Unauthorized',
+        sessionEmail: session?.user?.email || null,
+        hint: 'Add your email to ADMIN_EMAILS in this file',
+      }, { status: 401 });
     }
 
     const ticker = req.nextUrl.searchParams.get('ticker') || 'QLD';

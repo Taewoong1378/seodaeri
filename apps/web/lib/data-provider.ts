@@ -131,17 +131,16 @@ export class StandaloneDataProvider implements DataProvider {
 
       for (const item of portfolio) {
         if (item.ticker === 'CASH') {
-          // CASH 특수 처리: quantity=원화금액, avgPrice=달러금액 (getPortfolio에서 환산 후 totalValue에 합산됨)
-          const krwAmount = item.quantity || 0; // 원화 보유액 (원본)
-          const usdAmount = item.avgPriceOriginal || item.avgPrice || 0; // 달러 보유액 (원본)
-          const cashInvested = krwAmount + usdAmount * exchangeRate;
+          // CASH 특수 처리: quantity=원화금액, avgPriceOriginal=달러금액
+          const krwAmount = item.quantity || 0;
+          const usdAmount = item.avgPriceOriginal || 0;
           totalAsset += item.totalValue; // 이미 KRW 환산됨
-          totalInvested += cashInvested;
+          totalInvested += krwAmount + usdAmount * exchangeRate;
           continue;
         }
-        const rate = item.currency === 'USD' ? exchangeRate : 1;
-        totalAsset += item.totalValue * rate;
-        totalInvested += item.avgPrice * item.quantity * rate;
+        // getPortfolio()에서 avgPrice, totalValue는 이미 KRW 환산됨 — rate 재적용 불필요
+        totalAsset += item.totalValue;
+        totalInvested += item.avgPrice * item.quantity;
       }
     }
 

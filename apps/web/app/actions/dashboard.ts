@@ -1130,9 +1130,9 @@ export async function syncPortfolio() {
     let totalInvested = 0;
 
     for (const item of portfolio) {
-      const rate = item.currency === "USD" ? 1400 : 1;
-      totalAsset += item.totalValue * rate;
-      totalInvested += item.avgPrice * item.quantity * rate;
+      // portfolio items already have KRW-converted values from getPortfolio
+      totalAsset += item.totalValue;
+      totalInvested += item.avgPrice * item.quantity;
     }
 
     const totalProfit = totalAsset - totalInvested;
