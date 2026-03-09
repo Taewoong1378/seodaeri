@@ -123,17 +123,17 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
     blob: Blob,
     fileName: string
   ): Promise<boolean> => {
+    if (typeof navigator.share !== "function") return false;
+
     try {
       const file = new File([blob], fileName, { type: blob.type });
-      if (navigator.share && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: `Gulim - ${title}`,
-          files: [file],
-        });
-        return true;
-      }
+      // canShare 체크 없이 직접 호출 (Android WebView에서 canShare가 false여도 share는 동작할 수 있음)
+      await navigator.share({
+        title: `Gulim - ${title}`,
+        files: [file],
+      });
+      return true;
     } catch (error) {
-      // 사용자 취소(AbortError)는 성공으로 처리
       if ((error as Error).name === "AbortError") return true;
       console.warn("Web Share API failed:", error);
     }
@@ -191,31 +191,14 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
         new Date().toISOString().split("T")[0]
       }.${ext}`;
 
-      // 1차: Web Share API (웹/WebView 공통)
-      const hasShare = typeof navigator.share === "function";
-      let canShareFiles = false;
-      try {
-        const file = new File([blob], fileName, { type: blob.type });
-        canShareFiles = hasShare && navigator.canShare({ files: [file] });
-      } catch { /* canShare not supported */ }
-
-      console.log(`[Share] WebShareAPI: share=${hasShare}, canShareFiles=${canShareFiles}`);
-
-      const shared = await shareViaWebAPI(blob, fileName);
-      if (shared) {
-        setIsOpen(false);
-        return;
-      }
-
-      // 2차 fallback
       if (isNativeApp) {
-        // Android WebView에서 bridge postMessage가 동작하지 않는 경우가 있음
-        // iOS: bridge 우선, Android: 다운로드 방식 우선 (시스템이 파일 처리)
-        const isAndroid = /android/i.test(navigator.userAgent);
-        console.log(`[Share] Native fallback: android=${isAndroid}, ${captureSize}KB`);
-
-        if (isAndroid) {
-          // Android: Blob URL 다운로드 → 시스템 다운로드 매니저가 처리
+        // 네이티브 앱: bridge로 직접 공유 (WebView에서 navigator.share가 hang할 수 있음)
+        console.log(`[Share] Native bridge: ${captureSize}KB`);
+        await shareViaBridge(dataUrl, mimeType);
+      } else {
+        // 웹: Web Share API 시도 → 실패 시 다운로드
+        const shared = await shareViaWebAPI(blob, fileName);
+        if (!shared) {
           const url = URL.createObjectURL(blob);
           const link = document.createElement("a");
           link.href = url;
@@ -223,21 +206,8 @@ export function ShareChartButton({ chartRef, title }: ShareChartButtonProps) {
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          setTimeout(() => URL.revokeObjectURL(url), 3000);
-        } else {
-          // iOS: bridge 경유
-          await shareViaBridge(dataUrl, mimeType);
+          URL.revokeObjectURL(url);
         }
-      } else {
-        // 웹: 다운로드
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
       }
 
       setIsOpen(false);
