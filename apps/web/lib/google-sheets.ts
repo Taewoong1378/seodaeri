@@ -1397,7 +1397,7 @@ export function parsePortfolioData(rows: any[], exchangeRate?: number): Portfoli
       currency: country === '한국' ? 'KRW' : 'USD',
       quantity,
       avgPrice,
-      avgPriceOriginal: usedUSDFallback ? avgPriceUSD : undefined,
+      avgPriceOriginal: country === '미국' ? (avgPriceUSD || undefined) : undefined,
       currentPrice,
       totalValue,
       profit,

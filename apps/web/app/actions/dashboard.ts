@@ -545,9 +545,12 @@ export async function getDashboardData(): Promise<DashboardData | null> {
           const portfolioCacheData = portfolio.map((item) => ({
             user_id: userId,
             ticker: item.ticker,
-            avg_price: item.avgPrice,
+            // DB에는 원본 통화로 저장 (USD 이중환산 방지)
+            avg_price: item.avgPriceOriginal ?? item.avgPrice,
             quantity: item.quantity,
-            current_price: item.currentPrice,
+            current_price: item.currency === 'USD' && currentRate > 0
+              ? Math.round((item.currentPrice / currentRate) * 100) / 100
+              : item.currentPrice,
             currency: item.currency,
             updated_at: now,
           }));
@@ -556,13 +559,13 @@ export async function getDashboardData(): Promise<DashboardData | null> {
             .from("portfolio_cache")
             .upsert(portfolioCacheData, { onConflict: "user_id,ticker" });
 
-          // holdings 테이블도 업데이트
+          // holdings 테이블도 업데이트 (원본 통화로 저장)
           const holdingsData = portfolio.map((item) => ({
             user_id: userId,
             ticker: item.ticker,
             name: item.name,
             quantity: item.quantity,
-            avg_price: item.avgPrice,
+            avg_price: item.avgPriceOriginal ?? item.avgPrice,
             currency: item.currency,
             updated_at: now,
           }));
@@ -891,8 +894,10 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     let totalInvested = 0;
 
     if (cachedPortfolio) {
+      const fallbackRate = await getUSDKRWRate().catch(() => 1450);
       for (const item of cachedPortfolio) {
-        const rate = item.currency === "USD" ? 1400 : 1;
+        // portfolio_cache에는 원본 통화로 저장됨
+        const rate = item.currency === "USD" ? fallbackRate : 1;
         totalAsset += (item.current_price || 0) * (item.quantity || 0) * rate;
         totalInvested += (item.avg_price || 0) * (item.quantity || 0) * rate;
       }
@@ -1016,9 +1021,12 @@ export async function syncPortfolio() {
     const cacheData = portfolio.map((item) => ({
       user_id: userId,
       ticker: item.ticker,
-      avg_price: item.avgPrice,
+      // DB에는 원본 통화로 저장 (USD 이중환산 방지)
+      avg_price: item.avgPriceOriginal ?? item.avgPrice,
       quantity: item.quantity,
-      current_price: item.currentPrice,
+      current_price: item.currency === 'USD' && syncExchangeRate > 0
+        ? Math.round((item.currentPrice / syncExchangeRate) * 100) / 100
+        : item.currentPrice,
       currency: item.currency,
       updated_at: new Date().toISOString(),
     }));

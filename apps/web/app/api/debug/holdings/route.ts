@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       .limit(20);
 
     // account_balances 조회
-    const { data: accountBalances, error: balancesError } = await supabase
+    const { data: accountBalances, error: balancesError } = await (supabase as any)
       .from('account_balances')
       .select('*')
       .eq('user_id', userId)
