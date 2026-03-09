@@ -94,6 +94,10 @@ export function LandscapeChartModal({ title, children, trigger }: LandscapeChart
       const target = e.target as Element;
       if (!target || !chartArea.contains(target)) return;
 
+      // 차트(recharts) 영역 내 터치만 보정 — 버튼/컨트롤은 통과시킴
+      const rechartsWrapper = chartArea.querySelector('.recharts-wrapper');
+      if (!rechartsWrapper || !rechartsWrapper.contains(target)) return;
+
       const rect = getRechartsRect();
       if (!rect) return;
 
@@ -157,6 +161,10 @@ export function LandscapeChartModal({ title, children, trigger }: LandscapeChart
       if (!chartArea) return;
       const target = e.target as Element;
       if (!target || !chartArea.contains(target)) return;
+
+      // 차트(recharts) 영역 내 마우스만 보정 — 버튼/컨트롤은 통과시킴
+      const rechartsWrapper = chartArea.querySelector('.recharts-wrapper');
+      if (!rechartsWrapper || !rechartsWrapper.contains(target)) return;
 
       const rect = getRechartsRect();
       if (!rect) return;
