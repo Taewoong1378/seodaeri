@@ -46,15 +46,24 @@ export function CashFlow({ deposits, snapshots }: CashFlowProps) {
     .map(([month, { deposit, withdrawal }]) => ({ month, deposit, withdrawal }))
     .sort((a, b) => a.month.localeCompare(b.month))
 
-  // Chart 2: 계좌 잔고 추이 — group snapshots by YYYY-MM, sum total_asset across users
-  const balanceMap = new Map<string, number>()
+  // Chart 2: 계좌 잔고 추이 — 월별 유저당 최신 스냅샷 1개만 사용하여 합산
+  const monthUserMap = new Map<string, Map<string, number>>()
+  // snapshots are sorted desc, so first occurrence per user per month is latest
   for (const s of snapshots) {
     const month = (s.snapshot_date ?? '').slice(0, 7)
     if (!month) continue
-    balanceMap.set(month, (balanceMap.get(month) ?? 0) + (s.total_asset ?? 0))
+    if (!monthUserMap.has(month)) monthUserMap.set(month, new Map())
+    const userMap = monthUserMap.get(month)!
+    if (!userMap.has(s.user_id)) {
+      userMap.set(s.user_id, s.total_asset ?? 0)
+    }
   }
-  const balanceTrend = Array.from(balanceMap.entries())
-    .map(([month, balance]) => ({ month, balance }))
+  const balanceTrend = Array.from(monthUserMap.entries())
+    .map(([month, userMap]) => {
+      let balance = 0
+      for (const val of userMap.values()) balance += val
+      return { month, balance }
+    })
     .sort((a, b) => a.month.localeCompare(b.month))
 
   return (
