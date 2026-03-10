@@ -73,8 +73,9 @@ export function AssetPerformance({ snapshots, holdings }: AssetPerformanceProps)
       date,
       totalAsset: getMedian(assets),
       totalProfit: getMedian(profits),
+      userCount: values.length,
     }
-  })
+  }).filter(d => d.userCount >= 3) // 유저 3명 이상인 날짜만 표시
 
   // Chart 2: 수익률 분포 — bucket latest yield_percent per user
   const bucketKeys = ['<-10%', '-10~-5%', '-5~0%', '0~5%', '5~10%', '10~20%', '20~30%', '30~50%', '50~100%', '>100%'] as const
