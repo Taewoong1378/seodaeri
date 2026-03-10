@@ -1,13 +1,12 @@
+import { EXCLUDED_EMAILS } from '@/lib/constants'
 import { createServiceClient } from '@repo/database/server'
-
-const CUTOFF_DATE = '2026-03-06T00:00:00.000Z'
 
 export async function getValidUsers() {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('users')
     .select('*')
-    .gte('created_at', CUTOFF_DATE)
+    .not('email', 'in', `(${EXCLUDED_EMAILS.join(',')})`)
   if (error) throw error
   return data ?? []
 }

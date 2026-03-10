@@ -1,8 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-
-const ALLOWED_EMAILS = ['xodndxnxn@gmail.com']
-const AUTH_COOKIE = 'admin_email'
+import { ALLOWED_EMAILS, AUTH_COOKIE } from '@/lib/constants'
 
 export async function AuthGate({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies()
