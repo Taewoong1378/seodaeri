@@ -3,6 +3,9 @@ import { AdminHeader } from '@/components/admin-header'
 import { OverviewKpis } from '@/components/sections/overview-kpis'
 import { PopularStocks } from '@/components/sections/popular-stocks'
 import { PortfolioAnalysis } from '@/components/sections/portfolio-analysis'
+import { AssetPerformance } from '@/components/sections/asset-performance'
+import { DividendAnalysis } from '@/components/sections/dividend-analysis'
+import { CashFlow } from '@/components/sections/cash-flow'
 import { UserActivity } from '@/components/sections/user-activity'
 import { DataExport } from '@/components/sections/data-export'
 import { getDashboardData } from '@/lib/queries'
@@ -21,7 +24,7 @@ export default async function AdminDashboard() {
 }
 
 async function DashboardContent() {
-  const { users, holdings, transactions, snapshots } = await getDashboardData()
+  const { users, holdings, transactions, snapshots, dividends, deposits } = await getDashboardData()
 
   return (
     <div className="space-y-8">
@@ -43,13 +46,31 @@ async function DashboardContent() {
         <PortfolioAnalysis holdings={holdings} snapshots={snapshots} />
       </section>
 
-      {/* Section 4: 유저 활동 */}
+      {/* Section 4: 자산 성과 */}
+      <section>
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">자산 성과</h2>
+        <AssetPerformance snapshots={snapshots} holdings={holdings} />
+      </section>
+
+      {/* Section 5: 배당 분석 */}
+      <section>
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">배당 분석</h2>
+        <DividendAnalysis dividends={dividends} users={users} />
+      </section>
+
+      {/* Section 6: 입출금 흐름 */}
+      <section>
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">입출금 흐름</h2>
+        <CashFlow deposits={deposits} snapshots={snapshots} />
+      </section>
+
+      {/* Section 7: 유저 활동 */}
       <section>
         <h2 className="mb-4 text-lg font-semibold text-gray-900">유저 활동</h2>
         <UserActivity users={users} transactions={transactions} />
       </section>
 
-      {/* Section 5: 데이터 내보내기 */}
+      {/* Section 8: 데이터 내보내기 */}
       <section>
         <DataExport />
       </section>

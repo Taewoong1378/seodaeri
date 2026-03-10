@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   }
 
   const type = req.nextUrl.searchParams.get("type");
-  if (!type || !["users", "holdings", "popular-stocks"].includes(type)) {
+  if (!type || !["users", "holdings", "popular-stocks", "dividends", "deposits", "snapshots"].includes(type)) {
     return NextResponse.json({ error: "Invalid type" }, { status: 400 });
   }
 
@@ -124,6 +124,67 @@ export async function GET(req: NextRequest) {
     ]);
     csv = arrayToCsv(headers, rows);
     filename = "popular-stocks";
+  } else if (type === "dividends") {
+    const { data: dividends } = await supabase
+      .from("dividends")
+      .select("*")
+      .in("user_id", userIds)
+      .order("dividend_date", { ascending: false });
+
+    const userEmailMap = new Map(validUsers.map((u) => [u.id, u.email ?? ""]));
+
+    const headers = ["사용자이메일", "티커", "종목명", "배당금(KRW)", "배당금(USD)", "배당일", "계좌"];
+    const rows: string[][] = (dividends ?? []).map((d) => [
+      userEmailMap.get(d.user_id) ?? "",
+      d.ticker,
+      d.name ?? "",
+      String(d.amount_krw ?? 0),
+      String(d.amount_usd ?? 0),
+      d.dividend_date ?? "",
+      d.account ?? "",
+    ]);
+    csv = arrayToCsv(headers, rows);
+    filename = "dividends";
+  } else if (type === "deposits") {
+    const { data: deposits } = await supabase
+      .from("deposits")
+      .select("*")
+      .in("user_id", userIds)
+      .order("deposit_date", { ascending: false });
+
+    const userEmailMap = new Map(validUsers.map((u) => [u.id, u.email ?? ""]));
+
+    const headers = ["사용자이메일", "유형", "금액", "통화", "입출금일", "메모"];
+    const rows: string[][] = (deposits ?? []).map((d) => [
+      userEmailMap.get(d.user_id) ?? "",
+      d.type,
+      String(d.amount ?? 0),
+      d.currency ?? "",
+      d.deposit_date ?? "",
+      d.memo ?? "",
+    ]);
+    csv = arrayToCsv(headers, rows);
+    filename = "deposits";
+  } else if (type === "snapshots") {
+    const { data: snaps } = await supabase
+      .from("portfolio_snapshots")
+      .select("*")
+      .in("user_id", userIds)
+      .order("snapshot_date", { ascending: false });
+
+    const userEmailMap = new Map(validUsers.map((u) => [u.id, u.email ?? ""]));
+
+    const headers = ["사용자이메일", "날짜", "총자산", "총투자금", "총수익", "수익률(%)"];
+    const rows: string[][] = (snaps ?? []).map((s) => [
+      userEmailMap.get(s.user_id) ?? "",
+      s.snapshot_date ?? "",
+      String(s.total_asset ?? 0),
+      String(s.total_invested ?? 0),
+      String(s.total_profit ?? 0),
+      String(s.yield_percent ?? 0),
+    ]);
+    csv = arrayToCsv(headers, rows);
+    filename = "snapshots";
   }
 
   // Add BOM for Korean Excel compatibility

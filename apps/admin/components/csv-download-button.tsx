@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Button } from '@repo/design-system'
 
 interface CsvDownloadButtonProps {
-  type: 'users' | 'holdings' | 'popular-stocks'
+  type: 'users' | 'holdings' | 'popular-stocks' | 'dividends' | 'deposits' | 'snapshots'
   label: string
 }
 
