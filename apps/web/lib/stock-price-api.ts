@@ -213,12 +213,20 @@ async function fetchKISOverseasPrice(ticker: string): Promise<StockPrice | null>
     const change = parseFloat(data.output.diff) || 0;
     const changePercent = parseFloat(data.output.rate) || 0;
 
-    // 빈 응답 체크
+    // 빈 응답 체크: 모든 거래소 순회
     if (price === 0) {
-      console.warn('[KIS-Overseas] Empty response for', ticker, '- trying different exchange');
-      // 다른 거래소로 재시도
-      const fallbackExchange = exchangeCode === 'NAS' ? 'AMS' : exchangeCode === 'AMS' ? 'NYS' : 'NAS';
-      return await fetchKISOverseasPriceWithExchange(ticker, fallbackExchange, token, appKey, appSecret);
+      console.warn('[KIS-Overseas] Empty response for', ticker, `(${exchangeCode}) - trying other exchanges`);
+      const allExchanges = ['NAS', 'AMS', 'NYS'];
+      const remaining = allExchanges.filter(e => e !== exchangeCode);
+      for (const fallbackExchange of remaining) {
+        const fallbackResult = await fetchKISOverseasPriceWithExchange(ticker, fallbackExchange, token, appKey, appSecret);
+        if (fallbackResult && fallbackResult.price > 0) {
+          console.log(`[KIS-Overseas] Found price for ${ticker} on ${fallbackExchange}: ${fallbackResult.price}`);
+          return fallbackResult;
+        }
+      }
+      console.warn(`[KIS-Overseas] No price found for ${ticker} on any exchange`);
+      return null;
     }
 
     return {

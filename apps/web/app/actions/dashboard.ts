@@ -390,6 +390,43 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       }
     }
 
+    // KIS API 현재가 보정: 시트에서 현재가를 가져오지 못한 종목 (GOOGLEFINANCE 실패)
+    const missingPriceItems = portfolio.filter((item) => {
+      if (item.ticker === 'CASH') return false;
+      if (ALTERNATIVE_ASSET_CODES.has(item.ticker)) return false;
+      // 현재가가 0이거나, 평단가와 동일한 경우 (시트 수식이 폴백한 경우)
+      if (item.currentPrice === 0) return true;
+      if (item.yieldPercent === 0 && item.avgPrice > 0 && Math.abs(item.currentPrice - item.avgPrice) < 1) return true;
+      return false;
+    });
+
+    if (missingPriceItems.length > 0) {
+      try {
+        const missingTickers = missingPriceItems.map((item) => item.ticker);
+        console.log(`[Dashboard] Sheet missing prices for ${missingTickers.length} items:`, missingTickers.join(', '));
+
+        const { getStockPrices } = await import('../../lib/stock-price-api');
+        const kisPrices = await getStockPrices(missingTickers);
+
+        for (const item of missingPriceItems) {
+          const kisPrice = kisPrices.get(item.ticker);
+          if (kisPrice && kisPrice.price > 0) {
+            // KIS 가격은 원본 통화 (KRW or USD)
+            // 시트의 currentPrice/totalValue는 원화 환산되어 있으므로 환율 적용 필요
+            const priceKRW = kisPrice.currency === 'USD' ? kisPrice.price * currentRate : kisPrice.price;
+            item.currentPrice = Math.round(priceKRW);
+            item.totalValue = Math.round(priceKRW * item.quantity);
+            const invested = item.avgPrice * item.quantity;
+            item.profit = item.totalValue - invested;
+            item.yieldPercent = invested > 0 ? Number(((item.profit / invested) * 100).toFixed(2)) : 0;
+            console.log(`[Dashboard] KIS price override: ${item.ticker} = ${kisPrice.price} ${kisPrice.currency} → ${item.currentPrice} KRW (yield: ${item.yieldPercent}%)`);
+          }
+        }
+      } catch (error) {
+        console.error('[Dashboard] KIS price override for sheet items failed:', error);
+      }
+    }
+
     // '5. 계좌내역(누적)'에서 총자산, 원금, 수익률 계산
     // E열(0)=연도, F열(1)=월, H열(3)=계좌총액, I열(4)=입금액, Y열(20)=누적수익률
     // 총자산: 현재 연도/월에 해당하는 H열 값 (SUMIFS 로직)
