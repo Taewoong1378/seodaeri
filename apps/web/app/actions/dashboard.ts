@@ -396,7 +396,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       if (ALTERNATIVE_ASSET_CODES.has(item.ticker)) return false;
       // 현재가가 0이거나, 평단가와 동일한 경우 (시트 수식이 폴백한 경우)
       if (item.currentPrice === 0) return true;
-      if (item.yieldPercent === 0 && item.avgPrice > 0 && Math.abs(item.currentPrice - item.avgPrice) < 1) return true;
+      if (item.avgPrice > 0 && Math.abs(item.yieldPercent) < 0.05) return true;
       return false;
     });
 

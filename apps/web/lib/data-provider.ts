@@ -6,13 +6,24 @@
  * 2. StandaloneDataProvider: DB + 외부 API 기반 독립 모드
  */
 
-import { createServiceClient } from '@repo/database/server';
-import { getUSDKRWRate } from './exchange-rate-api';
-import { getStockPrices, isKoreanStock, type StockPrice } from './stock-price-api';
-import type { AccountTrendData, MajorIndexYieldComparisonData, MonthlyProfitLoss } from './google-sheets';
-import type { HistoricalMarketData } from './historical-exchange-rate';
-import { calculateMarketYields } from './exchange-rate-enrichment';
-import { ALTERNATIVE_ASSET_CODES, getAlternativeAssetPrices } from './alternative-asset-api';
+import { createServiceClient } from "@repo/database/server";
+import {
+  ALTERNATIVE_ASSET_CODES,
+  getAlternativeAssetPrices,
+} from "./alternative-asset-api";
+import { getUSDKRWRate } from "./exchange-rate-api";
+import { calculateMarketYields } from "./exchange-rate-enrichment";
+import type {
+  AccountTrendData,
+  MajorIndexYieldComparisonData,
+  MonthlyProfitLoss,
+} from "./google-sheets";
+import type { HistoricalMarketData } from "./historical-exchange-rate";
+import {
+  type StockPrice,
+  getStockPrices,
+  isKoreanStock,
+} from "./stock-price-api";
 
 // ============================================
 // 공통 타입 정의
@@ -27,16 +38,16 @@ export interface PortfolioItem {
   totalValue: number;
   profit: number;
   profitPercent: number;
-  currency: 'KRW' | 'USD';
+  currency: "KRW" | "USD";
   weight?: number; // 포트폴리오 비중 (%)
   avgPriceOriginal?: number; // 원본 통화 평단가 (편집용, KRW 환산 전)
 }
 
 export interface DashboardSummary {
-  totalAsset: number;       // 총 자산 (KRW)
-  totalInvested: number;    // 총 투자원금 (KRW)
-  totalProfit: number;      // 총 수익금
-  totalYield: number;       // 수익률 (%)
+  totalAsset: number; // 총 자산 (KRW)
+  totalInvested: number; // 총 투자원금 (KRW)
+  totalProfit: number; // 총 수익금
+  totalYield: number; // 수익률 (%)
   thisMonthDividend: number;
   yearlyDividend: number;
   investmentDays: number;
@@ -54,7 +65,7 @@ export interface DividendRecord {
 
 export interface DepositRecord {
   id?: string;
-  type: 'DEPOSIT' | 'WITHDRAW';
+  type: "DEPOSIT" | "WITHDRAW";
   amount: number;
   date: string;
   memo?: string;
@@ -66,7 +77,7 @@ export interface DepositRecord {
 // ============================================
 
 export interface DataProvider {
-  mode: 'sheet' | 'standalone';
+  mode: "sheet" | "standalone";
 
   // 대시보드 요약
   getDashboardSummary(userId: string): Promise<DashboardSummary>;
@@ -90,7 +101,7 @@ export interface DataProvider {
 // ============================================
 
 export class StandaloneDataProvider implements DataProvider {
-  mode: 'sheet' | 'standalone' = 'standalone';
+  mode: "sheet" | "standalone" = "standalone";
 
   async getDashboardSummary(userId: string): Promise<DashboardSummary> {
     const supabase = createServiceClient();
@@ -101,10 +112,10 @@ export class StandaloneDataProvider implements DataProvider {
 
     // 1) account_balances + deposits 우선 조회
     const { data: accountBalances } = await (supabase as any)
-      .from('account_balances')
-      .select('year_month, balance')
-      .eq('user_id', userId)
-      .order('year_month', { ascending: false });
+      .from("account_balances")
+      .select("year_month, balance")
+      .eq("user_id", userId)
+      .order("year_month", { ascending: false });
 
     if (accountBalances && accountBalances.length > 0) {
       // 최신 잔액 = totalAsset
@@ -112,15 +123,15 @@ export class StandaloneDataProvider implements DataProvider {
 
       // deposits에서 순입금액 계산 = totalInvested
       const { data: deposits } = await supabase
-        .from('deposits')
-        .select('type, amount')
-        .eq('user_id', userId);
+        .from("deposits")
+        .select("type, amount")
+        .eq("user_id", userId);
 
       if (deposits && deposits.length > 0) {
         for (const d of deposits) {
-          if (d.type === 'DEPOSIT') {
+          if (d.type === "DEPOSIT") {
             totalInvested += d.amount || 0;
-          } else if (d.type === 'WITHDRAW') {
+          } else if (d.type === "WITHDRAW") {
             totalInvested -= d.amount || 0;
           }
         }
@@ -130,7 +141,7 @@ export class StandaloneDataProvider implements DataProvider {
       const portfolio = await this.getPortfolio(userId);
 
       for (const item of portfolio) {
-        if (item.ticker === 'CASH') {
+        if (item.ticker === "CASH") {
           // CASH 특수 처리: quantity=원화금액, avgPriceOriginal=달러금액
           const krwAmount = item.quantity || 0;
           const usdAmount = item.avgPriceOriginal || 0;
@@ -145,9 +156,10 @@ export class StandaloneDataProvider implements DataProvider {
     }
 
     const totalProfit = totalAsset - totalInvested;
-    const totalYield = totalInvested > 0
-      ? ((totalAsset - totalInvested) / totalInvested) * 100
-      : 0;
+    const totalYield =
+      totalInvested > 0
+        ? ((totalAsset - totalInvested) / totalInvested) * 100
+        : 0;
 
     // 배당금 조회
     const now = new Date();
@@ -155,9 +167,9 @@ export class StandaloneDataProvider implements DataProvider {
     const thisMonth = now.getMonth() + 1;
 
     const { data: dividends } = await supabase
-      .from('dividends')
-      .select('amount_krw, amount_usd, dividend_date')
-      .eq('user_id', userId);
+      .from("dividends")
+      .select("amount_krw, amount_usd, dividend_date")
+      .eq("user_id", userId);
 
     let thisMonthDividend = 0;
     let yearlyDividend = 0;
@@ -178,11 +190,11 @@ export class StandaloneDataProvider implements DataProvider {
 
     // 투자 일수 계산 (첫 입금일부터)
     const { data: firstDeposit } = await supabase
-      .from('deposits')
-      .select('deposit_date')
-      .eq('user_id', userId)
-      .eq('type', 'DEPOSIT')
-      .order('deposit_date', { ascending: true })
+      .from("deposits")
+      .select("deposit_date")
+      .eq("user_id", userId)
+      .eq("type", "DEPOSIT")
+      .order("deposit_date", { ascending: true })
       .limit(1)
       .single();
 
@@ -190,7 +202,10 @@ export class StandaloneDataProvider implements DataProvider {
     if (firstDeposit) {
       const firstDate = new Date(firstDeposit.deposit_date);
       const today = new Date();
-      investmentDays = Math.floor((today.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      investmentDays =
+        Math.floor(
+          (today.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24),
+        ) + 1;
     }
 
     return {
@@ -209,9 +224,9 @@ export class StandaloneDataProvider implements DataProvider {
 
     // holdings 테이블에서 보유종목 조회
     const { data: holdings } = await supabase
-      .from('holdings')
-      .select('*')
-      .eq('user_id', userId);
+      .from("holdings")
+      .select("*")
+      .eq("user_id", userId);
 
     if (!holdings || holdings.length === 0) {
       return [];
@@ -220,37 +235,52 @@ export class StandaloneDataProvider implements DataProvider {
     // 기타자산과 주식 분리
     const allTickers = holdings.map((h) => h.ticker);
     const altTickers = allTickers.filter((t) => ALTERNATIVE_ASSET_CODES.has(t));
-    const stockTickers = allTickers.filter((t) => !ALTERNATIVE_ASSET_CODES.has(t));
+    const stockTickers = allTickers.filter(
+      (t) => !ALTERNATIVE_ASSET_CODES.has(t),
+    );
 
     // 현재가 조회: 주식은 KIS API, 기타자산은 스프레드시트
-    const prices = stockTickers.length > 0 ? await getStockPrices(stockTickers) : new Map<string, StockPrice>();
+    const prices =
+      stockTickers.length > 0
+        ? await getStockPrices(stockTickers)
+        : new Map<string, StockPrice>();
 
     // 기타자산 현재가 조회
     if (altTickers.length > 0) {
       try {
-        console.log(`[StandaloneProvider] Fetching alt asset prices for: ${altTickers.join(', ')}`);
+        console.log(
+          `[StandaloneProvider] Fetching alt asset prices for: ${altTickers.join(", ")}`,
+        );
         const altPrices = await getAlternativeAssetPrices();
-        console.log(`[StandaloneProvider] Got ${altPrices.length} alt prices:`, altPrices.map(a => `${a.code}=${a.price}`).join(', '));
+        console.log(
+          `[StandaloneProvider] Got ${altPrices.length} alt prices:`,
+          altPrices.map((a) => `${a.code}=${a.price}`).join(", "),
+        );
         for (const alt of altPrices) {
           if (altTickers.includes(alt.code)) {
             prices.set(alt.code, {
               ticker: alt.code,
               price: alt.price,
-              currency: 'KRW' as const,
+              currency: "KRW" as const,
               timestamp: Date.now(),
-              source: 'spreadsheet',
+              source: "spreadsheet",
             });
           }
         }
       } catch (error) {
-        console.error('[StandaloneProvider] Alternative asset price fetch failed:', error);
+        console.error(
+          "[StandaloneProvider] Alternative asset price fetch failed:",
+          error,
+        );
       }
     }
 
     // KIS API에서 가격을 못 가져온 종목은 DB 캐시에서 조회
     const missingTickers = allTickers.filter((t) => !prices.has(t));
     if (missingTickers.length > 0) {
-      console.log(`[StandaloneProvider] KIS API missing ${missingTickers.length} tickers: ${missingTickers.join(', ')}`);
+      console.log(
+        `[StandaloneProvider] KIS API missing ${missingTickers.length} tickers: ${missingTickers.join(", ")}`,
+      );
 
       // avg_price 맵 (캐시 오염 방지용)
       const avgPriceMap = new Map<string, number>();
@@ -259,13 +289,15 @@ export class StandaloneDataProvider implements DataProvider {
       }
 
       // 7일 이내 캐시만 사용 (stale 가격 방지)
-      const cacheMaxAge = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const cacheMaxAge = new Date(
+        Date.now() - 7 * 24 * 60 * 60 * 1000,
+      ).toISOString();
       const { data: cachedPrices } = await supabase
-        .from('portfolio_cache')
-        .select('ticker, current_price, currency')
-        .eq('user_id', userId)
-        .in('ticker', missingTickers)
-        .gte('updated_at', cacheMaxAge);
+        .from("portfolio_cache")
+        .select("ticker, current_price, currency")
+        .eq("user_id", userId)
+        .in("ticker", missingTickers)
+        .gte("updated_at", cacheMaxAge);
 
       if (cachedPrices) {
         for (const cached of cachedPrices) {
@@ -273,16 +305,22 @@ export class StandaloneDataProvider implements DataProvider {
             // 캐시 오염 방지: current_price == avg_price인 경우 무시
             // (KIS API 실패 시 avg_price가 current_price로 저장된 무의미한 값)
             const avgP = avgPriceMap.get(cached.ticker);
-            if (avgP && cached.current_price === avgP) {
-              console.log(`[StandaloneProvider] Skipping poisoned cache: ${cached.ticker} (current_price=${cached.current_price} == avg_price)`);
+            if (
+              avgP &&
+              avgP > 0 &&
+              Math.abs(cached.current_price - avgP) / avgP < 0.01
+            ) {
+              console.log(
+                `[StandaloneProvider] Skipping poisoned cache: ${cached.ticker} (current_price=${cached.current_price} == avg_price)`,
+              );
               continue;
             }
             prices.set(cached.ticker, {
               ticker: cached.ticker,
               price: cached.current_price,
-              currency: (cached.currency as 'KRW' | 'USD') || 'KRW',
+              currency: (cached.currency as "KRW" | "USD") || "KRW",
               timestamp: Date.now(),
-              source: 'db-cache',
+              source: "db-cache",
             });
           }
         }
@@ -296,18 +334,23 @@ export class StandaloneDataProvider implements DataProvider {
       // 각 종목의 expected currency를 미리 구함
       const holdingCurrencyMap = new Map<string, string>();
       for (const h of holdings) {
-        holdingCurrencyMap.set(h.ticker, h.currency || (isKoreanStock(h.ticker) ? 'KRW' : 'USD'));
+        holdingCurrencyMap.set(
+          h.ticker,
+          h.currency || (isKoreanStock(h.ticker) ? "KRW" : "USD"),
+        );
       }
 
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const sevenDaysAgo = new Date(
+        Date.now() - 7 * 24 * 60 * 60 * 1000,
+      ).toISOString();
 
       const { data: globalPrices } = await supabase
-        .from('portfolio_cache')
-        .select('ticker, current_price, currency, updated_at')
-        .in('ticker', stillMissing)
-        .gt('current_price', 0)
-        .gte('updated_at', sevenDaysAgo)
-        .order('updated_at', { ascending: false });
+        .from("portfolio_cache")
+        .select("ticker, current_price, currency, updated_at")
+        .in("ticker", stillMissing)
+        .gt("current_price", 0)
+        .gte("updated_at", sevenDaysAgo)
+        .order("updated_at", { ascending: false });
 
       if (globalPrices) {
         // 종목당 가장 최신 1건만 사용 (이미 updated_at DESC 정렬)
@@ -321,17 +364,26 @@ export class StandaloneDataProvider implements DataProvider {
 
           // avg_price와 동일한 값이면 건너뜀 (이전에 폴백으로 저장된 무의미한 값)
           const holding = holdings.find((h) => h.ticker === gp.ticker);
-          if (holding && gp.current_price === holding.avg_price) continue;
+          if (
+            holding?.avg_price &&
+            holding.avg_price > 0 &&
+            Math.abs((gp.current_price ?? 0) - holding.avg_price) /
+              holding.avg_price <
+              0.01
+          )
+            continue;
 
           used.add(gp.ticker);
           prices.set(gp.ticker, {
             ticker: gp.ticker,
             price: gp.current_price ?? 0,
-            currency: (gp.currency as 'KRW' | 'USD') || 'KRW',
+            currency: (gp.currency as "KRW" | "USD") || "KRW",
             timestamp: Date.now(),
-            source: 'global-cache',
+            source: "global-cache",
           });
-          console.log(`[StandaloneProvider] Global cache hit: ${gp.ticker} = ${gp.current_price} (from ${gp.updated_at})`);
+          console.log(
+            `[StandaloneProvider] Global cache hit: ${gp.ticker} = ${gp.current_price} (from ${gp.updated_at})`,
+          );
         }
       }
     }
@@ -342,12 +394,15 @@ export class StandaloneDataProvider implements DataProvider {
     // 포트폴리오 아이템 생성
     const portfolio: PortfolioItem[] = [];
     // 캐시용 원본 가격 보관 (USD 이중 환산 방지)
-    const originalPrices: Map<string, { currentPrice: number; currency: 'KRW' | 'USD' }> = new Map();
+    const originalPrices: Map<
+      string,
+      { currentPrice: number; currency: "KRW" | "USD" }
+    > = new Map();
     let totalValueKRW = 0;
 
     for (const holding of holdings) {
       // CASH 특수 처리: quantity=원화금액, avg_price=달러금액
-      if (holding.ticker === 'CASH') {
+      if (holding.ticker === "CASH") {
         const krwAmount = holding.quantity || 0;
         const usdAmount = holding.avg_price || 0;
         const totalValue = krwAmount + usdAmount * exchangeRate;
@@ -355,7 +410,7 @@ export class StandaloneDataProvider implements DataProvider {
 
         portfolio.push({
           ticker: holding.ticker,
-          name: holding.name || '현금',
+          name: holding.name || "현금",
           quantity: krwAmount,
           avgPrice: usdAmount, // 달러 금액 (편집용으로 사용)
           avgPriceOriginal: usdAmount, // 달러 금액 원본
@@ -363,7 +418,7 @@ export class StandaloneDataProvider implements DataProvider {
           totalValue: Math.round(totalValue),
           profit: 0,
           profitPercent: 0,
-          currency: 'KRW',
+          currency: "KRW",
         });
         continue;
       }
@@ -372,11 +427,16 @@ export class StandaloneDataProvider implements DataProvider {
       // 기타자산(암호화폐/금)은 avg_price를 현재가 폴백으로 사용하지 않음
       // avg_price가 오래되거나 잘못된 값일 경우 현재가로 노출되는 버그 방지
       const isAltAsset = ALTERNATIVE_ASSET_CODES.has(holding.ticker);
-      const currentPrice = priceData?.price || (isAltAsset ? 0 : (holding.avg_price || 0));
+      const currentPrice =
+        priceData?.price || (isAltAsset ? 0 : holding.avg_price || 0);
       if (!priceData?.price && !isAltAsset && holding.avg_price) {
-        console.warn(`[Portfolio] No live price for ${holding.ticker}, falling back to avgPrice=${holding.avg_price}`);
+        console.warn(
+          `[Portfolio] No live price for ${holding.ticker}, falling back to avgPrice=${holding.avg_price}`,
+        );
       }
-      const currency = (holding.currency as 'KRW' | 'USD') || (isKoreanStock(holding.ticker) ? 'KRW' : 'USD');
+      const currency =
+        (holding.currency as "KRW" | "USD") ||
+        (isKoreanStock(holding.ticker) ? "KRW" : "USD");
 
       const quantity = holding.quantity || 0;
       const avgPrice = holding.avg_price || 0;
@@ -386,7 +446,7 @@ export class StandaloneDataProvider implements DataProvider {
       const profitPercent = invested > 0 ? (profit / invested) * 100 : 0;
 
       // KRW 환산
-      const rate = currency === 'USD' ? exchangeRate : 1;
+      const rate = currency === "USD" ? exchangeRate : 1;
       totalValueKRW += totalValue * rate;
 
       // 캐시용 원본 가격 저장 (환산 전)
@@ -408,9 +468,10 @@ export class StandaloneDataProvider implements DataProvider {
 
     // 비중 계산 (totalValue는 이미 KRW 환산된 값)
     for (const item of portfolio) {
-      item.weight = totalValueKRW > 0
-        ? Number(((item.totalValue / totalValueKRW) * 100).toFixed(2))
-        : 0;
+      item.weight =
+        totalValueKRW > 0
+          ? Number(((item.totalValue / totalValueKRW) * 100).toFixed(2))
+          : 0;
     }
 
     // 현재가 캐시 업데이트 (원본 가격으로 저장, KRW 환산값이 아닌 API 원본)
@@ -418,13 +479,21 @@ export class StandaloneDataProvider implements DataProvider {
     const apiPricedItems = portfolio
       .filter((item) => {
         const p = prices.get(item.ticker);
-        if (!p || p.source === 'db-cache' || p.source === 'global-cache') return false;
+        if (!p || p.source === "db-cache" || p.source === "global-cache")
+          return false;
         // avg_price와 같은 값은 캐시하지 않음 (KIS API 실패 시 폴백값이 캐시되는 것 방지)
         const holding = holdings.find((h) => h.ticker === item.ticker);
         const orig = originalPrices.get(item.ticker);
         const realPrice = orig?.currentPrice ?? item.currentPrice;
-        if (holding && realPrice === (holding.avg_price || 0)) {
-          console.log(`[StandaloneProvider] Skip caching ${item.ticker}: price=${realPrice} equals avg_price`);
+        const holdingAvg = holding?.avg_price || 0;
+        if (
+          holding &&
+          holdingAvg > 0 &&
+          Math.abs(realPrice - holdingAvg) / holdingAvg < 0.01
+        ) {
+          console.log(
+            `[StandaloneProvider] Skip caching ${item.ticker}: price=${realPrice} equals avg_price`,
+          );
           return false;
         }
         return true;
@@ -441,7 +510,10 @@ export class StandaloneDataProvider implements DataProvider {
     return portfolio;
   }
 
-  private async updatePriceCache(userId: string, portfolio: PortfolioItem[]): Promise<void> {
+  private async updatePriceCache(
+    userId: string,
+    portfolio: PortfolioItem[],
+  ): Promise<void> {
     if (portfolio.length === 0) return;
 
     const supabase = createServiceClient();
@@ -455,23 +527,23 @@ export class StandaloneDataProvider implements DataProvider {
     }));
 
     await supabase
-      .from('portfolio_cache')
-      .upsert(updates, { onConflict: 'user_id,ticker' });
+      .from("portfolio_cache")
+      .upsert(updates, { onConflict: "user_id,ticker" });
   }
 
   async getDividends(userId: string, year?: number): Promise<DividendRecord[]> {
     const supabase = createServiceClient();
 
     let query = supabase
-      .from('dividends')
-      .select('*')
-      .eq('user_id', userId)
-      .order('dividend_date', { ascending: false });
+      .from("dividends")
+      .select("*")
+      .eq("user_id", userId)
+      .order("dividend_date", { ascending: false });
 
     if (year) {
       query = query
-        .gte('dividend_date', `${year}-01-01`)
-        .lte('dividend_date', `${year}-12-31`);
+        .gte("dividend_date", `${year}-01-01`)
+        .lte("dividend_date", `${year}-12-31`);
     }
 
     const { data } = await query;
@@ -487,43 +559,47 @@ export class StandaloneDataProvider implements DataProvider {
     }));
   }
 
-  async saveDividend(userId: string, dividend: DividendRecord): Promise<boolean> {
+  async saveDividend(
+    userId: string,
+    dividend: DividendRecord,
+  ): Promise<boolean> {
     const supabase = createServiceClient();
 
-    const { error } = await supabase
-      .from('dividends')
-      .insert({
-        user_id: userId,
-        ticker: dividend.ticker,
-        name: dividend.name,
-        amount_krw: dividend.amountKRW,
-        amount_usd: dividend.amountUSD,
-        dividend_date: dividend.date,
-        sheet_synced: false, // Standalone 모드이므로 false
-      });
+    const { error } = await supabase.from("dividends").insert({
+      user_id: userId,
+      ticker: dividend.ticker,
+      name: dividend.name,
+      amount_krw: dividend.amountKRW,
+      amount_usd: dividend.amountUSD,
+      dividend_date: dividend.date,
+      sheet_synced: false, // Standalone 모드이므로 false
+    });
 
     if (error) {
-      console.error('[StandaloneProvider] saveDividend error:', error);
+      console.error("[StandaloneProvider] saveDividend error:", error);
       return false;
     }
 
     return true;
   }
 
-  async deleteDividend(userId: string, dividend: DividendRecord): Promise<boolean> {
+  async deleteDividend(
+    userId: string,
+    dividend: DividendRecord,
+  ): Promise<boolean> {
     const supabase = createServiceClient();
 
     const { error } = await supabase
-      .from('dividends')
+      .from("dividends")
       .delete()
-      .eq('user_id', userId)
-      .eq('ticker', dividend.ticker)
-      .eq('dividend_date', dividend.date)
-      .eq('amount_krw', dividend.amountKRW)
-      .eq('amount_usd', dividend.amountUSD);
+      .eq("user_id", userId)
+      .eq("ticker", dividend.ticker)
+      .eq("dividend_date", dividend.date)
+      .eq("amount_krw", dividend.amountKRW)
+      .eq("amount_usd", dividend.amountUSD);
 
     if (error) {
-      console.error('[StandaloneProvider] deleteDividend error:', error);
+      console.error("[StandaloneProvider] deleteDividend error:", error);
       return false;
     }
 
@@ -534,14 +610,14 @@ export class StandaloneDataProvider implements DataProvider {
     const supabase = createServiceClient();
 
     const { data } = await supabase
-      .from('deposits')
-      .select('*')
-      .eq('user_id', userId)
-      .order('deposit_date', { ascending: false });
+      .from("deposits")
+      .select("*")
+      .eq("user_id", userId)
+      .order("deposit_date", { ascending: false });
 
     return (data || []).map((d) => ({
       id: d.id,
-      type: d.type as 'DEPOSIT' | 'WITHDRAW',
+      type: d.type as "DEPOSIT" | "WITHDRAW",
       amount: d.amount || 0,
       date: d.deposit_date,
       memo: d.memo || undefined,
@@ -551,39 +627,40 @@ export class StandaloneDataProvider implements DataProvider {
   async saveDeposit(userId: string, deposit: DepositRecord): Promise<boolean> {
     const supabase = createServiceClient();
 
-    const { error } = await supabase
-      .from('deposits')
-      .insert({
-        user_id: userId,
-        type: deposit.type,
-        amount: deposit.amount,
-        currency: 'KRW',
-        deposit_date: deposit.date,
-        memo: deposit.memo || null,
-        sheet_synced: false, // Standalone 모드이므로 false
-      });
+    const { error } = await supabase.from("deposits").insert({
+      user_id: userId,
+      type: deposit.type,
+      amount: deposit.amount,
+      currency: "KRW",
+      deposit_date: deposit.date,
+      memo: deposit.memo || null,
+      sheet_synced: false, // Standalone 모드이므로 false
+    });
 
     if (error) {
-      console.error('[StandaloneProvider] saveDeposit error:', error);
+      console.error("[StandaloneProvider] saveDeposit error:", error);
       return false;
     }
 
     return true;
   }
 
-  async deleteDeposit(userId: string, deposit: DepositRecord): Promise<boolean> {
+  async deleteDeposit(
+    userId: string,
+    deposit: DepositRecord,
+  ): Promise<boolean> {
     const supabase = createServiceClient();
 
     const { error } = await supabase
-      .from('deposits')
+      .from("deposits")
       .delete()
-      .eq('user_id', userId)
-      .eq('type', deposit.type)
-      .eq('amount', deposit.amount)
-      .eq('deposit_date', deposit.date);
+      .eq("user_id", userId)
+      .eq("type", deposit.type)
+      .eq("amount", deposit.amount)
+      .eq("deposit_date", deposit.date);
 
     if (error) {
-      console.error('[StandaloneProvider] deleteDeposit error:', error);
+      console.error("[StandaloneProvider] deleteDeposit error:", error);
       return false;
     }
 
@@ -599,10 +676,10 @@ export class StandaloneDataProvider implements DataProvider {
 
     // account_balances 조회 (시간순)
     const { data: balances } = await (supabase as any)
-      .from('account_balances')
-      .select('year_month, balance')
-      .eq('user_id', userId)
-      .order('year_month', { ascending: true });
+      .from("account_balances")
+      .select("year_month, balance")
+      .eq("user_id", userId)
+      .order("year_month", { ascending: true });
 
     if (!balances || balances.length === 0) {
       return [];
@@ -610,19 +687,19 @@ export class StandaloneDataProvider implements DataProvider {
 
     // deposits 조회 (시간순)
     const { data: deposits } = await supabase
-      .from('deposits')
-      .select('type, amount, deposit_date')
-      .eq('user_id', userId)
-      .order('deposit_date', { ascending: true });
+      .from("deposits")
+      .select("type, amount, deposit_date")
+      .eq("user_id", userId)
+      .order("deposit_date", { ascending: true });
 
     // 월별 순입금액 계산
     const monthlyNetDeposit = new Map<string, number>();
     if (deposits) {
       for (const d of deposits) {
         const date = new Date(d.deposit_date);
-        const ym = `${String(date.getFullYear()).slice(2)}.${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const ym = `${String(date.getFullYear()).slice(2)}.${String(date.getMonth() + 1).padStart(2, "0")}`;
         const current = monthlyNetDeposit.get(ym) || 0;
-        const amount = d.type === 'DEPOSIT' ? (d.amount || 0) : -(d.amount || 0);
+        const amount = d.type === "DEPOSIT" ? d.amount || 0 : -(d.amount || 0);
         monthlyNetDeposit.set(ym, current + amount);
       }
     }
@@ -633,8 +710,8 @@ export class StandaloneDataProvider implements DataProvider {
 
     for (const b of balances) {
       // year_month: "2025-01" → "25.01"
-      const parts = (b.year_month as string).split('-');
-      const date = `${(parts[0] || '').slice(2)}.${parts[1] || ''}`;
+      const parts = (b.year_month as string).split("-");
+      const date = `${(parts[0] || "").slice(2)}.${parts[1] || ""}`;
 
       // 누적 입금액 갱신
       const netDeposit = monthlyNetDeposit.get(date) || 0;
@@ -663,11 +740,11 @@ export class StandaloneDataProvider implements DataProvider {
     const yearPrefix = `${currentYear}-`;
 
     const { data: balances } = await (supabase as any)
-      .from('account_balances')
-      .select('year_month, balance')
-      .eq('user_id', userId)
-      .like('year_month', `${yearPrefix}%`)
-      .order('year_month', { ascending: true });
+      .from("account_balances")
+      .select("year_month, balance")
+      .eq("user_id", userId)
+      .like("year_month", `${yearPrefix}%`)
+      .order("year_month", { ascending: true });
 
     if (!balances || balances.length === 0) {
       return [];
@@ -675,11 +752,11 @@ export class StandaloneDataProvider implements DataProvider {
 
     // 올해 deposits 조회
     const { data: deposits } = await supabase
-      .from('deposits')
-      .select('type, amount, deposit_date')
-      .eq('user_id', userId)
-      .gte('deposit_date', `${currentYear}-01-01`)
-      .lte('deposit_date', `${currentYear}-12-31`);
+      .from("deposits")
+      .select("type, amount, deposit_date")
+      .eq("user_id", userId)
+      .gte("deposit_date", `${currentYear}-01-01`)
+      .lte("deposit_date", `${currentYear}-12-31`);
 
     // 월별 순입금액 계산
     const monthlyNetDeposit = new Map<number, number>();
@@ -687,7 +764,7 @@ export class StandaloneDataProvider implements DataProvider {
       for (const d of deposits) {
         const month = new Date(d.deposit_date).getMonth() + 1;
         const current = monthlyNetDeposit.get(month) || 0;
-        const amount = d.type === 'DEPOSIT' ? (d.amount || 0) : -(d.amount || 0);
+        const amount = d.type === "DEPOSIT" ? d.amount || 0 : -(d.amount || 0);
         monthlyNetDeposit.set(month, current + amount);
       }
     }
@@ -695,17 +772,20 @@ export class StandaloneDataProvider implements DataProvider {
     // 월별 잔액 맵
     const monthlyBalance = new Map<number, number>();
     for (const b of balances) {
-      const month = Number.parseInt((b.year_month as string).split('-')[1] || '0', 10);
+      const month = Number.parseInt(
+        (b.year_month as string).split("-")[1] || "0",
+        10,
+      );
       monthlyBalance.set(month, b.balance || 0);
     }
 
     // 이전달 잔액 (작년 12월) 조회
     let prevBalance = 0;
     const { data: prevYear } = await (supabase as any)
-      .from('account_balances')
-      .select('balance')
-      .eq('user_id', userId)
-      .eq('year_month', `${currentYear - 1}-12`)
+      .from("account_balances")
+      .select("balance")
+      .eq("user_id", userId)
+      .eq("year_month", `${currentYear - 1}-12`)
       .single();
     if (prevYear) {
       prevBalance = prevYear.balance || 0;
@@ -725,7 +805,7 @@ export class StandaloneDataProvider implements DataProvider {
       }
 
       const netDeposit = monthlyNetDeposit.get(m) || 0;
-      const netPL = (balance - lastBalance) - netDeposit;
+      const netPL = balance - lastBalance - netDeposit;
 
       result.push({
         month: `${m}월`,
@@ -744,7 +824,11 @@ export class StandaloneDataProvider implements DataProvider {
    * 공개 스프레드시트의 historical market data를 사용하여
    * Sheet 모드와 동일한 실제 YTD 수익률을 계산
    */
-  async getMajorIndexYieldComparison(userId: string, historicalRates?: Map<string, number>, marketData?: HistoricalMarketData): Promise<MajorIndexYieldComparisonData | null> {
+  async getMajorIndexYieldComparison(
+    userId: string,
+    historicalRates?: Map<string, number>,
+    marketData?: HistoricalMarketData,
+  ): Promise<MajorIndexYieldComparisonData | null> {
     const supabase = createServiceClient();
 
     try {
@@ -753,26 +837,34 @@ export class StandaloneDataProvider implements DataProvider {
       const currentMonth = now.getMonth(); // 0-indexed
 
       // 1. 월별 레이블 생성
-      const months = ['시작'];
+      const months = ["시작"];
       for (let m = 0; m <= currentMonth; m++) {
         months.push(`${m + 1}월`);
       }
 
       // 2. 시장 데이터에서 모든 수익률 계산 (KOSPI, S&P500, NASDAQ, 달러, 금, BTC, 부동산)
       if (!marketData) {
-        console.warn('[StandaloneProvider] No market data available - skipping comparison chart');
+        console.warn(
+          "[StandaloneProvider] No market data available - skipping comparison chart",
+        );
         return null;
       }
 
-      const marketYields = calculateMarketYields(months, marketData, currentYear);
+      const marketYields = calculateMarketYields(
+        months,
+        marketData,
+        currentYear,
+      );
 
       // 지수 데이터 유효성 확인 (하나라도 있어야 차트 표시)
-      const hasKospi = marketYields.kospi.some(v => v !== 0);
-      const hasSP500 = marketYields.sp500.some(v => v !== 0);
-      const hasNasdaq = marketYields.nasdaq.some(v => v !== 0);
+      const hasKospi = marketYields.kospi.some((v) => v !== 0);
+      const hasSP500 = marketYields.sp500.some((v) => v !== 0);
+      const hasNasdaq = marketYields.nasdaq.some((v) => v !== 0);
 
       if (!hasKospi && !hasSP500 && !hasNasdaq) {
-        console.warn('[StandaloneProvider] No index data in market data - skipping comparison chart');
+        console.warn(
+          "[StandaloneProvider] No index data in market data - skipping comparison chart",
+        );
         return null;
       }
 
@@ -781,50 +873,56 @@ export class StandaloneDataProvider implements DataProvider {
       let accountYields: (number | null)[];
 
       const { data: snapshots } = await supabase
-        .from('portfolio_snapshots')
-        .select('snapshot_date, total_asset, total_invested')
-        .eq('user_id', userId)
-        .gte('snapshot_date', yearStart)
-        .order('snapshot_date', { ascending: true });
+        .from("portfolio_snapshots")
+        .select("snapshot_date, total_asset, total_invested")
+        .eq("user_id", userId)
+        .gte("snapshot_date", yearStart)
+        .order("snapshot_date", { ascending: true });
 
       if (snapshots && snapshots.length > 0) {
         // 포트폴리오 스냅샷 있음 → 기존 수익률 계산 사용
-        const normalizedSnapshots = snapshots.map(s => ({
+        const normalizedSnapshots = snapshots.map((s) => ({
           snapshot_date: s.snapshot_date,
           total_asset: s.total_asset ?? 0,
           total_invested: s.total_invested ?? 0,
         }));
-        accountYields = this.calculateAccountYields(normalizedSnapshots, currentMonth + 1);
+        accountYields = this.calculateAccountYields(
+          normalizedSnapshots,
+          currentMonth + 1,
+        );
       } else {
         // Fallback: account_balances + deposits → 입금 차감 수익률 계산
         const { data: balances } = await (supabase as any)
-          .from('account_balances')
-          .select('year_month, balance')
-          .eq('user_id', userId)
-          .gte('year_month', `${currentYear}-01`)
-          .order('year_month', { ascending: true });
+          .from("account_balances")
+          .select("year_month, balance")
+          .eq("user_id", userId)
+          .gte("year_month", `${currentYear}-01`)
+          .order("year_month", { ascending: true });
 
         // 전체 입금 내역 조회 (누적 투자금 계산용)
         const { data: allDeposits } = await (supabase as any)
-          .from('deposits')
-          .select('amount, type, deposit_date')
-          .eq('user_id', userId)
-          .order('deposit_date', { ascending: true });
+          .from("deposits")
+          .select("amount, type, deposit_date")
+          .eq("user_id", userId)
+          .order("deposit_date", { ascending: true });
 
         // 월별 누적 투자금 계산 (YYYY-MM → 누적액)
         const cumulativeByYM = new Map<string, number>();
         let runningInvested = 0;
         for (const d of allDeposits || []) {
-          runningInvested += d.type === 'DEPOSIT' ? (d.amount || 0) : -(d.amount || 0);
+          runningInvested +=
+            d.type === "DEPOSIT" ? d.amount || 0 : -(d.amount || 0);
           const ym = (d.deposit_date as string).slice(0, 7);
           cumulativeByYM.set(ym, runningInvested);
         }
 
         // 특정 year-month까지의 누적 투자금 반환 (해당 월에 입금이 없어도 이전 값 유지)
         const getInvestedAt = (year: number, month: number): number => {
-          const targetYM = `${year}-${String(month).padStart(2, '0')}`;
+          const targetYM = `${year}-${String(month).padStart(2, "0")}`;
           let result = 0;
-          const sorted = Array.from(cumulativeByYM.entries()).sort(([a], [b]) => a.localeCompare(b));
+          const sorted = Array.from(cumulativeByYM.entries()).sort(([a], [b]) =>
+            a.localeCompare(b),
+          );
           for (const [ym, val] of sorted) {
             if (ym <= targetYM) result = val;
             else break;
@@ -837,7 +935,10 @@ export class StandaloneDataProvider implements DataProvider {
         if (balances && balances.length > 0) {
           const monthlyBalance = new Map<number, number>();
           for (const b of balances) {
-            const month = Number.parseInt((b.year_month as string).split('-')[1] || '0', 10);
+            const month = Number.parseInt(
+              (b.year_month as string).split("-")[1] || "0",
+              10,
+            );
             monthlyBalance.set(month, b.balance || 0);
           }
 
@@ -849,7 +950,9 @@ export class StandaloneDataProvider implements DataProvider {
               const invested = getInvestedAt(currentYear, m);
               if (invested > 0) {
                 // 수익률 = (잔고 - 누적투자금) / 누적투자금 * 100
-                accountYields.push(Math.round(((bal - invested) / invested) * 1000) / 10);
+                accountYields.push(
+                  Math.round(((bal - invested) / invested) * 1000) / 10,
+                );
               } else {
                 accountYields.push(0);
               }
@@ -862,7 +965,7 @@ export class StandaloneDataProvider implements DataProvider {
         }
       }
 
-      console.log('[StandaloneProvider] Index comparison (historical):', {
+      console.log("[StandaloneProvider] Index comparison (historical):", {
         kospiYTD: marketYields.kospi[marketYields.kospi.length - 1],
         sp500YTD: marketYields.sp500[marketYields.sp500.length - 1],
         nasdaqYTD: marketYields.nasdaq[marketYields.nasdaq.length - 1],
@@ -885,7 +988,10 @@ export class StandaloneDataProvider implements DataProvider {
         bitcoinDollar: marketYields.bitcoinDollar,
       };
     } catch (error) {
-      console.error('[StandaloneProvider] getMajorIndexYieldComparison error:', error);
+      console.error(
+        "[StandaloneProvider] getMajorIndexYieldComparison error:",
+        error,
+      );
       return null;
     }
   }
@@ -894,8 +1000,12 @@ export class StandaloneDataProvider implements DataProvider {
    * 포트폴리오 스냅샷 기반 월별 수익률 계산
    */
   private calculateAccountYields(
-    snapshots: Array<{ snapshot_date: string; total_asset: number; total_invested: number }>,
-    monthCount: number
+    snapshots: Array<{
+      snapshot_date: string;
+      total_asset: number;
+      total_invested: number;
+    }>,
+    monthCount: number,
   ): (number | null)[] {
     const yields: (number | null)[] = [0]; // 시작점은 0%
 
@@ -919,7 +1029,7 @@ export class StandaloneDataProvider implements DataProvider {
     }
 
     // 월별로 그룹화
-    const monthlySnapshots = new Map<number, typeof snapshots[0]>();
+    const monthlySnapshots = new Map<number, (typeof snapshots)[0]>();
     for (const snapshot of snapshots) {
       const month = new Date(snapshot.snapshot_date).getMonth(); // 0-indexed
       // 각 월의 마지막 스냅샷 사용
@@ -971,9 +1081,9 @@ export async function getDataProvider(userId: string): Promise<{
 
   // 사용자 조회
   const { data: user } = await supabase
-    .from('users')
-    .select('spreadsheet_id')
-    .eq('id', userId)
+    .from("users")
+    .select("spreadsheet_id")
+    .eq("id", userId)
     .single();
 
   const isStandalone = !user?.spreadsheet_id;
@@ -1000,9 +1110,9 @@ export async function isStandaloneUser(userId: string): Promise<boolean> {
   const supabase = createServiceClient();
 
   const { data: user } = await supabase
-    .from('users')
-    .select('spreadsheet_id')
-    .eq('id', userId)
+    .from("users")
+    .select("spreadsheet_id")
+    .eq("id", userId)
     .single();
 
   return !user?.spreadsheet_id;
@@ -1015,9 +1125,9 @@ export async function isStandaloneUserByEmail(email: string): Promise<boolean> {
   const supabase = createServiceClient();
 
   const { data: user } = await supabase
-    .from('users')
-    .select('spreadsheet_id')
-    .eq('email', email)
+    .from("users")
+    .select("spreadsheet_id")
+    .eq("email", email)
     .single();
 
   return !user?.spreadsheet_id;

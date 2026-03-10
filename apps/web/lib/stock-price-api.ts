@@ -106,6 +106,12 @@ async function fetchKISPrice(ticker: string): Promise<StockPrice | null> {
     const change = parseFloat(data.output.prdy_vrss) || 0;
     const changePercent = parseFloat(data.output.prdy_ctrt) || 0;
 
+    // 가격이 0이면 실패로 처리 (거래정지, 상폐 등)
+    if (price === 0) {
+      console.warn('[KIS] Zero price for domestic stock', ticker);
+      return null;
+    }
+
     return {
       ticker,
       price,
@@ -452,7 +458,7 @@ export async function getStockPrices(
 
     // Rate limit 방지를 위한 딜레이 (청크 사이)
     if (i + CHUNK_SIZE < needFetch.length) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
   }
 
