@@ -44,27 +44,33 @@ export function AssetPerformance({ snapshots, holdings }: AssetPerformanceProps)
   // KPI: 총 관리 자산
   const totalAsset = latestSnapshots.reduce((sum, s) => sum + (s.total_asset ?? 0), 0)
 
-  // Chart 1: 자산 성장 추이 — group by snapshot_date, average total_asset and total_profit
-  const dateMap = new Map<string, { totalAssetSum: number; totalProfitSum: number; count: number }>()
-  for (const s of snapshots) {
-    const date = (s.snapshot_date ?? '').slice(0, 10)
-    if (!date) continue
-    const existing = dateMap.get(date) ?? { totalAssetSum: 0, totalProfitSum: 0, count: 0 }
-    existing.totalAssetSum += s.total_asset ?? 0
-    existing.totalProfitSum += s.total_profit ?? 0
-    existing.count++
-    dateMap.set(date, existing)
-  }
-  const growthData = Array.from(dateMap.entries())
-    .map(([date, { totalAssetSum, totalProfitSum, count }]) => ({
+  // Chart 1: 자산 성장 추이 — 각 날짜마다 유저별 최신 스냅샷 누적 평균
+  // (특정 날짜에 1명만 스냅샷이 있어도 이전 유저들의 최신값이 유지됨)
+  const sortedSnapshots = [...snapshots].sort((a, b) =>
+    (a.snapshot_date ?? '').localeCompare(b.snapshot_date ?? ''),
+  )
+  const allDates = [...new Set(sortedSnapshots.map(s => (s.snapshot_date ?? '').slice(0, 10)))].filter(Boolean).sort()
+  const userLatest = new Map<string, Snapshot>()
+  let dateIdx = 0
+  const growthData = allDates.map(date => {
+    while (dateIdx < sortedSnapshots.length && (sortedSnapshots[dateIdx]?.snapshot_date ?? '').slice(0, 10) <= date) {
+      const s = sortedSnapshots[dateIdx]!
+      userLatest.set(s.user_id, s)
+      dateIdx++
+    }
+    const values = Array.from(userLatest.values())
+    const totalAssetSum = values.reduce((sum, s) => sum + (s.total_asset ?? 0), 0)
+    const totalProfitSum = values.reduce((sum, s) => sum + (s.total_profit ?? 0), 0)
+    const count = values.length
+    return {
       date,
       totalAsset: count > 0 ? totalAssetSum / count : 0,
       totalProfit: count > 0 ? totalProfitSum / count : 0,
-    }))
-    .sort((a, b) => a.date.localeCompare(b.date))
+    }
+  })
 
   // Chart 2: 수익률 분포 — bucket latest yield_percent per user
-  const bucketKeys = ['<-10%', '-10~-5%', '-5~0%', '0~5%', '5~10%', '10~20%', '>20%'] as const
+  const bucketKeys = ['<-10%', '-10~-5%', '-5~0%', '0~5%', '5~10%', '10~20%', '20~30%', '30~50%', '50~100%', '>100%'] as const
   type BucketKey = (typeof bucketKeys)[number]
   const buckets = new Map<BucketKey, number>(bucketKeys.map(k => [k, 0]))
   const getBucket = (y: number): BucketKey => {
@@ -74,7 +80,10 @@ export function AssetPerformance({ snapshots, holdings }: AssetPerformanceProps)
     if (y < 5) return '0~5%'
     if (y < 10) return '5~10%'
     if (y < 20) return '10~20%'
-    return '>20%'
+    if (y < 30) return '20~30%'
+    if (y < 50) return '30~50%'
+    if (y < 100) return '50~100%'
+    return '>100%'
   }
   for (const s of latestSnapshots) {
     const key = getBucket(s.yield_percent ?? 0)
@@ -113,7 +122,13 @@ export function AssetPerformance({ snapshots, holdings }: AssetPerformanceProps)
           <YieldDistributionChart data={yieldBuckets} />
         </SectionCard>
         <SectionCard title="브로커 분포" description="보유종목 기준 증권사별">
-          <BrokerDistributionDonut data={brokerData} />
+          {brokerData.length > 0 ? (
+            <BrokerDistributionDonut data={brokerData} />
+          ) : (
+            <div className="flex h-[300px] items-center justify-center text-sm text-gray-400">
+              브로커 데이터가 없습니다
+            </div>
+          )}
         </SectionCard>
       </div>
     </div>
