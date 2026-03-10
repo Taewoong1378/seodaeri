@@ -14,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body>
+      <body className="min-h-screen bg-gray-50">
         {children}
         <Toaster />
       </body>
