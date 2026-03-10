@@ -44,8 +44,16 @@ export function AssetPerformance({ snapshots, holdings }: AssetPerformanceProps)
   // KPI: 총 관리 자산
   const totalAsset = latestSnapshots.reduce((sum, s) => sum + (s.total_asset ?? 0), 0)
 
-  // Chart 1: 자산 성장 추이 — 각 날짜마다 유저별 최신 스냅샷 누적 평균
-  // (특정 날짜에 1명만 스냅샷이 있어도 이전 유저들의 최신값이 유지됨)
+  // Chart 1: 자산 성장 추이 — 중앙값(median) 사용 (이상치 영향 최소화)
+  const getMedian = (arr: number[]): number => {
+    if (arr.length === 0) return 0
+    const sorted = [...arr].sort((a, b) => a - b)
+    const mid = Math.floor(sorted.length / 2)
+    return sorted.length % 2 === 1
+      ? (sorted[mid] ?? 0)
+      : ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2
+  }
+
   const sortedSnapshots = [...snapshots].sort((a, b) =>
     (a.snapshot_date ?? '').localeCompare(b.snapshot_date ?? ''),
   )
@@ -59,13 +67,12 @@ export function AssetPerformance({ snapshots, holdings }: AssetPerformanceProps)
       dateIdx++
     }
     const values = Array.from(userLatest.values())
-    const totalAssetSum = values.reduce((sum, s) => sum + (s.total_asset ?? 0), 0)
-    const totalProfitSum = values.reduce((sum, s) => sum + (s.total_profit ?? 0), 0)
-    const count = values.length
+    const assets = values.map(s => s.total_asset ?? 0)
+    const profits = values.map(s => s.total_profit ?? 0)
     return {
       date,
-      totalAsset: count > 0 ? totalAssetSum / count : 0,
-      totalProfit: count > 0 ? totalProfitSum / count : 0,
+      totalAsset: getMedian(assets),
+      totalProfit: getMedian(profits),
     }
   })
 
@@ -114,7 +121,7 @@ export function AssetPerformance({ snapshots, holdings }: AssetPerformanceProps)
           description={`${userCount}명 기준`}
         />
       </div>
-      <SectionCard title="자산 성장 추이" description="전체 유저 평균 추이">
+      <SectionCard title="자산 성장 추이" description="전체 유저 중앙값 추이">
         <AssetGrowthChart data={growthData} />
       </SectionCard>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

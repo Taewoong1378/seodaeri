@@ -19,7 +19,7 @@ export function AssetGrowthChart({ data }: AssetGrowthChartProps) {
             contentStyle={{ fontSize: '12px', borderRadius: '8px' }}
             formatter={(value: number, name: string) => [
               `${value.toLocaleString('ko-KR')}원`,
-              name === 'totalAsset' ? '평균 총자산' : '평균 수익',
+              name === 'totalAsset' ? '중앙값 총자산' : '중앙값 수익',
             ]}
           />
           <Area
