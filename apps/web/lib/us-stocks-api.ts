@@ -123,6 +123,27 @@ export async function fetchUSStocks(): Promise<USStock[]> {
     }
   }
 
+  // NASDAQ API가 누락하는 인기 레버리지/인버스 ETF 보충
+  const missingPopularETFs: USStock[] = [
+    { code: "TQQQ", name: "ProShares UltraPro QQQ", market: "US_ETF" },
+    { code: "FNGU", name: "MicroSectors FANG+ Index 3X Leveraged ETN", market: "US_ETF" },
+    { code: "CURE", name: "Direxion Daily Healthcare Bull 3X Shares", market: "US_ETF" },
+    { code: "TNA", name: "Direxion Daily Small Cap Bull 3X Shares", market: "US_ETF" },
+    { code: "FAS", name: "Direxion Daily Financial Bull 3X Shares", market: "US_ETF" },
+    { code: "LABU", name: "Direxion Daily S&P Biotech Bull 3X Shares", market: "US_ETF" },
+    { code: "NUGT", name: "Direxion Daily Gold Miners Index Bull 2X Shares", market: "US_ETF" },
+    { code: "NAIL", name: "Direxion Daily Homebuilders & Supplies Bull 3X Shares", market: "US_ETF" },
+    { code: "DFEN", name: "Direxion Daily Aerospace & Defense Bull 3X Shares", market: "US_ETF" },
+    { code: "WEBL", name: "Direxion Daily Dow Jones Internet Bull 3X Shares", market: "US_ETF" },
+  ];
+
+  for (const etf of missingPopularETFs) {
+    if (!seenCodes.has(etf.code)) {
+      seenCodes.add(etf.code);
+      allStocks.push(etf);
+    }
+  }
+
   console.log(`[US Stocks] Total unique stocks: ${allStocks.length}`);
   return allStocks;
 }
