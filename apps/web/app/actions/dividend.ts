@@ -1,79 +1,73 @@
-"use server";
+'use server'
 
-import { auth } from "@repo/auth/server";
-import { createServiceClient } from "@repo/database/server";
-import { revalidatePath } from "next/cache";
-import { getUSDKRWRate } from "../../lib/exchange-rate-api";
-import {
-  appendSheetData,
-  deleteSheetRow,
-  fetchSheetData,
-} from "../../lib/google-sheets";
+import { auth } from '@repo/auth/server'
+import { createServiceClient } from '@repo/database/server'
+import { revalidatePath } from 'next/cache'
+import { getUSDKRWRate } from '../../lib/exchange-rate-api'
+import { appendSheetData, deleteSheetRow, fetchSheetData } from '../../lib/google-sheets'
 
 export interface DividendInput {
-  date: string; // YYYY-MM-DD
-  ticker: string;
-  name: string;
-  amountKRW: number;
-  amountUSD: number;
-  account?: string; // "일반 계좌" | "절세 계좌"
+  date: string // YYYY-MM-DD
+  ticker: string
+  name: string
+  amountKRW: number
+  amountUSD: number
+  account?: string // "일반 계좌" | "절세 계좌"
 }
 
 export interface SaveDividendResult {
-  success: boolean;
-  error?: string;
+  success: boolean
+  error?: string
 }
 
 /**
  * 배당내역을 저장 (Standalone 또는 Google Sheet)
  * 시트 구조: 일자 | 연도 | 월 | 일 | 종목코드 | 종목명 | 원화 배당금 | 외화 배당금 | 원화환산
  */
-export async function saveDividend(
-  input: DividendInput,
-): Promise<SaveDividendResult> {
-  console.log("[saveDividend] Called with input:", JSON.stringify(input));
+export async function saveDividend(input: DividendInput): Promise<SaveDividendResult> {
+  console.log('[saveDividend] Called with input:', JSON.stringify(input))
 
-  const session = await auth();
+  const session = await auth()
 
   if (!session?.user?.id) {
-    console.log("[saveDividend] No session user id");
-    return { success: false, error: "로그인이 필요합니다." };
+    console.log('[saveDividend] No session user id')
+    return { success: false, error: '로그인이 필요합니다.' }
   }
 
-  const supabase = createServiceClient();
+  const supabase = createServiceClient()
 
   try {
     // 사용자의 spreadsheet_id 조회
     let { data: user } = await supabase
-      .from("users")
-      .select("id, spreadsheet_id")
-      .eq("id", session.user.id)
-      .single();
+      .from('users')
+      .select('id, spreadsheet_id')
+      .eq('id', session.user.id)
+      .single()
 
     if (!user && session.user.email) {
       const { data: userByEmail } = await supabase
-        .from("users")
-        .select("id, spreadsheet_id")
-        .eq("email", session.user.email)
-        .single();
+        .from('users')
+        .select('id, spreadsheet_id')
+        .eq('email', session.user.email)
+        .single()
 
       if (userByEmail) {
-        user = userByEmail;
+        user = userByEmail
       }
     }
 
     if (!user?.id) {
-      console.log("[saveDividend] No user found");
-      return { success: false, error: "사용자 정보를 찾을 수 없습니다." };
+      console.log('[saveDividend] No user found')
+      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
     }
 
-    const userId = user.id as string;
+    const userId = user.id as string
 
     // Standalone 모드: DB에만 저장
     if (!user.spreadsheet_id) {
-      console.log("[saveDividend] Standalone mode - saving to DB only");
+      console.log('[saveDividend] Standalone mode - saving to DB only')
 
-      const { error: dbError } = await supabase.from("dividends").insert({
+      const { error: dbError } = await supabase.from('dividends').insert({
         user_id: userId,
         ticker: input.ticker,
         name: input.name || input.ticker,
@@ -82,150 +76,139 @@ export async function saveDividend(
         dividend_date: input.date,
         account: input.account || null,
         sheet_synced: false,
-      });
+      })
 
       if (dbError) {
-        console.error("[saveDividend] DB insert error:", dbError);
-        return { success: false, error: "배당내역 저장에 실패했습니다." };
+        console.error('[saveDividend] DB insert error:', dbError)
+        return { success: false, error: '배당내역 저장에 실패했습니다.' }
       }
 
-      console.log("[saveDividend] Standalone mode - Success!");
-      revalidatePath("/dashboard");
-      revalidatePath("/transactions");
-      return { success: true };
+      console.log('[saveDividend] Standalone mode - Success!')
+      revalidatePath('/dashboard')
+      revalidatePath('/transactions')
+      return { success: true }
     }
 
     // Sheet 모드: Google Sheet에 저장
     if (!session.accessToken) {
-      console.log("[saveDividend] No access token");
-      return { success: false, error: "Google 인증이 필요합니다." };
+      console.log('[saveDividend] No access token')
+      return { success: false, error: 'Google 인증이 필요합니다.' }
     }
 
-    console.log(
-      "[saveDividend] Sheet mode, spreadsheet_id:",
-      user.spreadsheet_id,
-    );
+    console.log('[saveDividend] Sheet mode, spreadsheet_id:', user.spreadsheet_id)
 
     // 날짜 파싱 (YYYY-MM-DD)
-    const dateParts = input.date.split("-");
-    const year = dateParts[0] || "";
-    const month = dateParts[1] || "";
-    const day = dateParts[2] || "";
+    const dateParts = input.date.split('-')
+    const year = dateParts[0] || ''
+    const month = dateParts[1] || ''
+    const day = dateParts[2] || ''
 
     // 시트에 추가할 데이터
     // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산(수식)
     // 날짜 형식: YYYY/MM/DD (기존 시트 양식과 일치)
-    const formattedDate = input.date.replace(/-/g, "/");
+    const formattedDate = input.date.replace(/-/g, '/')
     const rowData = [
-      "", // A: 빈 칸
+      '', // A: 빈 칸
       formattedDate, // B: 일자 (YYYY/MM/DD 형식)
       year, // C: 연도
       `${Number(month)}월`, // D: 월 (2월 형식, 02월 아님)
       `${Number(day)}일`, // E: 일 (3일 형식, 03일 아님)
       input.ticker, // F: 종목코드
       input.name || input.ticker, // G: 종목명
-      input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : "", // H: 원화 배당금
-      input.amountUSD > 0 ? input.amountUSD : "", // I: 외화 배당금 (숫자만)
+      input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : '', // H: 원화 배당금
+      input.amountUSD > 0 ? input.amountUSD : '', // I: 외화 배당금 (숫자만)
       '=INDIRECT("H"&ROW())+INDIRECT("I"&ROW())*GOOGLEFINANCE("usdkrw")', // J: 원화환산 (수식)
-      input.account || "", // K: 계좌 유형
-    ];
+      input.account || '', // K: 계좌 유형
+    ]
 
     // 기존 데이터 마지막 행 다음에 추가 (append API가 자동으로 마지막 행 감지)
-    console.log("[saveDividend] Appending row:", rowData);
+    console.log('[saveDividend] Appending row:', rowData)
 
-    await appendSheetData(
-      session.accessToken,
-      user.spreadsheet_id,
-      "'7. 배당내역'!A:K",
-      [rowData]
-    );
+    await appendSheetData(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!A:K", [rowData])
 
-    console.log("[saveDividend] Success!");
+    console.log('[saveDividend] Success!')
 
-    revalidatePath("/dashboard");
-    revalidatePath("/transactions");
+    revalidatePath('/dashboard')
+    revalidatePath('/transactions')
 
-    return { success: true };
+    return { success: true }
   } catch (error: any) {
-    console.error("saveDividend error:", error);
+    console.error('saveDividend error:', error)
 
     // 더 구체적인 에러 메시지 반환
-    const errorMessage =
-      error?.message || error?.toString() || "알 수 없는 오류";
+    const errorMessage = error?.message || error?.toString() || '알 수 없는 오류'
 
-    if (error?.code === 401 || errorMessage.includes("401")) {
+    if (error?.code === 401 || errorMessage.includes('401')) {
       return {
         success: false,
-        error: "인증이 만료되었습니다. 다시 로그인해주세요.",
-      };
+        error: '인증이 만료되었습니다. 다시 로그인해주세요.',
+      }
     }
-    if (error?.code === 403 || errorMessage.includes("403")) {
-      return { success: false, error: "스프레드시트에 접근 권한이 없습니다." };
+    if (error?.code === 403 || errorMessage.includes('403')) {
+      return { success: false, error: '스프레드시트에 접근 권한이 없습니다.' }
     }
-    if (error?.code === 404 || errorMessage.includes("404")) {
+    if (error?.code === 404 || errorMessage.includes('404')) {
       return {
         success: false,
-        error: "스프레드시트 또는 시트를 찾을 수 없습니다.",
-      };
+        error: '스프레드시트 또는 시트를 찾을 수 없습니다.',
+      }
     }
 
-    return { success: false, error: `저장 실패: ${errorMessage}` };
+    return { success: false, error: `저장 실패: ${errorMessage}` }
   }
 }
 
 /**
  * 여러 배당내역을 한번에 Google Sheet에 저장
  */
-export async function saveDividends(
-  inputs: DividendInput[],
-): Promise<SaveDividendResult> {
-  const session = await auth();
+export async function saveDividends(inputs: DividendInput[]): Promise<SaveDividendResult> {
+  const session = await auth()
 
   if (!session?.user?.id) {
-    return { success: false, error: "로그인이 필요합니다." };
+    return { success: false, error: '로그인이 필요합니다.' }
   }
 
   if (!session.accessToken) {
-    return { success: false, error: "Google 인증이 필요합니다." };
+    return { success: false, error: 'Google 인증이 필요합니다.' }
   }
 
   if (inputs.length === 0) {
-    return { success: false, error: "저장할 배당내역이 없습니다." };
+    return { success: false, error: '저장할 배당내역이 없습니다.' }
   }
 
-  const supabase = createServiceClient();
+  const supabase = createServiceClient()
 
   try {
     // 사용자의 spreadsheet_id 조회
     let { data: user } = await supabase
-      .from("users")
-      .select("spreadsheet_id")
-      .eq("id", session.user.id)
-      .single();
+      .from('users')
+      .select('spreadsheet_id')
+      .eq('id', session.user.id)
+      .single()
 
     if (!user && session.user.email) {
       const { data: userByEmail } = await supabase
-        .from("users")
-        .select("id, spreadsheet_id")
-        .eq("email", session.user.email)
-        .single();
+        .from('users')
+        .select('id, spreadsheet_id')
+        .eq('email', session.user.email)
+        .single()
 
       if (userByEmail) {
-        user = userByEmail;
+        user = userByEmail
       }
     }
 
     // Standalone 모드: DB에만 저장
     if (!user?.spreadsheet_id) {
-      console.log("[saveDividends] Standalone mode - saving to DB only");
+      console.log('[saveDividends] Standalone mode - saving to DB only')
 
-      const userId = (user as any)?.id || session.user.id;
+      const userId = (user as any)?.id || session.user.id
       if (!userId) {
-        return { success: false, error: "사용자 정보를 찾을 수 없습니다." };
+        return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
       }
 
       // 환율 조회 (USD 배당금 원화 환산용)
-      const exchangeRate = await getUSDKRWRate();
+      const exchangeRate = await getUSDKRWRate()
 
       const dividendRows = inputs.map((input) => ({
         user_id: userId,
@@ -237,348 +220,316 @@ export async function saveDividends(
         dividend_date: input.date,
         account: input.account || null,
         sheet_synced: false,
-      }));
+      }))
 
-      const { error: dbError } = await supabase
-        .from("dividends")
-        .insert(dividendRows);
+      const { error: dbError } = await supabase.from('dividends').insert(dividendRows)
 
       if (dbError) {
-        console.error("[saveDividends] DB error:", dbError);
-        return { success: false, error: "배당내역 저장에 실패했습니다." };
+        console.error('[saveDividends] DB error:', dbError)
+        return { success: false, error: '배당내역 저장에 실패했습니다.' }
       }
 
-      revalidatePath("/dashboard");
-      revalidatePath("/transactions");
-      return { success: true };
+      revalidatePath('/dashboard')
+      revalidatePath('/transactions')
+      return { success: true }
     }
 
     // 모든 배당내역을 행 데이터로 변환
     // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산(수식)
     const rows = inputs.map((input) => {
-      const dateParts = input.date.split("-");
-      const year = dateParts[0] || "";
-      const month = dateParts[1] || "";
-      const day = dateParts[2] || "";
+      const dateParts = input.date.split('-')
+      const year = dateParts[0] || ''
+      const month = dateParts[1] || ''
+      const day = dateParts[2] || ''
 
       // 날짜 형식: YYYY/MM/DD (기존 시트 양식과 일치)
-      const formattedDate = input.date.replace(/-/g, "/");
+      const formattedDate = input.date.replace(/-/g, '/')
 
       return [
-        "", // A: 빈 칸
+        '', // A: 빈 칸
         formattedDate, // B: 일자 (YYYY/MM/DD 형식)
         year, // C: 연도
         `${Number(month)}월`, // D: 월 (2월 형식, 02월 아님)
         `${Number(day)}일`, // E: 일 (3일 형식, 03일 아님)
         input.ticker, // F: 종목코드
         input.name || input.ticker, // G: 종목명
-        input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : "", // H: 원화 배당금
-        input.amountUSD > 0 ? input.amountUSD : "", // I: 외화 배당금 (숫자만)
+        input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : '', // H: 원화 배당금
+        input.amountUSD > 0 ? input.amountUSD : '', // I: 외화 배당금 (숫자만)
         '=INDIRECT("H"&ROW())+INDIRECT("I"&ROW())*GOOGLEFINANCE("usdkrw")', // J: 원화환산 (수식)
-        input.account || "", // K: 계좌 유형
-      ];
-    });
+        input.account || '', // K: 계좌 유형
+      ]
+    })
 
     // 한번에 여러 행 추가
-    await appendSheetData(
-      session.accessToken,
-      user.spreadsheet_id,
-      "'7. 배당내역'!A:K",
-      rows,
-    );
+    await appendSheetData(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!A:K", rows)
 
-    revalidatePath("/dashboard");
-    revalidatePath("/transactions");
+    revalidatePath('/dashboard')
+    revalidatePath('/transactions')
 
-    return { success: true };
+    return { success: true }
   } catch (error: any) {
-    console.error("saveDividends error:", error);
+    console.error('saveDividends error:', error)
 
     // 더 구체적인 에러 메시지 반환
-    const errorMessage =
-      error?.message || error?.toString() || "알 수 없는 오류";
+    const errorMessage = error?.message || error?.toString() || '알 수 없는 오류'
 
-    if (error?.code === 401 || errorMessage.includes("401")) {
+    if (error?.code === 401 || errorMessage.includes('401')) {
       return {
         success: false,
-        error: "인증이 만료되었습니다. 다시 로그인해주세요.",
-      };
+        error: '인증이 만료되었습니다. 다시 로그인해주세요.',
+      }
     }
-    if (error?.code === 403 || errorMessage.includes("403")) {
-      return { success: false, error: "스프레드시트에 접근 권한이 없습니다." };
+    if (error?.code === 403 || errorMessage.includes('403')) {
+      return { success: false, error: '스프레드시트에 접근 권한이 없습니다.' }
     }
-    if (error?.code === 404 || errorMessage.includes("404")) {
+    if (error?.code === 404 || errorMessage.includes('404')) {
       return {
         success: false,
-        error: "스프레드시트 또는 시트를 찾을 수 없습니다.",
-      };
+        error: '스프레드시트 또는 시트를 찾을 수 없습니다.',
+      }
     }
 
-    return { success: false, error: `저장 실패: ${errorMessage}` };
+    return { success: false, error: `저장 실패: ${errorMessage}` }
   }
 }
 
 export interface DeleteDividendInput {
-  date: string; // YYYY-MM-DD
-  ticker: string;
-  amountKRW: number;
-  amountUSD: number;
+  date: string // YYYY-MM-DD
+  ticker: string
+  amountKRW: number
+  amountUSD: number
 }
 
 export interface UpdateDividendInput {
   // 원래 값 (매칭용)
-  originalDate: string;
-  originalTicker: string;
-  originalAmountKRW: number;
-  originalAmountUSD: number;
+  originalDate: string
+  originalTicker: string
+  originalAmountKRW: number
+  originalAmountUSD: number
   // 새 값
-  newDate: string;
-  newTicker: string;
-  newName: string;
-  newAmountKRW: number;
-  newAmountUSD: number;
-  newAccount?: string; // "일반 계좌" | "절세 계좌"
+  newDate: string
+  newTicker: string
+  newName: string
+  newAmountKRW: number
+  newAmountUSD: number
+  newAccount?: string // "일반 계좌" | "절세 계좌"
 }
 
 // 날짜 파싱 헬퍼 (시리얼 넘버 및 다양한 형식 지원)
 function parseSheetDate(val: any): string | null {
-  if (!val) return null;
+  if (!val) return null
 
   // 시리얼 넘버 처리 (Google Sheets는 숫자로 날짜를 저장)
-  if (typeof val === "number" && val > 30000 && val < 100000) {
-    const date = new Date((val - 25569) * 86400 * 1000);
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(date.getUTCDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+  if (typeof val === 'number' && val > 30000 && val < 100000) {
+    const date = new Date((val - 25569) * 86400 * 1000)
+    const year = date.getUTCFullYear()
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(date.getUTCDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
 
-  const str = String(val).trim();
+  const str = String(val).trim()
 
   // YYYY/MM/DD 또는 YYYY-MM-DD 형식
-  const match1 = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+  const match1 = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/)
   if (match1) {
-    return `${match1[1]}-${match1[2]?.padStart(2, "0")}-${match1[3]?.padStart(
-      2,
-      "0",
-    )}`;
+    return `${match1[1]}-${match1[2]?.padStart(2, '0')}-${match1[3]?.padStart(2, '0')}`
   }
 
   // MM/DD/YYYY 형식
-  const match2 = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  const match2 = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
   if (match2) {
-    return `${match2[3]}-${match2[1]?.padStart(2, "0")}-${match2[2]?.padStart(
-      2,
-      "0",
-    )}`;
+    return `${match2[3]}-${match2[1]?.padStart(2, '0')}-${match2[2]?.padStart(2, '0')}`
   }
 
-  return null;
+  return null
 }
 
 // 숫자 파싱 헬퍼
 function parseSheetNumber(val: any): number {
-  if (!val) return 0;
-  const cleaned = String(val).replace(/[₩$,\s]/g, "");
-  return Number.parseFloat(cleaned) || 0;
+  if (!val) return 0
+  const cleaned = String(val).replace(/[₩$,\s]/g, '')
+  return Number.parseFloat(cleaned) || 0
 }
 
 /**
  * 배당내역 삭제 (Standalone 또는 Supabase + Google Sheet)
  */
-export async function deleteDividend(
-  input: DeleteDividendInput,
-): Promise<SaveDividendResult> {
-  console.log("===========================================");
-  console.log("[deleteDividend] FUNCTION CALLED");
-  console.log("[deleteDividend] Input:", JSON.stringify(input));
-  console.log("===========================================");
+export async function deleteDividend(input: DeleteDividendInput): Promise<SaveDividendResult> {
+  console.log('===========================================')
+  console.log('[deleteDividend] FUNCTION CALLED')
+  console.log('[deleteDividend] Input:', JSON.stringify(input))
+  console.log('===========================================')
 
-  const session = await auth();
+  const session = await auth()
 
   if (!session?.user?.id) {
-    console.log("[deleteDividend] No session user id");
-    return { success: false, error: "로그인이 필요합니다." };
+    console.log('[deleteDividend] No session user id')
+    return { success: false, error: '로그인이 필요합니다.' }
   }
 
-  const supabase = createServiceClient();
+  const supabase = createServiceClient()
 
   try {
     // 사용자의 spreadsheet_id 조회
     let { data: user } = await supabase
-      .from("users")
-      .select("id, spreadsheet_id")
-      .eq("id", session.user.id)
-      .single();
+      .from('users')
+      .select('id, spreadsheet_id')
+      .eq('id', session.user.id)
+      .single()
 
     if (!user && session.user.email) {
       const { data: userByEmail } = await supabase
-        .from("users")
-        .select("id, spreadsheet_id")
-        .eq("email", session.user.email)
-        .single();
+        .from('users')
+        .select('id, spreadsheet_id')
+        .eq('email', session.user.email)
+        .single()
 
       if (userByEmail) {
-        user = userByEmail;
+        user = userByEmail
       }
     }
 
     if (!user?.id) {
-      console.log("[deleteDividend] No user found");
-      return { success: false, error: "사용자 정보를 찾을 수 없습니다." };
+      console.log('[deleteDividend] No user found')
+      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
     }
 
-    const userId = user.id as string;
+    const userId = user.id as string
 
     // Standalone 모드: DB에서만 삭제
     if (!user.spreadsheet_id) {
-      console.log("[deleteDividend] Standalone mode - deleting from DB only");
+      console.log('[deleteDividend] Standalone mode - deleting from DB only')
 
       const { error: dbError } = await supabase
-        .from("dividends")
+        .from('dividends')
         .delete()
-        .eq("user_id", userId)
-        .eq("ticker", input.ticker)
-        .eq("dividend_date", input.date)
-        .eq("amount_krw", input.amountKRW)
-        .eq("amount_usd", input.amountUSD);
+        .eq('user_id', userId)
+        .eq('ticker', input.ticker)
+        .eq('dividend_date', input.date)
+        .eq('amount_krw', input.amountKRW)
+        .eq('amount_usd', input.amountUSD)
 
       if (dbError) {
-        console.error("[deleteDividend] DB delete error:", dbError);
-        return { success: false, error: "배당내역 삭제에 실패했습니다." };
+        console.error('[deleteDividend] DB delete error:', dbError)
+        return { success: false, error: '배당내역 삭제에 실패했습니다.' }
       }
 
-      console.log("[deleteDividend] Standalone mode - Success!");
-      revalidatePath("/dashboard");
-      revalidatePath("/transactions");
-      return { success: true };
+      console.log('[deleteDividend] Standalone mode - Success!')
+      revalidatePath('/dashboard')
+      revalidatePath('/transactions')
+      return { success: true }
     }
 
     // Sheet 모드: Google Sheet에서도 삭제
     if (!session.accessToken) {
-      console.log("[deleteDividend] No access token");
-      return { success: false, error: "Google 인증이 필요합니다." };
+      console.log('[deleteDividend] No access token')
+      return { success: false, error: 'Google 인증이 필요합니다.' }
     }
 
-    console.log(
-      "[deleteDividend] User found, spreadsheet_id:",
-      user.spreadsheet_id,
-    );
+    console.log('[deleteDividend] User found, spreadsheet_id:', user.spreadsheet_id)
 
     // 1. Supabase에서 삭제
     const { error: dbError, count } = await supabase
-      .from("dividends")
+      .from('dividends')
       .delete()
-      .eq("user_id", userId)
-      .eq("ticker", input.ticker)
-      .eq("dividend_date", input.date)
-      .eq("amount_krw", input.amountKRW)
-      .eq("amount_usd", input.amountUSD);
+      .eq('user_id', userId)
+      .eq('ticker', input.ticker)
+      .eq('dividend_date', input.date)
+      .eq('amount_krw', input.amountKRW)
+      .eq('amount_usd', input.amountUSD)
 
-    console.log(
-      "[deleteDividend] Supabase delete result - error:",
-      dbError,
-      "count:",
-      count,
-    );
+    console.log('[deleteDividend] Supabase delete result - error:', dbError, 'count:', count)
 
     // 2. Google Sheet에서 해당 행 찾아서 삭제
-    const sheetName = "7. 배당내역";
-    console.log("[deleteDividend] Fetching sheet data...");
+    const sheetName = '7. 배당내역'
+    console.log('[deleteDividend] Fetching sheet data...')
     const rows = await fetchSheetData(
       session.accessToken,
       user.spreadsheet_id,
       `'${sheetName}'!A:K`,
-    );
+    )
 
-    console.log("[deleteDividend] Sheet rows count:", rows?.length || 0);
+    console.log('[deleteDividend] Sheet rows count:', rows?.length || 0)
 
     if (rows && rows.length > 1) {
-      let found = false;
+      let found = false
 
       // 헤더 행 분석하여 컬럼 인덱스 찾기
-      const headerRow = rows[0] || [];
-      let dateCol = -1;
-      let tickerCol = -1;
-      let amountKRWCol = -1;
-      let amountUSDCol = -1;
+      const headerRow = rows[0] || []
+      let dateCol = -1
+      let tickerCol = -1
+      let amountKRWCol = -1
+      let amountUSDCol = -1
 
       for (let i = 0; i < headerRow.length; i++) {
-        const header = String(headerRow[i] || "").toLowerCase();
-        if (
-          header.includes("날짜") ||
-          header.includes("date") ||
-          header.includes("일자")
-        ) {
-          dateCol = i;
+        const header = String(headerRow[i] || '').toLowerCase()
+        if (header.includes('날짜') || header.includes('date') || header.includes('일자')) {
+          dateCol = i
         } else if (
-          header.includes("종목코드") ||
-          header.includes("ticker") ||
-          header.includes("코드")
+          header.includes('종목코드') ||
+          header.includes('ticker') ||
+          header.includes('코드')
         ) {
-          tickerCol = i;
+          tickerCol = i
+        } else if (header.includes('원화') || header.includes('krw') || header.includes('배당금')) {
+          if (amountKRWCol === -1) amountKRWCol = i
         } else if (
-          header.includes("원화") ||
-          header.includes("krw") ||
-          header.includes("배당금")
+          header.includes('달러') ||
+          header.includes('usd') ||
+          header.includes('$') ||
+          header.includes('외화')
         ) {
-          if (amountKRWCol === -1) amountKRWCol = i;
-        } else if (
-          header.includes("달러") ||
-          header.includes("usd") ||
-          header.includes("$") ||
-          header.includes("외화")
-        ) {
-          amountUSDCol = i;
+          amountUSDCol = i
         }
       }
 
       // 헤더를 찾지 못한 경우 기본값 사용
       // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산
-      if (dateCol === -1) dateCol = 1; // B열 (날짜)
-      if (tickerCol === -1) tickerCol = 5; // F열 (종목코드)
-      if (amountKRWCol === -1) amountKRWCol = 7; // H열 (원화 배당금)
-      if (amountUSDCol === -1) amountUSDCol = 8; // I열 (외화 배당금)
+      if (dateCol === -1) dateCol = 1 // B열 (날짜)
+      if (tickerCol === -1) tickerCol = 5 // F열 (종목코드)
+      if (amountKRWCol === -1) amountKRWCol = 7 // H열 (원화 배당금)
+      if (amountUSDCol === -1) amountUSDCol = 8 // I열 (외화 배당금)
 
-      console.log("[deleteDividend] Column indices:", {
+      console.log('[deleteDividend] Column indices:', {
         dateCol,
         tickerCol,
         amountKRWCol,
         amountUSDCol,
-      });
+      })
 
       // 첫 몇 행의 raw 데이터 로깅
-      console.log("[deleteDividend] First 3 rows raw data:");
+      console.log('[deleteDividend] First 3 rows raw data:')
       for (let i = 0; i < Math.min(3, rows.length); i++) {
-        console.log(`[deleteDividend] Row ${i}:`, JSON.stringify(rows[i]));
+        console.log(`[deleteDividend] Row ${i}:`, JSON.stringify(rows[i]))
       }
 
       // 매칭되는 행 찾기 (날짜 + 종목코드 + 금액)
       for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || !Array.isArray(row)) continue;
+        const row = rows[i]
+        if (!row || !Array.isArray(row)) continue
 
         // 날짜 찾기 - 여러 컬럼 시도
-        let rowDate: string | null = null;
+        let rowDate: string | null = null
         for (let col = 0; col < Math.min(row.length, 5); col++) {
-          rowDate = parseSheetDate(row[col]);
-          if (rowDate) break;
+          rowDate = parseSheetDate(row[col])
+          if (rowDate) break
         }
 
-        if (!rowDate) continue; // 유효한 날짜 없으면 skip
+        if (!rowDate) continue // 유효한 날짜 없으면 skip
 
-        const rowTicker = String(row[tickerCol] || "").trim();
-        const rowAmountKRW = parseSheetNumber(row[amountKRWCol]);
-        const rowAmountUSD = parseSheetNumber(row[amountUSDCol]);
+        const rowTicker = String(row[tickerCol] || '').trim()
+        const rowAmountKRW = parseSheetNumber(row[amountKRWCol])
+        const rowAmountUSD = parseSheetNumber(row[amountUSDCol])
 
         // 처음 몇 개 행만 상세 로깅
         if (i <= 5) {
           console.log(
             `[deleteDividend] Row ${i}: date=${rowDate}, ticker=${rowTicker}, krw=${rowAmountKRW}, usd=${rowAmountUSD}`,
-          );
+          )
           console.log(
             `[deleteDividend] Input: date=${input.date}, ticker=${input.ticker}, krw=${input.amountKRW}, usd=${input.amountUSD}`,
-          );
+          )
         }
 
         if (
@@ -587,113 +538,106 @@ export async function deleteDividend(
           Math.abs(rowAmountKRW - input.amountKRW) < 1 &&
           Math.abs(rowAmountUSD - input.amountUSD) < 0.01
         ) {
-          console.log(`[deleteDividend] Match found at row ${i}, deleting...`);
+          console.log(`[deleteDividend] Match found at row ${i}, deleting...`)
           // 행 삭제 (i는 0-based index)
-          await deleteSheetRow(
-            session.accessToken,
-            user.spreadsheet_id,
-            sheetName,
-            i,
-          );
-          found = true;
-          break;
+          await deleteSheetRow(session.accessToken, user.spreadsheet_id, sheetName, i)
+          found = true
+          break
         }
       }
       if (!found) {
-        console.log("[deleteDividend] No matching row found in sheet");
+        console.log('[deleteDividend] No matching row found in sheet')
       }
     }
 
-    revalidatePath("/dashboard");
-    revalidatePath("/transactions");
+    revalidatePath('/dashboard')
+    revalidatePath('/transactions')
 
-    console.log("[deleteDividend] Success");
-    return { success: true };
+    console.log('[deleteDividend] Success')
+    return { success: true }
   } catch (error: any) {
-    console.error("[deleteDividend] Error:", error);
-    const errorMessage = error?.message || "알 수 없는 오류";
-    return { success: false, error: `삭제 실패: ${errorMessage}` };
+    console.error('[deleteDividend] Error:', error)
+    const errorMessage = error?.message || '알 수 없는 오류'
+    return { success: false, error: `삭제 실패: ${errorMessage}` }
   }
 }
 
 /**
  * 배당 내역 수정 (Supabase + Google Sheet)
  */
-export async function updateDividend(
-  input: UpdateDividendInput,
-): Promise<SaveDividendResult> {
-  console.log("[updateDividend] Called with input:", JSON.stringify(input));
+export async function updateDividend(input: UpdateDividendInput): Promise<SaveDividendResult> {
+  console.log('[updateDividend] Called with input:', JSON.stringify(input))
 
-  const session = await auth();
+  const session = await auth()
 
   if (!session?.user?.id) {
-    return { success: false, error: "로그인이 필요합니다." };
+    return { success: false, error: '로그인이 필요합니다.' }
   }
 
   if (!session.accessToken) {
-    return { success: false, error: "Google 인증이 필요합니다." };
+    return { success: false, error: 'Google 인증이 필요합니다.' }
   }
 
-  const supabase = createServiceClient();
+  const supabase = createServiceClient()
 
   try {
     // 사용자의 spreadsheet_id 조회
     let { data: user } = await supabase
-      .from("users")
-      .select("id, spreadsheet_id")
-      .eq("id", session.user.id)
-      .single();
+      .from('users')
+      .select('id, spreadsheet_id')
+      .eq('id', session.user.id)
+      .single()
 
     if (!user && session.user.email) {
       const { data: userByEmail } = await supabase
-        .from("users")
-        .select("id, spreadsheet_id")
-        .eq("email", session.user.email)
-        .single();
+        .from('users')
+        .select('id, spreadsheet_id')
+        .eq('email', session.user.email)
+        .single()
 
       if (userByEmail) {
-        user = userByEmail;
+        user = userByEmail
       }
     }
 
     if (!user?.spreadsheet_id) {
-      return { success: false, error: "연동된 스프레드시트가 없습니다." };
+      return { success: false, error: '연동된 스프레드시트가 없습니다.' }
     }
 
-    const userId = user.id as string;
+    const userId = user.id as string
 
     // 1. Google Sheet에서 해당 행 찾아서 수정
-    const sheetName = "7. 배당내역";
+    const sheetName = '7. 배당내역'
     const rows = await fetchSheetData(
       session.accessToken,
       user.spreadsheet_id,
       `'${sheetName}'!A:K`,
-    );
+    )
 
     if (rows && rows.length > 1) {
       // 컬럼 인덱스 (기본값)
       // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산, K=계좌유형
-      const tickerCol = 5; // F열 (종목코드)
-      const amountKRWCol = 7; // H열 (원화 배당금)
-      const amountUSDCol = 8; // I열 (외화 배당금)
+      const tickerCol = 5 // F열 (종목코드)
+      const amountKRWCol = 7 // H열 (원화 배당금)
+      const amountUSDCol = 8 // I열 (외화 배당금)
 
       // 매칭되는 행 찾기
       for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || !Array.isArray(row)) continue;
+        const row = rows[i]
+        if (!row || !Array.isArray(row)) continue
 
         // 날짜 찾기
-        let rowDate: string | null = null;
+        let rowDate: string | null = null
         for (let col = 0; col < Math.min(row.length, 5); col++) {
-          rowDate = parseSheetDate(row[col]);
-          if (rowDate) break;
+          rowDate = parseSheetDate(row[col])
+          if (rowDate) break
         }
 
-        if (!rowDate) continue;
+        if (!rowDate) continue
 
-        const rowTicker = String(row[tickerCol] || "").trim();
-        const rowAmountKRW = parseSheetNumber(row[amountKRWCol]);
-        const rowAmountUSD = parseSheetNumber(row[amountUSDCol]);
+        const rowTicker = String(row[tickerCol] || '').trim()
+        const rowAmountKRW = parseSheetNumber(row[amountKRWCol])
+        const rowAmountUSD = parseSheetNumber(row[amountUSDCol])
 
         if (
           rowDate === input.originalDate &&
@@ -701,56 +645,52 @@ export async function updateDividend(
           Math.abs(rowAmountKRW - input.originalAmountKRW) < 1 &&
           Math.abs(rowAmountUSD - input.originalAmountUSD) < 0.01
         ) {
-          console.log(`[updateDividend] Match found at row ${i}, updating...`);
+          console.log(`[updateDividend] Match found at row ${i}, updating...`)
 
           // 새 날짜 파싱
-          const dateParts = input.newDate.split("-");
-          const year = dateParts[0] || "";
-          const month = dateParts[1] || "";
-          const day = dateParts[2] || "";
+          const dateParts = input.newDate.split('-')
+          const year = dateParts[0] || ''
+          const month = dateParts[1] || ''
+          const day = dateParts[2] || ''
 
           // 시트 업데이트
           // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산(수식)
           // 날짜 형식: YYYY/MM/DD (기존 시트 양식과 일치)
-          const formattedNewDate = input.newDate.replace(/-/g, "/");
+          const formattedNewDate = input.newDate.replace(/-/g, '/')
           const newRowData = [
-            "", // A: 빈 칸
+            '', // A: 빈 칸
             formattedNewDate, // B: 날짜 (YYYY/MM/DD 형식)
             year, // C: 연도
             `${Number(month)}월`, // D: 월 (2월 형식, 02월 아님)
             `${Number(day)}일`, // E: 일 (3일 형식, 03일 아님)
             input.newTicker, // F: 종목코드
             input.newName || input.newTicker, // G: 종목명
-            input.newAmountKRW > 0
-              ? `₩${input.newAmountKRW.toLocaleString()}`
-              : "", // H: 원화 배당금
-            input.newAmountUSD > 0 ? input.newAmountUSD : "", // I: 외화 배당금 (숫자만)
+            input.newAmountKRW > 0 ? `₩${input.newAmountKRW.toLocaleString()}` : '', // H: 원화 배당금
+            input.newAmountUSD > 0 ? input.newAmountUSD : '', // I: 외화 배당금 (숫자만)
             '=INDIRECT("H"&ROW())+INDIRECT("I"&ROW())*GOOGLEFINANCE("usdkrw")', // J: 원화환산 (수식)
-            input.newAccount || "", // K: 계좌 유형
-          ];
+            input.newAccount || '', // K: 계좌 유형
+          ]
 
           // Google Sheets API로 행 업데이트
           const response = await fetch(
             `https://sheets.googleapis.com/v4/spreadsheets/${
               user.spreadsheet_id
-            }/values/'${sheetName}'!A${i + 1}:K${
-              i + 1
-            }?valueInputOption=USER_ENTERED`,
+            }/values/'${sheetName}'!A${i + 1}:K${i + 1}?valueInputOption=USER_ENTERED`,
             {
-              method: "PUT",
+              method: 'PUT',
               headers: {
                 Authorization: `Bearer ${session.accessToken}`,
-                "Content-Type": "application/json",
+                'Content-Type': 'application/json',
               },
               body: JSON.stringify({ values: [newRowData] }),
             },
-          );
+          )
 
           if (!response.ok) {
-            throw new Error(`Sheet update failed: ${response.status}`);
+            throw new Error(`Sheet update failed: ${response.status}`)
           }
 
-          break;
+          break
         }
       }
     }
@@ -758,15 +698,15 @@ export async function updateDividend(
     // 2. Supabase 업데이트
     // 기존 레코드 삭제 후 새로 생성 (unique constraint 때문)
     await supabase
-      .from("dividends")
+      .from('dividends')
       .delete()
-      .eq("user_id", userId)
-      .eq("ticker", input.originalTicker)
-      .eq("dividend_date", input.originalDate)
-      .eq("amount_krw", input.originalAmountKRW)
-      .eq("amount_usd", input.originalAmountUSD);
+      .eq('user_id', userId)
+      .eq('ticker', input.originalTicker)
+      .eq('dividend_date', input.originalDate)
+      .eq('amount_krw', input.originalAmountKRW)
+      .eq('amount_usd', input.originalAmountUSD)
 
-    await supabase.from("dividends").insert({
+    await supabase.from('dividends').insert({
       user_id: userId,
       ticker: input.newTicker,
       name: input.newName,
@@ -775,16 +715,16 @@ export async function updateDividend(
       dividend_date: input.newDate,
       account: input.newAccount || null,
       sheet_synced: true,
-    });
+    })
 
-    revalidatePath("/dashboard");
-    revalidatePath("/transactions");
+    revalidatePath('/dashboard')
+    revalidatePath('/transactions')
 
-    console.log("[updateDividend] Success");
-    return { success: true };
+    console.log('[updateDividend] Success')
+    return { success: true }
   } catch (error: any) {
-    console.error("[updateDividend] Error:", error);
-    const errorMessage = error?.message || "알 수 없는 오류";
-    return { success: false, error: `수정 실패: ${errorMessage}` };
+    console.error('[updateDividend] Error:', error)
+    const errorMessage = error?.message || '알 수 없는 오류'
+    return { success: false, error: `수정 실패: ${errorMessage}` }
   }
 }

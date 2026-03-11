@@ -10,108 +10,107 @@
  * - 장외시간: 1시간 캐시
  */
 
-import { getKISToken, KIS_BASE_URL } from './kis-token';
+import { KIS_BASE_URL, getKISToken } from './kis-token'
 
 // 캐시 유효 시간
-const MARKET_HOURS_CACHE_MS = 5 * 60 * 1000; // 5분
-const OFF_HOURS_CACHE_MS = 60 * 60 * 1000; // 1시간
+const MARKET_HOURS_CACHE_MS = 5 * 60 * 1000 // 5분
+const OFF_HOURS_CACHE_MS = 60 * 60 * 1000 // 1시간
 
 export interface IndexData {
-  name: string;
-  code: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  timestamp: number;
-  source: string;
+  name: string
+  code: string
+  price: number
+  change: number
+  changePercent: number
+  timestamp: number
+  source: string
 }
 
 interface IndexCache {
-  data: IndexData;
-  timestamp: number;
+  data: IndexData
+  timestamp: number
 }
 
 // 메모리 캐시
-const indexCache = new Map<string, IndexCache>();
+const indexCache = new Map<string, IndexCache>()
 
 interface KISIndexPriceResponse {
-  rt_cd: string;
-  msg_cd: string;
-  msg1: string;
+  rt_cd: string
+  msg_cd: string
+  msg1: string
   output: {
-    bstp_nmix_prpr: string; // 업종 지수 현재가
-    bstp_nmix_prdy_vrss: string; // 전일 대비
-    prdy_vrss_sign: string; // 전일 대비 부호
-    bstp_nmix_prdy_ctrt: string; // 등락률
-    acml_vol: string; // 거래량
-    bstp_nmix_oprc: string; // 시가
-    bstp_nmix_hgpr: string; // 고가
-    bstp_nmix_lwpr: string; // 저가
-  };
+    bstp_nmix_prpr: string // 업종 지수 현재가
+    bstp_nmix_prdy_vrss: string // 전일 대비
+    prdy_vrss_sign: string // 전일 대비 부호
+    bstp_nmix_prdy_ctrt: string // 등락률
+    acml_vol: string // 거래량
+    bstp_nmix_oprc: string // 시가
+    bstp_nmix_hgpr: string // 고가
+    bstp_nmix_lwpr: string // 저가
+  }
 }
 
 interface KISOverseasPriceResponse {
-  rt_cd: string;
-  msg_cd: string;
-  msg1: string;
+  rt_cd: string
+  msg_cd: string
+  msg1: string
   output: {
-    rsym: string;
-    zdiv: string;
-    base: string;
-    pvol: string;
-    last: string;
-    sign: string;
-    diff: string;
-    rate: string;
-    tvol: string;
-    tamt: string;
-    ordy: string;
-  };
+    rsym: string
+    zdiv: string
+    base: string
+    pvol: string
+    last: string
+    sign: string
+    diff: string
+    rate: string
+    tvol: string
+    tamt: string
+    ordy: string
+  }
 }
 
 /**
  * 시장 운영 시간인지 확인
  */
 function isMarketHours(market: 'KR' | 'US'): boolean {
-  const now = new Date();
-  const hours = now.getHours();
-  const minutes = now.getMinutes();
-  const day = now.getDay();
+  const now = new Date()
+  const hours = now.getHours()
+  const minutes = now.getMinutes()
+  const day = now.getDay()
 
   // 주말은 장 마감
-  if (day === 0 || day === 6) return false;
+  if (day === 0 || day === 6) return false
 
   if (market === 'KR') {
     // 한국 시장: 09:00 ~ 15:30 (KST)
-    const time = hours * 100 + minutes;
-    return time >= 900 && time <= 1530;
-  } else {
-    // 미국 시장: 22:30 ~ 05:00 (KST, 다음날)
-    const time = hours * 100 + minutes;
-    return time >= 2230 || time <= 500;
+    const time = hours * 100 + minutes
+    return time >= 900 && time <= 1530
   }
+  // 미국 시장: 22:30 ~ 05:00 (KST, 다음날)
+  const time = hours * 100 + minutes
+  return time >= 2230 || time <= 500
 }
 
 /**
  * 캐시 유효 시간 결정
  */
 function getCacheDuration(market: 'KR' | 'US'): number {
-  return isMarketHours(market) ? MARKET_HOURS_CACHE_MS : OFF_HOURS_CACHE_MS;
+  return isMarketHours(market) ? MARKET_HOURS_CACHE_MS : OFF_HOURS_CACHE_MS
 }
 
 /**
  * 캐시에서 조회
  */
 function getFromCache(code: string, market: 'KR' | 'US'): IndexData | null {
-  const cached = indexCache.get(code);
-  if (!cached) return null;
+  const cached = indexCache.get(code)
+  if (!cached) return null
 
-  const cacheDuration = getCacheDuration(market);
+  const cacheDuration = getCacheDuration(market)
   if (Date.now() - cached.timestamp > cacheDuration) {
-    return null; // 캐시 만료
+    return null // 캐시 만료
   }
 
-  return cached.data;
+  return cached.data
 }
 
 /**
@@ -121,26 +120,26 @@ function saveToCache(code: string, data: IndexData): void {
   indexCache.set(code, {
     data,
     timestamp: Date.now(),
-  });
+  })
 }
 
 /**
  * KOSPI 지수 조회
  */
 export async function getKOSPIIndex(): Promise<IndexData | null> {
-  const cached = getFromCache('KOSPI', 'KR');
+  const cached = getFromCache('KOSPI', 'KR')
   if (cached) {
-    console.log('[Index] Cache hit: KOSPI =', cached.price);
-    return cached;
+    console.log('[Index] Cache hit: KOSPI =', cached.price)
+    return cached
   }
 
-  const token = await getKISToken();
-  if (!token) return null;
+  const token = await getKISToken()
+  if (!token) return null
 
-  const appKey = process.env.KIS_APP_KEY;
-  const appSecret = process.env.KIS_APP_SECRET;
+  const appKey = process.env.KIS_APP_KEY
+  const appSecret = process.env.KIS_APP_SECRET
 
-  if (!appKey || !appSecret) return null;
+  if (!appKey || !appSecret) return null
 
   try {
     const response = await fetch(
@@ -155,38 +154,38 @@ export async function getKOSPIIndex(): Promise<IndexData | null> {
           tr_id: 'FHPUP02100000',
           custtype: 'P',
         },
-      }
-    );
+      },
+    )
 
     if (!response.ok) {
-      console.error('[Index] KOSPI request failed:', response.status);
-      return null;
+      console.error('[Index] KOSPI request failed:', response.status)
+      return null
     }
 
-    const data: KISIndexPriceResponse = await response.json();
+    const data: KISIndexPriceResponse = await response.json()
 
     if (data.rt_cd !== '0') {
-      console.error('[Index] KOSPI API error:', data.msg1);
-      return null;
+      console.error('[Index] KOSPI API error:', data.msg1)
+      return null
     }
 
     const result: IndexData = {
       name: 'KOSPI',
       code: '0001',
-      price: parseFloat(data.output.bstp_nmix_prpr) || 0,
-      change: parseFloat(data.output.bstp_nmix_prdy_vrss) || 0,
-      changePercent: parseFloat(data.output.bstp_nmix_prdy_ctrt) || 0,
+      price: Number.parseFloat(data.output.bstp_nmix_prpr) || 0,
+      change: Number.parseFloat(data.output.bstp_nmix_prdy_vrss) || 0,
+      changePercent: Number.parseFloat(data.output.bstp_nmix_prdy_ctrt) || 0,
       timestamp: Date.now(),
       source: 'kis-index',
-    };
+    }
 
-    saveToCache('KOSPI', result);
-    console.log('[Index] Fetched KOSPI:', result.price);
+    saveToCache('KOSPI', result)
+    console.log('[Index] Fetched KOSPI:', result.price)
 
-    return result;
+    return result
   } catch (error) {
-    console.error('[Index] KOSPI fetch error:', error);
-    return null;
+    console.error('[Index] KOSPI fetch error:', error)
+    return null
   }
 }
 
@@ -194,19 +193,19 @@ export async function getKOSPIIndex(): Promise<IndexData | null> {
  * KOSDAQ 지수 조회
  */
 export async function getKOSDAQIndex(): Promise<IndexData | null> {
-  const cached = getFromCache('KOSDAQ', 'KR');
+  const cached = getFromCache('KOSDAQ', 'KR')
   if (cached) {
-    console.log('[Index] Cache hit: KOSDAQ =', cached.price);
-    return cached;
+    console.log('[Index] Cache hit: KOSDAQ =', cached.price)
+    return cached
   }
 
-  const token = await getKISToken();
-  if (!token) return null;
+  const token = await getKISToken()
+  if (!token) return null
 
-  const appKey = process.env.KIS_APP_KEY;
-  const appSecret = process.env.KIS_APP_SECRET;
+  const appKey = process.env.KIS_APP_KEY
+  const appSecret = process.env.KIS_APP_SECRET
 
-  if (!appKey || !appSecret) return null;
+  if (!appKey || !appSecret) return null
 
   try {
     const response = await fetch(
@@ -221,38 +220,38 @@ export async function getKOSDAQIndex(): Promise<IndexData | null> {
           tr_id: 'FHPUP02100000',
           custtype: 'P',
         },
-      }
-    );
+      },
+    )
 
     if (!response.ok) {
-      console.error('[Index] KOSDAQ request failed:', response.status);
-      return null;
+      console.error('[Index] KOSDAQ request failed:', response.status)
+      return null
     }
 
-    const data: KISIndexPriceResponse = await response.json();
+    const data: KISIndexPriceResponse = await response.json()
 
     if (data.rt_cd !== '0') {
-      console.error('[Index] KOSDAQ API error:', data.msg1);
-      return null;
+      console.error('[Index] KOSDAQ API error:', data.msg1)
+      return null
     }
 
     const result: IndexData = {
       name: 'KOSDAQ',
       code: '1001',
-      price: parseFloat(data.output.bstp_nmix_prpr) || 0,
-      change: parseFloat(data.output.bstp_nmix_prdy_vrss) || 0,
-      changePercent: parseFloat(data.output.bstp_nmix_prdy_ctrt) || 0,
+      price: Number.parseFloat(data.output.bstp_nmix_prpr) || 0,
+      change: Number.parseFloat(data.output.bstp_nmix_prdy_vrss) || 0,
+      changePercent: Number.parseFloat(data.output.bstp_nmix_prdy_ctrt) || 0,
       timestamp: Date.now(),
       source: 'kis-index',
-    };
+    }
 
-    saveToCache('KOSDAQ', result);
-    console.log('[Index] Fetched KOSDAQ:', result.price);
+    saveToCache('KOSDAQ', result)
+    console.log('[Index] Fetched KOSDAQ:', result.price)
 
-    return result;
+    return result
   } catch (error) {
-    console.error('[Index] KOSDAQ fetch error:', error);
-    return null;
+    console.error('[Index] KOSDAQ fetch error:', error)
+    return null
   }
 }
 
@@ -260,19 +259,19 @@ export async function getKOSDAQIndex(): Promise<IndexData | null> {
  * S&P500 지수 조회 (SPY ETF 기반)
  */
 export async function getSP500Index(): Promise<IndexData | null> {
-  const cached = getFromCache('SP500', 'US');
+  const cached = getFromCache('SP500', 'US')
   if (cached) {
-    console.log('[Index] Cache hit: S&P500 =', cached.price);
-    return cached;
+    console.log('[Index] Cache hit: S&P500 =', cached.price)
+    return cached
   }
 
-  const token = await getKISToken();
-  if (!token) return null;
+  const token = await getKISToken()
+  if (!token) return null
 
-  const appKey = process.env.KIS_APP_KEY;
-  const appSecret = process.env.KIS_APP_SECRET;
+  const appKey = process.env.KIS_APP_KEY
+  const appSecret = process.env.KIS_APP_SECRET
 
-  if (!appKey || !appSecret) return null;
+  if (!appKey || !appSecret) return null
 
   try {
     const response = await fetch(
@@ -287,44 +286,44 @@ export async function getSP500Index(): Promise<IndexData | null> {
           tr_id: 'HHDFS00000300',
           custtype: 'P',
         },
-      }
-    );
+      },
+    )
 
     if (!response.ok) {
-      console.error('[Index] S&P500 request failed:', response.status);
-      return null;
+      console.error('[Index] S&P500 request failed:', response.status)
+      return null
     }
 
-    const data: KISOverseasPriceResponse = await response.json();
+    const data: KISOverseasPriceResponse = await response.json()
 
     if (data.rt_cd !== '0') {
-      console.error('[Index] S&P500 API error:', data.msg1);
-      return null;
+      console.error('[Index] S&P500 API error:', data.msg1)
+      return null
     }
 
-    const price = parseFloat(data.output.last) || 0;
+    const price = Number.parseFloat(data.output.last) || 0
     if (price === 0) {
-      console.warn('[Index] S&P500 empty response');
-      return null;
+      console.warn('[Index] S&P500 empty response')
+      return null
     }
 
     const result: IndexData = {
       name: 'S&P500',
       code: 'SPY',
       price,
-      change: parseFloat(data.output.diff) || 0,
-      changePercent: parseFloat(data.output.rate) || 0,
+      change: Number.parseFloat(data.output.diff) || 0,
+      changePercent: Number.parseFloat(data.output.rate) || 0,
       timestamp: Date.now(),
       source: 'kis-etf',
-    };
+    }
 
-    saveToCache('SP500', result);
-    console.log('[Index] Fetched S&P500 (SPY):', result.price);
+    saveToCache('SP500', result)
+    console.log('[Index] Fetched S&P500 (SPY):', result.price)
 
-    return result;
+    return result
   } catch (error) {
-    console.error('[Index] S&P500 fetch error:', error);
-    return null;
+    console.error('[Index] S&P500 fetch error:', error)
+    return null
   }
 }
 
@@ -332,19 +331,19 @@ export async function getSP500Index(): Promise<IndexData | null> {
  * NASDAQ 지수 조회 (QQQ ETF 기반)
  */
 export async function getNASDAQIndex(): Promise<IndexData | null> {
-  const cached = getFromCache('NASDAQ', 'US');
+  const cached = getFromCache('NASDAQ', 'US')
   if (cached) {
-    console.log('[Index] Cache hit: NASDAQ =', cached.price);
-    return cached;
+    console.log('[Index] Cache hit: NASDAQ =', cached.price)
+    return cached
   }
 
-  const token = await getKISToken();
-  if (!token) return null;
+  const token = await getKISToken()
+  if (!token) return null
 
-  const appKey = process.env.KIS_APP_KEY;
-  const appSecret = process.env.KIS_APP_SECRET;
+  const appKey = process.env.KIS_APP_KEY
+  const appSecret = process.env.KIS_APP_SECRET
 
-  if (!appKey || !appSecret) return null;
+  if (!appKey || !appSecret) return null
 
   try {
     const response = await fetch(
@@ -359,44 +358,44 @@ export async function getNASDAQIndex(): Promise<IndexData | null> {
           tr_id: 'HHDFS00000300',
           custtype: 'P',
         },
-      }
-    );
+      },
+    )
 
     if (!response.ok) {
-      console.error('[Index] NASDAQ request failed:', response.status);
-      return null;
+      console.error('[Index] NASDAQ request failed:', response.status)
+      return null
     }
 
-    const data: KISOverseasPriceResponse = await response.json();
+    const data: KISOverseasPriceResponse = await response.json()
 
     if (data.rt_cd !== '0') {
-      console.error('[Index] NASDAQ API error:', data.msg1);
-      return null;
+      console.error('[Index] NASDAQ API error:', data.msg1)
+      return null
     }
 
-    const price = parseFloat(data.output.last) || 0;
+    const price = Number.parseFloat(data.output.last) || 0
     if (price === 0) {
-      console.warn('[Index] NASDAQ empty response');
-      return null;
+      console.warn('[Index] NASDAQ empty response')
+      return null
     }
 
     const result: IndexData = {
       name: 'NASDAQ',
       code: 'QQQ',
       price,
-      change: parseFloat(data.output.diff) || 0,
-      changePercent: parseFloat(data.output.rate) || 0,
+      change: Number.parseFloat(data.output.diff) || 0,
+      changePercent: Number.parseFloat(data.output.rate) || 0,
       timestamp: Date.now(),
       source: 'kis-etf',
-    };
+    }
 
-    saveToCache('NASDAQ', result);
-    console.log('[Index] Fetched NASDAQ (QQQ):', result.price);
+    saveToCache('NASDAQ', result)
+    console.log('[Index] Fetched NASDAQ (QQQ):', result.price)
 
-    return result;
+    return result
   } catch (error) {
-    console.error('[Index] NASDAQ fetch error:', error);
-    return null;
+    console.error('[Index] NASDAQ fetch error:', error)
+    return null
   }
 }
 
@@ -404,45 +403,45 @@ export async function getNASDAQIndex(): Promise<IndexData | null> {
  * 모든 주요 지수 조회
  */
 export async function getAllMajorIndices(): Promise<{
-  kospi: IndexData | null;
-  kosdaq: IndexData | null;
-  sp500: IndexData | null;
-  nasdaq: IndexData | null;
+  kospi: IndexData | null
+  kosdaq: IndexData | null
+  sp500: IndexData | null
+  nasdaq: IndexData | null
 }> {
   const [kospi, kosdaq, sp500, nasdaq] = await Promise.all([
     getKOSPIIndex(),
     getKOSDAQIndex(),
     getSP500Index(),
     getNASDAQIndex(),
-  ]);
+  ])
 
-  return { kospi, kosdaq, sp500, nasdaq };
+  return { kospi, kosdaq, sp500, nasdaq }
 }
 
 /**
  * 지수 캐시 초기화
  */
 export function clearIndexCache(): void {
-  indexCache.clear();
-  console.log('[Index] Cache cleared');
+  indexCache.clear()
+  console.log('[Index] Cache cleared')
 }
 
 /**
  * 지수 캐시 상태 조회
  */
 export function getIndexCacheStats(): {
-  size: number;
-  entries: Array<{ code: string; price: number; age: number }>;
+  size: number
+  entries: Array<{ code: string; price: number; age: number }>
 } {
-  const now = Date.now();
+  const now = Date.now()
   const entries = Array.from(indexCache.entries()).map(([code, cache]) => ({
     code,
     price: cache.data.price,
     age: Math.round((now - cache.timestamp) / 1000),
-  }));
+  }))
 
   return {
     size: indexCache.size,
     entries,
-  };
+  }
 }

@@ -1,7 +1,7 @@
-'use client';
+'use client'
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { type ReactNode, useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { type ReactNode, useState } from 'react'
 
 function makeQueryClient() {
   return new QueryClient({
@@ -19,29 +19,29 @@ function makeQueryClient() {
         retry: 1,
       },
     },
-  });
+  })
 }
 
-let browserQueryClient: QueryClient | undefined = undefined;
+let browserQueryClient: QueryClient | undefined = undefined
 
 function getQueryClient() {
   if (typeof window === 'undefined') {
     // 서버에서는 항상 새 클라이언트 생성
-    return makeQueryClient();
+    return makeQueryClient()
   }
   // 브라우저에서는 싱글톤 사용
   if (!browserQueryClient) {
-    browserQueryClient = makeQueryClient();
+    browserQueryClient = makeQueryClient()
   }
-  return browserQueryClient;
+  return browserQueryClient
 }
 
 interface QueryProviderProps {
-  children: ReactNode;
+  children: ReactNode
 }
 
 export function QueryProvider({ children }: QueryProviderProps) {
-  const [queryClient] = useState(() => getQueryClient());
+  const [queryClient] = useState(() => getQueryClient())
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -50,7 +50,7 @@ export function QueryProvider({ children }: QueryProviderProps) {
         <ReactQueryDevtools initialIsOpen={false} />
       )} */}
     </QueryClientProvider>
-  );
+  )
 }
 
 // Query Keys 상수
@@ -62,4 +62,4 @@ export const queryKeys = {
   sheetConnection: ['sheetConnection'] as const,
   portfolio: ['portfolio'] as const,
   goalSettings: ['goalSettings'] as const,
-} as const;
+} as const

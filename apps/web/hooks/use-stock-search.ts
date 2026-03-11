@@ -1,95 +1,101 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react'
 
 export interface StockSearchResult {
-  code: string;
-  name: string;
-  market: string;
+  code: string
+  name: string
+  market: string
 }
 
 interface UseStockSearchOptions {
-  onSelect?: (stock: StockSearchResult) => void;
-  debounceMs?: number;
+  onSelect?: (stock: StockSearchResult) => void
+  debounceMs?: number
 }
 
 export function useStockSearch(options: UseStockSearchOptions = {}) {
-  const { onSelect, debounceMs = 300 } = options;
+  const { onSelect, debounceMs = 300 } = options
 
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<StockSearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showResults, setShowResults] = useState(false);
-  const [selectedStock, setSelectedStock] = useState<StockSearchResult | null>(null);
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<StockSearchResult[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [showResults, setShowResults] = useState(false)
+  const [selectedStock, setSelectedStock] = useState<StockSearchResult | null>(null)
 
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // API 호출 (한글 1글자 이상, 영문 2글자 이상)
   const searchStocks = useCallback(async (searchQuery: string) => {
-    const trimmed = searchQuery.trim();
-    const hasKorean = /[가-힣]/.test(trimmed);
-    const minLength = hasKorean ? 1 : 2;
+    const trimmed = searchQuery.trim()
+    const hasKorean = /[가-힣]/.test(trimmed)
+    const minLength = hasKorean ? 1 : 2
 
     if (!trimmed || trimmed.length < minLength) {
-      setResults([]);
-      setShowResults(false);
-      return;
+      setResults([])
+      setShowResults(false)
+      return
     }
 
-    setIsSearching(true);
+    setIsSearching(true)
     try {
-      const response = await fetch(`/api/stocks/search?q=${encodeURIComponent(searchQuery)}`);
-      const data = await response.json();
-      setResults(data.stocks || []);
+      const response = await fetch(`/api/stocks/search?q=${encodeURIComponent(searchQuery)}`)
+      const data = await response.json()
+      setResults(data.stocks || [])
     } catch (error) {
-      console.error('Stock search error:', error);
-      setResults([]);
+      console.error('Stock search error:', error)
+      setResults([])
     } finally {
-      setIsSearching(false);
+      setIsSearching(false)
     }
-  }, []);
+  }, [])
 
   // 검색어 변경 (debounce 적용)
-  const handleQueryChange = useCallback((newQuery: string) => {
-    setQuery(newQuery);
-    setShowResults(true);
-    setSelectedStock(null); // 새로 검색 시작하면 선택 해제
+  const handleQueryChange = useCallback(
+    (newQuery: string) => {
+      setQuery(newQuery)
+      setShowResults(true)
+      setSelectedStock(null) // 새로 검색 시작하면 선택 해제
 
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
 
-    timeoutRef.current = setTimeout(() => {
-      searchStocks(newQuery);
-    }, debounceMs);
-  }, [searchStocks, debounceMs]);
+      timeoutRef.current = setTimeout(() => {
+        searchStocks(newQuery)
+      }, debounceMs)
+    },
+    [searchStocks, debounceMs],
+  )
 
   // 종목 선택
-  const handleSelect = useCallback((stock: StockSearchResult) => {
-    setSelectedStock(stock);
-    setQuery(`${stock.name} (${stock.code})`);
-    setShowResults(false);
-    setResults([]);
-    onSelect?.(stock);
-  }, [onSelect]);
+  const handleSelect = useCallback(
+    (stock: StockSearchResult) => {
+      setSelectedStock(stock)
+      setQuery(`${stock.name} (${stock.code})`)
+      setShowResults(false)
+      setResults([])
+      onSelect?.(stock)
+    },
+    [onSelect],
+  )
 
   // 선택 초기화
   const clearSelection = useCallback(() => {
-    setSelectedStock(null);
-    setQuery('');
-    setResults([]);
-    setShowResults(false);
-  }, []);
+    setSelectedStock(null)
+    setQuery('')
+    setResults([])
+    setShowResults(false)
+  }, [])
 
   // 전체 리셋
   const reset = useCallback(() => {
-    setQuery('');
-    setResults([]);
-    setIsSearching(false);
-    setShowResults(false);
-    setSelectedStock(null);
+    setQuery('')
+    setResults([])
+    setIsSearching(false)
+    setShowResults(false)
+    setSelectedStock(null)
     if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
+      clearTimeout(timeoutRef.current)
     }
-  }, []);
+  }, [])
 
   return {
     // State
@@ -106,5 +112,5 @@ export function useStockSearch(options: UseStockSearchOptions = {}) {
     handleSelect,
     clearSelection,
     reset,
-  };
+  }
 }

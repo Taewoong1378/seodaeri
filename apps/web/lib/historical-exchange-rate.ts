@@ -6,49 +6,51 @@
  * - Column H: USD/KRW 환율
  */
 
-import { createServiceClient } from "@repo/database/server";
-import { getUSDKRWRate } from "./exchange-rate-api";
+import { createServiceClient } from '@repo/database/server'
+import { getUSDKRWRate } from './exchange-rate-api'
 
-const PUBLIC_SPREADSHEET_ID = "1mhRnA1oB2OizL-jRtbBV-b2evYVJooMaVGyWIgQeBMM";
+const PUBLIC_SPREADSHEET_ID = '1mhRnA1oB2OizL-jRtbBV-b2evYVJooMaVGyWIgQeBMM'
 
 // 메모리 캐시 (24시간)
-const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
-let memoryCache: { data: Map<string, number>; timestamp: number } | null = null;
-let marketDataCache: { data: HistoricalMarketData; timestamp: number } | null = null;
+const CACHE_DURATION_MS = 24 * 60 * 60 * 1000
+let memoryCache: { data: Map<string, number>; timestamp: number } | null = null
+let marketDataCache: { data: HistoricalMarketData; timestamp: number } | null = null
 
 // 공유 CSV fetch (중복 다운로드 방지)
-let sharedCsvFetchPromise: Promise<string> | null = null;
+let sharedCsvFetchPromise: Promise<string> | null = null
 async function fetchSharedCSV(): Promise<string> {
   if (!sharedCsvFetchPromise) {
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${PUBLIC_SPREADSHEET_ID}/export?format=csv`;
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${PUBLIC_SPREADSHEET_ID}/export?format=csv`
     sharedCsvFetchPromise = fetch(csvUrl, {
       next: { revalidate: 86400 },
     }).then((r) => {
-      if (!r.ok) throw new Error(`HTTP error: ${r.status}`);
-      return r.text();
-    });
+      if (!r.ok) throw new Error(`HTTP error: ${r.status}`)
+      return r.text()
+    })
     // 1초 후 promise 해제 (다음 요청 시 fresh fetch)
-    setTimeout(() => { sharedCsvFetchPromise = null; }, 1000);
+    setTimeout(() => {
+      sharedCsvFetchPromise = null
+    }, 1000)
   }
-  return sharedCsvFetchPromise;
+  return sharedCsvFetchPromise
 }
 
 interface DBCacheValue {
-  rates: Record<string, number>;
+  rates: Record<string, number>
 }
 
 export interface HistoricalMarketData {
-  exchangeRates: Map<string, number>;  // YY.MM → USD/KRW
-  gold: Map<string, number>;           // YY.MM → 금 원화환산 가격
-  bitcoin: Map<string, number>;        // YY.MM → BTC 원화환산 가격
-  realEstate: Map<string, number>;     // YY.MM → 서울 아파트 지수
-  kospi: Map<string, number>;          // YY.MM → KOSPI 지수
-  sp500: Map<string, number>;          // YY.MM → S&P500 (USD)
-  nasdaq: Map<string, number>;         // YY.MM → NASDAQ (USD)
-  sp500Krw: Map<string, number>;       // YY.MM → S&P500 원화환산
-  nasdaqKrw: Map<string, number>;      // YY.MM → NASDAQ 원화환산
-  goldUsd?: Map<string, number>;       // YY.MM → 금 USD 가격 (원화환산 / 환율)
-  bitcoinUsd?: Map<string, number>;    // YY.MM → BTC USD 가격 (원화환산 / 환율)
+  exchangeRates: Map<string, number> // YY.MM → USD/KRW
+  gold: Map<string, number> // YY.MM → 금 원화환산 가격
+  bitcoin: Map<string, number> // YY.MM → BTC 원화환산 가격
+  realEstate: Map<string, number> // YY.MM → 서울 아파트 지수
+  kospi: Map<string, number> // YY.MM → KOSPI 지수
+  sp500: Map<string, number> // YY.MM → S&P500 (USD)
+  nasdaq: Map<string, number> // YY.MM → NASDAQ (USD)
+  sp500Krw: Map<string, number> // YY.MM → S&P500 원화환산
+  nasdaqKrw: Map<string, number> // YY.MM → NASDAQ 원화환산
+  goldUsd?: Map<string, number> // YY.MM → 금 USD 가격 (원화환산 / 환율)
+  bitcoinUsd?: Map<string, number> // YY.MM → BTC USD 가격 (원화환산 / 환율)
 }
 
 /**
@@ -56,16 +58,16 @@ export interface HistoricalMarketData {
  */
 async function fetchFromPublicSpreadsheet(): Promise<Map<string, number>> {
   try {
-    console.log("[HistoricalExchangeRate] Fetching from public spreadsheet");
+    console.log('[HistoricalExchangeRate] Fetching from public spreadsheet')
 
-    const csvText = await fetchSharedCSV();
-    const rates = parseCSVExchangeRates(csvText);
+    const csvText = await fetchSharedCSV()
+    const rates = parseCSVExchangeRates(csvText)
 
-    console.log(`[HistoricalExchangeRate] Fetched ${rates.size} monthly rates`);
-    return rates;
+    console.log(`[HistoricalExchangeRate] Fetched ${rates.size} monthly rates`)
+    return rates
   } catch (error) {
-    console.error("[HistoricalExchangeRate] Failed to fetch from spreadsheet:", error);
-    throw error;
+    console.error('[HistoricalExchangeRate] Failed to fetch from spreadsheet:', error)
+    throw error
   }
 }
 
@@ -74,25 +76,25 @@ async function fetchFromPublicSpreadsheet(): Promise<Map<string, number>> {
  * "1,069.02" 같은 따옴표 안의 쉼표를 필드 구분자로 처리하지 않음
  */
 function parseCSVLine(line: string): string[] {
-  const fields: string[] = [];
-  let current = '';
-  let inQuotes = false;
+  const fields: string[] = []
+  let current = ''
+  let inQuotes = false
 
   for (let i = 0; i < line.length; i++) {
-    const char = line[i];
+    const char = line[i]
 
     if (char === '"') {
-      inQuotes = !inQuotes;
+      inQuotes = !inQuotes
     } else if (char === ',' && !inQuotes) {
-      fields.push(current.trim());
-      current = '';
+      fields.push(current.trim())
+      current = ''
     } else {
-      current += char;
+      current += char
     }
   }
-  fields.push(current.trim());
+  fields.push(current.trim())
 
-  return fields;
+  return fields
 }
 
 /**
@@ -101,37 +103,37 @@ function parseCSVLine(line: string): string[] {
  * 환율 값이 "1,069.02" 형태의 따옴표 포함 가능
  */
 function parseCSVExchangeRates(csvText: string): Map<string, number> {
-  const rates = new Map<string, number>();
-  const lines = csvText.split('\n');
+  const rates = new Map<string, number>()
+  const lines = csvText.split('\n')
 
   // 헤더 2행 제외하고 데이터 파싱
   for (let i = 2; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line) continue;
+    const line = lines[i]
+    if (!line) continue
 
-    const trimmedLine = line.trim();
-    if (!trimmedLine) continue;
+    const trimmedLine = line.trim()
+    if (!trimmedLine) continue
 
-    const columns = parseCSVLine(trimmedLine);
+    const columns = parseCSVLine(trimmedLine)
 
     // Column G (index 6) = 날짜, Column H (index 7) = 환율
-    const dateStr = columns[6]?.trim();
-    const rateStr = columns[7]?.trim();
+    const dateStr = columns[6]?.trim()
+    const rateStr = columns[7]?.trim()
 
-    if (!dateStr || !rateStr) continue;
+    if (!dateStr || !rateStr) continue
 
     // 날짜 형식 검증: YY.MM (예: "25.01")
-    if (!/^\d{2}\.\d{2}$/.test(dateStr)) continue;
+    if (!/^\d{2}\.\d{2}$/.test(dateStr)) continue
 
     // 환율 파싱 (쉼표, 따옴표 제거)
-    const rate = Number.parseFloat(rateStr.replace(/[,"]/g, ""));
+    const rate = Number.parseFloat(rateStr.replace(/[,"]/g, ''))
 
-    if (Number.isNaN(rate) || rate <= 0) continue;
+    if (Number.isNaN(rate) || rate <= 0) continue
 
-    rates.set(dateStr, rate);
+    rates.set(dateStr, rate)
   }
 
-  return rates;
+  return rates
 }
 
 /**
@@ -139,173 +141,183 @@ function parseCSVExchangeRates(csvText: string): Map<string, number> {
  * Column G = 날짜, Column H = 환율, Column V = 금, Column W = 비트코인, Column AA = 부동산
  */
 function parseCSVMarketData(csvText: string): HistoricalMarketData {
-  const exchangeRates = new Map<string, number>();
-  const gold = new Map<string, number>();
-  const bitcoin = new Map<string, number>();
-  const realEstate = new Map<string, number>();
-  const kospi = new Map<string, number>();
-  const sp500 = new Map<string, number>();
-  const nasdaq = new Map<string, number>();
-  const sp500Krw = new Map<string, number>();
-  const nasdaqKrw = new Map<string, number>();
-  const lines = csvText.split('\n');
+  const exchangeRates = new Map<string, number>()
+  const gold = new Map<string, number>()
+  const bitcoin = new Map<string, number>()
+  const realEstate = new Map<string, number>()
+  const kospi = new Map<string, number>()
+  const sp500 = new Map<string, number>()
+  const nasdaq = new Map<string, number>()
+  const sp500Krw = new Map<string, number>()
+  const nasdaqKrw = new Map<string, number>()
+  const lines = csvText.split('\n')
 
   const parseVal = (str: string | undefined): number => {
-    if (!str) return 0;
-    const val = Number.parseFloat(str.trim().replace(/[,"]/g, ""));
-    return (!Number.isNaN(val) && val > 0) ? val : 0;
-  };
+    if (!str) return 0
+    const val = Number.parseFloat(str.trim().replace(/[,"]/g, ''))
+    return !Number.isNaN(val) && val > 0 ? val : 0
+  }
 
   // 헤더 2행 제외하고 데이터 파싱
   for (let i = 2; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line) continue;
-    const trimmedLine = line.trim();
-    if (!trimmedLine) continue;
+    const line = lines[i]
+    if (!line) continue
+    const trimmedLine = line.trim()
+    if (!trimmedLine) continue
 
-    const columns = parseCSVLine(trimmedLine);
+    const columns = parseCSVLine(trimmedLine)
 
     // Column G (index 6) = 날짜
-    const dateStr = columns[6]?.trim();
-    if (!dateStr || !/^\d{2}\.\d{2}$/.test(dateStr)) continue;
+    const dateStr = columns[6]?.trim()
+    if (!dateStr || !/^\d{2}\.\d{2}$/.test(dateStr)) continue
 
     // Column H (index 7) = USD/KRW 환율
-    const rate = parseVal(columns[7]);
-    if (rate > 0) exchangeRates.set(dateStr, rate);
+    const rate = parseVal(columns[7])
+    if (rate > 0) exchangeRates.set(dateStr, rate)
 
     // Column L (index 11) = KOSPI
-    const kospiVal = parseVal(columns[11]);
-    if (kospiVal > 0) kospi.set(dateStr, kospiVal);
+    const kospiVal = parseVal(columns[11])
+    if (kospiVal > 0) kospi.set(dateStr, kospiVal)
 
     // Column M (index 12) = S&P500 (USD)
-    const sp500Val = parseVal(columns[12]);
-    if (sp500Val > 0) sp500.set(dateStr, sp500Val);
+    const sp500Val = parseVal(columns[12])
+    if (sp500Val > 0) sp500.set(dateStr, sp500Val)
 
     // Column N (index 13) = NASDAQ (USD)
-    const nasdaqVal = parseVal(columns[13]);
-    if (nasdaqVal > 0) nasdaq.set(dateStr, nasdaqVal);
+    const nasdaqVal = parseVal(columns[13])
+    if (nasdaqVal > 0) nasdaq.set(dateStr, nasdaqVal)
 
     // Column T (index 19) = S&P500 원화환산
-    const sp500KrwVal = parseVal(columns[19]);
-    if (sp500KrwVal > 0) sp500Krw.set(dateStr, sp500KrwVal);
+    const sp500KrwVal = parseVal(columns[19])
+    if (sp500KrwVal > 0) sp500Krw.set(dateStr, sp500KrwVal)
 
     // Column U (index 20) = NASDAQ 원화환산
-    const nasdaqKrwVal = parseVal(columns[20]);
-    if (nasdaqKrwVal > 0) nasdaqKrw.set(dateStr, nasdaqKrwVal);
+    const nasdaqKrwVal = parseVal(columns[20])
+    if (nasdaqKrwVal > 0) nasdaqKrw.set(dateStr, nasdaqKrwVal)
 
     // Column V (index 21) = 골드 원화환산
-    const goldVal = parseVal(columns[21]);
-    if (goldVal > 0) gold.set(dateStr, goldVal);
+    const goldVal = parseVal(columns[21])
+    if (goldVal > 0) gold.set(dateStr, goldVal)
 
     // Column W (index 22) = 비트코인 원화환산
-    const btcVal = parseVal(columns[22]);
-    if (btcVal > 0) bitcoin.set(dateStr, btcVal);
+    const btcVal = parseVal(columns[22])
+    if (btcVal > 0) bitcoin.set(dateStr, btcVal)
 
     // Column AA (index 26) = 서울 아파트 지수
-    const reVal = parseVal(columns[26]);
-    if (reVal > 0) realEstate.set(dateStr, reVal);
+    const reVal = parseVal(columns[26])
+    if (reVal > 0) realEstate.set(dateStr, reVal)
   }
 
   // Derive USD values for gold and bitcoin by dividing KRW by exchange rate
-  const goldUsd = new Map<string, number>();
-  const bitcoinUsd = new Map<string, number>();
+  const goldUsd = new Map<string, number>()
+  const bitcoinUsd = new Map<string, number>()
 
   for (const [dateStr, goldKrw] of gold) {
-    const rate = exchangeRates.get(dateStr);
+    const rate = exchangeRates.get(dateStr)
     if (rate && rate > 0) {
-      goldUsd.set(dateStr, goldKrw / rate);
+      goldUsd.set(dateStr, goldKrw / rate)
     }
   }
   for (const [dateStr, btcKrw] of bitcoin) {
-    const rate = exchangeRates.get(dateStr);
+    const rate = exchangeRates.get(dateStr)
     if (rate && rate > 0) {
-      bitcoinUsd.set(dateStr, btcKrw / rate);
+      bitcoinUsd.set(dateStr, btcKrw / rate)
     }
   }
 
-  return { exchangeRates, gold, bitcoin, realEstate, kospi, sp500, nasdaq, sp500Krw, nasdaqKrw, goldUsd, bitcoinUsd };
+  return {
+    exchangeRates,
+    gold,
+    bitcoin,
+    realEstate,
+    kospi,
+    sp500,
+    nasdaq,
+    sp500Krw,
+    nasdaqKrw,
+    goldUsd,
+    bitcoinUsd,
+  }
 }
 
 /**
  * 현재 환율로 누락된 최근 월 데이터 보완
  */
-async function supplementWithCurrentRate(
-  rates: Map<string, number>
-): Promise<Map<string, number>> {
+async function supplementWithCurrentRate(rates: Map<string, number>): Promise<Map<string, number>> {
   // 원본 보존 (새 Map 생성)
-  const supplementedRates = new Map(rates);
+  const supplementedRates = new Map(rates)
 
   // 최신 환율 가져오기
-  let currentRate: number;
+  let currentRate: number
   try {
-    currentRate = await getUSDKRWRate();
+    currentRate = await getUSDKRWRate()
   } catch (error) {
-    console.error("[HistoricalExchangeRate] Failed to get current rate:", error);
-    return supplementedRates;
+    console.error('[HistoricalExchangeRate] Failed to get current rate:', error)
+    return supplementedRates
   }
 
   // 현재 월 계산
-  const now = new Date();
-  const currentMonth = formatYYMM(now);
+  const now = new Date()
+  const currentMonth = formatYYMM(now)
 
   // Map에 있는 마지막 월 찾기
-  const allMonths = Array.from(rates.keys()).sort();
-  const lastMonth = allMonths[allMonths.length - 1];
+  const allMonths = Array.from(rates.keys()).sort()
+  const lastMonth = allMonths[allMonths.length - 1]
 
   if (!lastMonth) {
     // Map이 비어있으면 현재 월만 추가
-    supplementedRates.set(currentMonth, currentRate);
-    return supplementedRates;
+    supplementedRates.set(currentMonth, currentRate)
+    return supplementedRates
   }
 
   // 마지막 월부터 현재 월까지 누락된 월 찾기
-  const missingMonths = getMissingMonths(lastMonth, currentMonth);
+  const missingMonths = getMissingMonths(lastMonth, currentMonth)
 
   for (const month of missingMonths) {
     if (!supplementedRates.has(month)) {
-      supplementedRates.set(month, currentRate);
+      supplementedRates.set(month, currentRate)
     }
   }
 
-  return supplementedRates;
+  return supplementedRates
 }
 
 /**
  * Date를 YY.MM 형식으로 변환
  */
 function formatYYMM(date: Date): string {
-  const year = String(date.getFullYear()).slice(-2); // 뒤 2자리
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  return `${year}.${month}`;
+  const year = String(date.getFullYear()).slice(-2) // 뒤 2자리
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  return `${year}.${month}`
 }
 
 /**
  * 두 월(YY.MM) 사이의 누락된 월 목록 생성
  */
 function getMissingMonths(startMonth: string, endMonth: string): string[] {
-  const months: string[] = [];
+  const months: string[] = []
 
   // YY.MM을 Date로 변환
-  const startParts = startMonth.split('.').map(Number);
-  const endParts = endMonth.split('.').map(Number);
+  const startParts = startMonth.split('.').map(Number)
+  const endParts = endMonth.split('.').map(Number)
 
-  const startYY = startParts[0] ?? 0;
-  const startMM = startParts[1] ?? 1;
-  const endYY = endParts[0] ?? 0;
-  const endMM = endParts[1] ?? 1;
+  const startYY = startParts[0] ?? 0
+  const startMM = startParts[1] ?? 1
+  const endYY = endParts[0] ?? 0
+  const endMM = endParts[1] ?? 1
 
-  const startYear = 2000 + startYY;
-  const endYear = 2000 + endYY;
+  const startYear = 2000 + startYY
+  const endYear = 2000 + endYY
 
-  let currentDate = new Date(startYear, startMM - 1); // Month는 0-indexed
-  const endDate = new Date(endYear, endMM - 1);
+  const currentDate = new Date(startYear, startMM - 1) // Month는 0-indexed
+  const endDate = new Date(endYear, endMM - 1)
 
   while (currentDate <= endDate) {
-    months.push(formatYYMM(currentDate));
-    currentDate.setMonth(currentDate.getMonth() + 1);
+    months.push(formatYYMM(currentDate))
+    currentDate.setMonth(currentDate.getMonth() + 1)
   }
 
-  return months;
+  return months
 }
 
 /**
@@ -313,25 +325,25 @@ function getMissingMonths(startMonth: string, endMonth: string): string[] {
  */
 async function getFromDBCache(): Promise<Map<string, number> | null> {
   try {
-    const supabase = createServiceClient();
+    const supabase = createServiceClient()
     const { data, error } = await supabase
-      .from("sync_metadata")
-      .select("value, updated_at")
-      .eq("key", "historical_exchange_rates")
-      .single();
+      .from('sync_metadata')
+      .select('value, updated_at')
+      .eq('key', 'historical_exchange_rates')
+      .single()
 
-    if (error || !data || !data.value) return null;
+    if (error || !data || !data.value) return null
 
-    const value = data.value as unknown as DBCacheValue;
-    if (!value.rates || typeof value.rates !== 'object') return null;
+    const value = data.value as unknown as DBCacheValue
+    if (!value.rates || typeof value.rates !== 'object') return null
 
-    const rates = new Map<string, number>(Object.entries(value.rates));
+    const rates = new Map<string, number>(Object.entries(value.rates))
 
-    console.log(`[HistoricalExchangeRate] DB cache has ${rates.size} rates`);
-    return rates;
+    console.log(`[HistoricalExchangeRate] DB cache has ${rates.size} rates`)
+    return rates
   } catch (error) {
-    console.error("[HistoricalExchangeRate] Failed to get from DB cache:", error);
-    return null;
+    console.error('[HistoricalExchangeRate] Failed to get from DB cache:', error)
+    return null
   }
 }
 
@@ -340,26 +352,26 @@ async function getFromDBCache(): Promise<Map<string, number> | null> {
  */
 async function saveToDBCache(rates: Map<string, number>): Promise<void> {
   try {
-    const supabase = createServiceClient();
+    const supabase = createServiceClient()
 
     // Map을 Record로 변환
-    const ratesRecord: Record<string, number> = {};
+    const ratesRecord: Record<string, number> = {}
     rates.forEach((rate, month) => {
-      ratesRecord[month] = rate;
-    });
+      ratesRecord[month] = rate
+    })
 
-    await supabase.from("sync_metadata").upsert(
+    await supabase.from('sync_metadata').upsert(
       {
-        key: "historical_exchange_rates",
+        key: 'historical_exchange_rates',
         value: { rates: ratesRecord },
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "key" }
-    );
+      { onConflict: 'key' },
+    )
 
-    console.log(`[HistoricalExchangeRate] Saved ${rates.size} rates to DB cache`);
+    console.log(`[HistoricalExchangeRate] Saved ${rates.size} rates to DB cache`)
   } catch (error) {
-    console.error("[HistoricalExchangeRate] Failed to save to DB cache:", error);
+    console.error('[HistoricalExchangeRate] Failed to save to DB cache:', error)
   }
 }
 
@@ -371,38 +383,38 @@ async function saveToDBCache(rates: Map<string, number>): Promise<void> {
 export async function getHistoricalExchangeRates(): Promise<Map<string, number>> {
   // 1. 메모리 캐시 확인
   if (memoryCache && Date.now() - memoryCache.timestamp < CACHE_DURATION_MS) {
-    console.log("[HistoricalExchangeRate] Using memory cache");
-    return supplementWithCurrentRate(memoryCache.data);
+    console.log('[HistoricalExchangeRate] Using memory cache')
+    return supplementWithCurrentRate(memoryCache.data)
   }
 
   // 2. 공개 스프레드시트에서 가져오기 시도
   try {
-    const rates = await fetchFromPublicSpreadsheet();
+    const rates = await fetchFromPublicSpreadsheet()
     if (rates.size > 0) {
-      memoryCache = { data: rates, timestamp: Date.now() };
+      memoryCache = { data: rates, timestamp: Date.now() }
       // DB 캐시 저장 (비동기, 실패해도 무시)
-      saveToDBCache(rates).catch(() => {});
-      return supplementWithCurrentRate(rates);
+      saveToDBCache(rates).catch(() => {})
+      return supplementWithCurrentRate(rates)
     }
   } catch (error) {
-    console.error("[HistoricalExchangeRate] Fetch from spreadsheet failed:", error);
+    console.error('[HistoricalExchangeRate] Fetch from spreadsheet failed:', error)
   }
 
   // 3. DB 캐시 폴백
   try {
-    const dbRates = await getFromDBCache();
+    const dbRates = await getFromDBCache()
     if (dbRates && dbRates.size > 0) {
-      console.log("[HistoricalExchangeRate] Using DB cache");
-      memoryCache = { data: dbRates, timestamp: Date.now() };
-      return supplementWithCurrentRate(dbRates);
+      console.log('[HistoricalExchangeRate] Using DB cache')
+      memoryCache = { data: dbRates, timestamp: Date.now() }
+      return supplementWithCurrentRate(dbRates)
     }
   } catch (error) {
-    console.error("[HistoricalExchangeRate] DB cache failed:", error);
+    console.error('[HistoricalExchangeRate] DB cache failed:', error)
   }
 
   // 4. 최종 폴백 - 빈 Map 반환
-  console.warn("[HistoricalExchangeRate] No exchange rate data available");
-  return new Map();
+  console.warn('[HistoricalExchangeRate] No exchange rate data available')
+  return new Map()
 }
 
 /**
@@ -411,19 +423,17 @@ export async function getHistoricalExchangeRates(): Promise<Map<string, number>>
  * @param yearMonth - "YY.MM" 형식 (예: "25.01")
  * @returns USD/KRW 환율 또는 null
  */
-export async function getExchangeRateForMonth(
-  yearMonth: string
-): Promise<number | null> {
-  const rates = await getHistoricalExchangeRates();
-  return rates.get(yearMonth) || null;
+export async function getExchangeRateForMonth(yearMonth: string): Promise<number | null> {
+  const rates = await getHistoricalExchangeRates()
+  return rates.get(yearMonth) || null
 }
 
 /**
  * 환율 캐시 강제 갱신
  */
 export async function refreshHistoricalExchangeRates(): Promise<Map<string, number>> {
-  memoryCache = null;
-  return getHistoricalExchangeRates();
+  memoryCache = null
+  return getHistoricalExchangeRates()
 }
 
 /**
@@ -433,25 +443,27 @@ export async function refreshHistoricalExchangeRates(): Promise<Map<string, numb
 export async function getHistoricalMarketData(): Promise<HistoricalMarketData> {
   // 1. 메모리 캐시 확인
   if (marketDataCache && Date.now() - marketDataCache.timestamp < CACHE_DURATION_MS) {
-    console.log("[HistoricalMarketData] Using memory cache");
-    return marketDataCache.data;
+    console.log('[HistoricalMarketData] Using memory cache')
+    return marketDataCache.data
   }
 
   // 2. 공개 스프레드시트에서 가져오기
   try {
-    const csvText = await fetchSharedCSV();
-    const marketData = parseCSVMarketData(csvText);
+    const csvText = await fetchSharedCSV()
+    const marketData = parseCSVMarketData(csvText)
 
-    console.log(`[HistoricalMarketData] Fetched: rates=${marketData.exchangeRates.size}, gold=${marketData.gold.size}, btc=${marketData.bitcoin.size}, re=${marketData.realEstate.size}`);
+    console.log(
+      `[HistoricalMarketData] Fetched: rates=${marketData.exchangeRates.size}, gold=${marketData.gold.size}, btc=${marketData.bitcoin.size}, re=${marketData.realEstate.size}`,
+    )
 
-    marketDataCache = { data: marketData, timestamp: Date.now() };
+    marketDataCache = { data: marketData, timestamp: Date.now() }
 
     // 기존 환율 메모리 캐시도 업데이트
-    memoryCache = { data: marketData.exchangeRates, timestamp: Date.now() };
+    memoryCache = { data: marketData.exchangeRates, timestamp: Date.now() }
 
-    return marketData;
+    return marketData
   } catch (error) {
-    console.error("[HistoricalMarketData] Failed:", error);
+    console.error('[HistoricalMarketData] Failed:', error)
   }
 
   // 3. 폴백 - 빈 데이터
@@ -467,5 +479,5 @@ export async function getHistoricalMarketData(): Promise<HistoricalMarketData> {
     nasdaqKrw: new Map(),
     goldUsd: new Map(),
     bitcoinUsd: new Map(),
-  };
+  }
 }

@@ -1,17 +1,17 @@
-import { type NextRequest, NextResponse } from 'next/server';
-import { auth } from '@repo/auth/server';
-import { 
-  syncStocksFromKRX, 
-  syncUSStocks,
+import { auth } from '@repo/auth/server'
+import { type NextRequest, NextResponse } from 'next/server'
+import {
   downloadAndSyncUSStocks,
-  getLastSyncTime, 
-  getUSStocksLastSyncTime,
+  getLastSyncTime,
   getStocksCountByMarket,
-} from '../../../actions/stocks';
+  getUSStocksLastSyncTime,
+  syncStocksFromKRX,
+  syncUSStocks,
+} from '../../../actions/stocks'
 
 /**
  * 종목 데이터 동기화 API
- * 
+ *
  * GET /api/stocks/sync - 동기화 상태 조회
  * POST /api/stocks/sync - 동기화 실행 (인증 필요)
  *   - body: { market: 'kr' | 'us' | 'all' }
@@ -24,7 +24,7 @@ export async function GET() {
       getLastSyncTime(),
       getUSStocksLastSyncTime(),
       getStocksCountByMarket(),
-    ]);
+    ])
 
     return NextResponse.json({
       kr: {
@@ -38,13 +38,10 @@ export async function GET() {
         status: counts.us > 0 ? 'synced' : 'not_synced',
       },
       total: counts.total,
-    });
+    })
   } catch (error) {
-    console.error('[stocks/sync] GET Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to get sync status' },
-      { status: 500 }
-    );
+    console.error('[stocks/sync] GET Error:', error)
+    return NextResponse.json({ error: 'Failed to get sync status' }, { status: 500 })
   }
 }
 
@@ -52,63 +49,59 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     // 인증 확인 (관리자만 실행 가능)
-    const session = await auth();
-    
+    const session = await auth()
+
     if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 })
     }
 
     // 관리자 이메일 체크 (환경변수로 관리)
-    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim());
-    
+    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map((e) => e.trim())
+
     if (adminEmails.length > 0 && !adminEmails.includes(session.user.email)) {
-      return NextResponse.json(
-        { error: '관리자만 동기화를 실행할 수 있습니다.' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: '관리자만 동기화를 실행할 수 있습니다.' }, { status: 403 })
     }
 
     // 요청 body에서 market, mode 파라미터 추출
-    let market = 'kr';
-    let mode = 'sync'; // 'sync' | 'download_and_sync'
+    let market = 'kr'
+    let mode = 'sync' // 'sync' | 'download_and_sync'
     try {
-      const body = await request.json();
-      market = body.market || 'kr';
-      mode = body.mode || 'sync';
+      const body = await request.json()
+      market = body.market || 'kr'
+      mode = body.mode || 'sync'
     } catch {
       // body 파싱 실패 시 기본값 사용
     }
 
-    console.log(`[stocks/sync] ${mode} started by ${session.user.email}, market: ${market}`);
-    
-    let result: { success: boolean; message: string; count?: number; error?: string };
+    console.log(`[stocks/sync] ${mode} started by ${session.user.email}, market: ${market}`)
+
+    let result: { success: boolean; message: string; count?: number; error?: string }
 
     if (market === 'us' && mode === 'download_and_sync') {
       // CSV 다운로드 + DB 동기화 (미국 전용)
-      result = await downloadAndSyncUSStocks();
+      result = await downloadAndSyncUSStocks()
     } else if (market === 'us') {
-      result = await syncUSStocks();
+      result = await syncUSStocks()
     } else if (market === 'all') {
       // 한국 + 미국 모두 동기화
-      const krResult = await syncStocksFromKRX();
-      const usResult = await syncUSStocks();
-      
-      const totalCount = (krResult.count || 0) + (usResult.count || 0);
-      const hasError = !krResult.success || !usResult.success;
-      
+      const krResult = await syncStocksFromKRX()
+      const usResult = await syncUSStocks()
+
+      const totalCount = (krResult.count || 0) + (usResult.count || 0)
+      const hasError = !krResult.success || !usResult.success
+
       result = {
         success: !hasError || totalCount > 0,
-        message: hasError 
+        message: hasError
           ? `일부 동기화 실패: 한국(${krResult.success ? krResult.count : '실패'}), 미국(${usResult.success ? usResult.count : '실패'})`
           : `총 ${totalCount}개 종목 동기화 완료 (한국: ${krResult.count}, 미국: ${usResult.count})`,
         count: totalCount,
-        error: hasError ? `KR: ${krResult.error || 'OK'}, US: ${usResult.error || 'OK'}` : undefined,
-      };
+        error: hasError
+          ? `KR: ${krResult.error || 'OK'}, US: ${usResult.error || 'OK'}`
+          : undefined,
+      }
     } else {
-      result = await syncStocksFromKRX();
+      result = await syncStocksFromKRX()
     }
 
     if (result.success) {
@@ -116,22 +109,19 @@ export async function POST(request: NextRequest) {
         success: true,
         message: result.message,
         count: result.count,
-      });
+      })
     }
-    
+
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: result.error,
         message: result.message,
       },
-      { status: 500 }
-    );
+      { status: 500 },
+    )
   } catch (error) {
-    console.error('[stocks/sync] POST Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to sync stocks' },
-      { status: 500 }
-    );
+    console.error('[stocks/sync] POST Error:', error)
+    return NextResponse.json({ error: 'Failed to sync stocks' }, { status: 500 })
   }
 }

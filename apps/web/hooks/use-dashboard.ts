@@ -1,8 +1,14 @@
-'use client';
+'use client'
 
-import { useQuery, useSuspenseQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { queryKeys } from '../lib/query-client';
-import { getDashboardData, syncPortfolio, type DashboardData } from '../app/actions/dashboard';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query'
+import { type DashboardData, getDashboardData, syncPortfolio } from '../app/actions/dashboard'
+import { queryKeys } from '../lib/query-client'
 
 /**
  * 대시보드 데이터를 가져오는 훅 (SSR initialData 지원)
@@ -15,7 +21,7 @@ export function useDashboard(serverData?: DashboardData | null) {
     initialData: serverData ?? undefined,
     initialDataUpdatedAt: serverData ? Date.now() : undefined,
     refetchOnMount: true, // 다른 페이지에서 invalidate 후 돌아올 때 refetch 필요
-  });
+  })
 }
 
 /**
@@ -27,7 +33,7 @@ export function useSuspenseDashboard() {
   return useSuspenseQuery({
     queryKey: queryKeys.dashboard,
     queryFn: () => deferServerAction(getDashboardData),
-  });
+  })
 }
 
 /**
@@ -39,34 +45,34 @@ export function useSuspenseDashboard() {
  */
 function deferServerAction<T>(action: () => Promise<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    setTimeout(() => action().then(resolve, reject), 0);
-  });
+    setTimeout(() => action().then(resolve, reject), 0)
+  })
 }
 
 /**
  * 포트폴리오 동기화 뮤테이션
  */
 export function useSyncPortfolio() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: syncPortfolio,
     onSuccess: () => {
       // 대시보드 캐시 무효화
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
     },
-  });
+  })
 }
 
 /**
  * 대시보드 캐시 무효화 훅
  */
 export function useInvalidateDashboard() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard });
-  };
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
+  }
 }
 
 // 기본 대시보드 데이터
@@ -93,4 +99,4 @@ export const defaultDashboardData: DashboardData = {
   majorIndexYieldComparison: null,
   investmentDays: 0,
   lastSyncAt: null,
-};
+}

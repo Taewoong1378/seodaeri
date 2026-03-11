@@ -1,9 +1,9 @@
-import { getKISToken, KIS_BASE_URL } from '../../../../lib/kis-token';
-import { auth } from '@repo/auth/server';
-import { createServiceClient } from '@repo/database/server';
-import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@repo/auth/server'
+import { createServiceClient } from '@repo/database/server'
+import { type NextRequest, NextResponse } from 'next/server'
+import { KIS_BASE_URL, getKISToken } from '../../../../lib/kis-token'
 
-const ADMIN_EMAILS = ['xodndxnxn@gmail.com', 'gulim.app00@gmail.com'];
+const ADMIN_EMAILS = ['xodndxnxn@gmail.com', 'gulim.app00@gmail.com']
 
 /**
  * KIS API 진단 엔드포인트
@@ -13,37 +13,40 @@ const ADMIN_EMAILS = ['xodndxnxn@gmail.com', 'gulim.app00@gmail.com'];
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await auth();
+    const session = await auth()
     if (!session?.user?.email || !ADMIN_EMAILS.includes(session.user.email)) {
-      return NextResponse.json({
-        error: 'Unauthorized',
-        sessionEmail: session?.user?.email || null,
-        hint: 'Add your email to ADMIN_EMAILS in this file',
-      }, { status: 401 });
+      return NextResponse.json(
+        {
+          error: 'Unauthorized',
+          sessionEmail: session?.user?.email || null,
+          hint: 'Add your email to ADMIN_EMAILS in this file',
+        },
+        { status: 401 },
+      )
     }
 
-    const ticker = req.nextUrl.searchParams.get('ticker') || 'QLD';
-    const userId = req.nextUrl.searchParams.get('userId');
+    const ticker = req.nextUrl.searchParams.get('ticker') || 'QLD'
+    const userId = req.nextUrl.searchParams.get('userId')
 
-    const appKey = process.env.KIS_APP_KEY;
-    const appSecret = process.env.KIS_APP_SECRET;
+    const appKey = process.env.KIS_APP_KEY
+    const appSecret = process.env.KIS_APP_SECRET
 
     if (!appKey || !appSecret) {
-      return NextResponse.json({ error: 'KIS credentials not configured' }, { status: 500 });
+      return NextResponse.json({ error: 'KIS credentials not configured' }, { status: 500 })
     }
 
-    const token = await getKISToken();
+    const token = await getKISToken()
     if (!token) {
-      return NextResponse.json({ error: 'Failed to get KIS token' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to get KIS token' }, { status: 500 })
     }
 
     // 3개 거래소 모두 시도
-    const exchanges = ['AMS', 'NYS', 'NAS'];
-    const results: Record<string, any> = {};
+    const exchanges = ['AMS', 'NYS', 'NAS']
+    const results: Record<string, any> = {}
 
     for (const excd of exchanges) {
       try {
-        const url = `${KIS_BASE_URL}/uapi/overseas-price/v1/quotations/price?AUTH=&EXCD=${excd}&SYMB=${ticker}`;
+        const url = `${KIS_BASE_URL}/uapi/overseas-price/v1/quotations/price?AUTH=&EXCD=${excd}&SYMB=${ticker}`
         const response = await fetch(url, {
           method: 'GET',
           headers: {
@@ -54,9 +57,9 @@ export async function GET(req: NextRequest) {
             tr_id: 'HHDFS00000300',
             custtype: 'P',
           },
-        });
+        })
 
-        const data = await response.json();
+        const data = await response.json()
         results[excd] = {
           status: response.status,
           rt_cd: data.rt_cd,
@@ -66,22 +69,22 @@ export async function GET(req: NextRequest) {
           rate: data.output?.rate,
           tvol: data.output?.tvol,
           rawOutput: data.output,
-        };
+        }
       } catch (error: any) {
-        results[excd] = { error: error.message };
+        results[excd] = { error: error.message }
       }
     }
 
     // portfolio_cache 조회
-    let cacheInfo = null;
+    let cacheInfo = null
     if (userId) {
-      const supabase = createServiceClient();
+      const supabase = createServiceClient()
       const { data } = await supabase
         .from('portfolio_cache')
         .select('*')
         .eq('user_id', userId)
-        .eq('ticker', ticker);
-      cacheInfo = data;
+        .eq('ticker', ticker)
+      cacheInfo = data
 
       // 글로벌 캐시도 조회
       const { data: globalData } = await supabase
@@ -90,7 +93,7 @@ export async function GET(req: NextRequest) {
         .eq('ticker', ticker)
         .gt('current_price', 0)
         .order('updated_at', { ascending: false })
-        .limit(5);
+        .limit(5)
 
       return NextResponse.json({
         ticker,
@@ -98,15 +101,15 @@ export async function GET(req: NextRequest) {
         exchanges: results,
         userCache: cacheInfo,
         globalCache: globalData,
-      });
+      })
     }
 
     return NextResponse.json({
       ticker,
       tokenOk: true,
       exchanges: results,
-    });
+    })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

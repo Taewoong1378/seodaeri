@@ -1,14 +1,14 @@
-"use server";
+'use server'
 
-import { createServiceClient } from "@repo/database/server";
-import { type KRXStock, fetchAllStocks } from "../../lib/krx-api";
-import { type USStock, fetchUSStocks, downloadUSStockCSVs } from "../../lib/us-stocks-api";
+import { createServiceClient } from '@repo/database/server'
+import { type KRXStock, fetchAllStocks } from '../../lib/krx-api'
+import { type USStock, downloadUSStockCSVs, fetchUSStocks } from '../../lib/us-stocks-api'
 
 export interface SyncStocksResult {
-  success: boolean;
-  message: string;
-  count?: number;
-  error?: string;
+  success: boolean
+  message: string
+  count?: number
+  error?: string
 }
 
 /**
@@ -17,30 +17,30 @@ export interface SyncStocksResult {
  * - 장 마감 후 (오후 6시 이후) 실행 권장
  */
 export async function syncStocksFromKRX(): Promise<SyncStocksResult> {
-  const supabase = createServiceClient();
+  const supabase = createServiceClient()
 
   try {
-    console.log("[syncStocks] Fetching stocks from KRX API...");
+    console.log('[syncStocks] Fetching stocks from KRX API...')
 
     // KRX API에서 종목 데이터 가져오기
-    const krxStocks = await fetchAllStocks();
+    const krxStocks = await fetchAllStocks()
 
     if (krxStocks.length === 0) {
       return {
         success: false,
-        message: "KRX API에서 종목 데이터를 가져오지 못했습니다.",
-        error: "No data from KRX API",
-      };
+        message: 'KRX API에서 종목 데이터를 가져오지 못했습니다.',
+        error: 'No data from KRX API',
+      }
     }
 
-    console.log(`[syncStocks] Fetched ${krxStocks.length} stocks from KRX`);
+    console.log(`[syncStocks] Fetched ${krxStocks.length} stocks from KRX`)
 
     // Supabase에 upsert (배치로 처리)
-    const batchSize = 500;
-    let totalUpserted = 0;
+    const batchSize = 500
+    let totalUpserted = 0
 
     for (let i = 0; i < krxStocks.length; i += batchSize) {
-      const batch = krxStocks.slice(i, i + batchSize);
+      const batch = krxStocks.slice(i, i + batchSize)
 
       const stocksToUpsert = batch.map((stock: KRXStock) => ({
         code: stock.code,
@@ -48,33 +48,31 @@ export async function syncStocksFromKRX(): Promise<SyncStocksResult> {
         full_code: stock.fullCode,
         market: stock.market,
         eng_name: stock.engName || null,
-        country: "KR", // 한국 종목
+        country: 'KR', // 한국 종목
         is_active: true,
         updated_at: new Date().toISOString(),
-      }));
+      }))
 
-      const { error } = await supabase.from("stocks").upsert(stocksToUpsert, {
-        onConflict: "code",
+      const { error } = await supabase.from('stocks').upsert(stocksToUpsert, {
+        onConflict: 'code',
         ignoreDuplicates: false,
-      });
+      })
 
       if (error) {
-        console.error("[syncStocks] Batch upsert error:", error);
-        throw error;
+        console.error('[syncStocks] Batch upsert error:', error)
+        throw error
       }
 
-      totalUpserted += batch.length;
+      totalUpserted += batch.length
       console.log(
-        `[syncStocks] Upserted batch ${
-          Math.floor(i / batchSize) + 1
-        }, total: ${totalUpserted}`
-      );
+        `[syncStocks] Upserted batch ${Math.floor(i / batchSize) + 1}, total: ${totalUpserted}`,
+      )
     }
 
     // 동기화 메타데이터 업데이트
-    const { error: metaError } = await supabase.from("sync_metadata").upsert(
+    const { error: metaError } = await supabase.from('sync_metadata').upsert(
       {
-        key: "stocks_last_sync",
+        key: 'stocks_last_sync',
         value: {
           timestamp: new Date().toISOString(),
           count: totalUpserted,
@@ -82,26 +80,26 @@ export async function syncStocksFromKRX(): Promise<SyncStocksResult> {
         updated_at: new Date().toISOString(),
       },
       {
-        onConflict: "key",
-      }
-    );
+        onConflict: 'key',
+      },
+    )
 
     if (metaError) {
-      console.error("[syncStocks] Metadata update error:", metaError);
+      console.error('[syncStocks] Metadata update error:', metaError)
     }
 
     return {
       success: true,
       message: `${totalUpserted}개 종목 동기화 완료`,
       count: totalUpserted,
-    };
+    }
   } catch (error) {
-    console.error("[syncStocks] Error:", error);
+    console.error('[syncStocks] Error:', error)
     return {
       success: false,
-      message: "종목 동기화 중 오류가 발생했습니다.",
+      message: '종목 동기화 중 오류가 발생했습니다.',
       error: error instanceof Error ? error.message : String(error),
-    };
+    }
   }
 }
 
@@ -112,31 +110,31 @@ export async function syncStocksFromKRX(): Promise<SyncStocksResult> {
  * - CSV 파일 위치: apps/web/data/nasdaq.csv, nyse.csv, amex.csv
  */
 export async function syncUSStocks(): Promise<SyncStocksResult> {
-  const supabase = createServiceClient();
+  const supabase = createServiceClient()
 
   try {
-    console.log("[syncUSStocks] Loading stocks from CSV files...");
+    console.log('[syncUSStocks] Loading stocks from CSV files...')
 
     // CSV 파일에서 미국 종목 데이터 로드
-    const usStocks = await fetchUSStocks();
+    const usStocks = await fetchUSStocks()
 
     if (usStocks.length === 0) {
       return {
         success: false,
         message:
-          "CSV 파일에서 종목 데이터를 로드하지 못했습니다. data/ 폴더에 CSV 파일이 있는지 확인해주세요.",
-        error: "No data from CSV files",
-      };
+          'CSV 파일에서 종목 데이터를 로드하지 못했습니다. data/ 폴더에 CSV 파일이 있는지 확인해주세요.',
+        error: 'No data from CSV files',
+      }
     }
 
-    console.log(`[syncUSStocks] Loaded ${usStocks.length} stocks from CSV`);
+    console.log(`[syncUSStocks] Loaded ${usStocks.length} stocks from CSV`)
 
     // Supabase에 upsert (배치로 처리)
-    const batchSize = 500;
-    let totalUpserted = 0;
+    const batchSize = 500
+    let totalUpserted = 0
 
     for (let i = 0; i < usStocks.length; i += batchSize) {
-      const batch = usStocks.slice(i, i + batchSize);
+      const batch = usStocks.slice(i, i + batchSize)
 
       const stocksToUpsert = batch.map((stock: USStock) => ({
         code: stock.code,
@@ -144,33 +142,31 @@ export async function syncUSStocks(): Promise<SyncStocksResult> {
         full_code: stock.code, // 미국 주식은 티커가 곧 코드
         market: stock.market,
         eng_name: stock.name, // 영문명 = 종목명
-        country: "US", // 미국 종목
+        country: 'US', // 미국 종목
         is_active: true,
         updated_at: new Date().toISOString(),
-      }));
+      }))
 
-      const { error } = await supabase.from("stocks").upsert(stocksToUpsert, {
-        onConflict: "code",
+      const { error } = await supabase.from('stocks').upsert(stocksToUpsert, {
+        onConflict: 'code',
         ignoreDuplicates: false,
-      });
+      })
 
       if (error) {
-        console.error("[syncUSStocks] Batch upsert error:", error);
-        throw error;
+        console.error('[syncUSStocks] Batch upsert error:', error)
+        throw error
       }
 
-      totalUpserted += batch.length;
+      totalUpserted += batch.length
       console.log(
-        `[syncUSStocks] Upserted batch ${
-          Math.floor(i / batchSize) + 1
-        }, total: ${totalUpserted}`
-      );
+        `[syncUSStocks] Upserted batch ${Math.floor(i / batchSize) + 1}, total: ${totalUpserted}`,
+      )
     }
 
     // 동기화 메타데이터 업데이트
-    const { error: metaError } = await supabase.from("sync_metadata").upsert(
+    const { error: metaError } = await supabase.from('sync_metadata').upsert(
       {
-        key: "us_stocks_last_sync",
+        key: 'us_stocks_last_sync',
         value: {
           timestamp: new Date().toISOString(),
           count: totalUpserted,
@@ -178,26 +174,26 @@ export async function syncUSStocks(): Promise<SyncStocksResult> {
         updated_at: new Date().toISOString(),
       },
       {
-        onConflict: "key",
-      }
-    );
+        onConflict: 'key',
+      },
+    )
 
     if (metaError) {
-      console.error("[syncUSStocks] Metadata update error:", metaError);
+      console.error('[syncUSStocks] Metadata update error:', metaError)
     }
 
     return {
       success: true,
       message: `${totalUpserted}개 미국 종목 동기화 완료`,
       count: totalUpserted,
-    };
+    }
   } catch (error) {
-    console.error("[syncUSStocks] Error:", error);
+    console.error('[syncUSStocks] Error:', error)
     return {
       success: false,
-      message: "미국 종목 동기화 중 오류가 발생했습니다.",
+      message: '미국 종목 동기화 중 오류가 발생했습니다.',
       error: error instanceof Error ? error.message : String(error),
-    };
+    }
   }
 }
 
@@ -209,45 +205,45 @@ export async function syncUSStocks(): Promise<SyncStocksResult> {
  */
 export async function downloadAndSyncUSStocks(): Promise<SyncStocksResult> {
   try {
-    console.log("[downloadAndSync] Step 1: Downloading CSVs from NASDAQ API...");
-    
+    console.log('[downloadAndSync] Step 1: Downloading CSVs from NASDAQ API...')
+
     // Step 1: CSV 다운로드
-    const downloadResult = await downloadUSStockCSVs();
-    
+    const downloadResult = await downloadUSStockCSVs()
+
     if (!downloadResult.success) {
       return {
         success: false,
         message: `CSV 다운로드 실패: ${downloadResult.message}`,
         error: downloadResult.error,
-      };
+      }
     }
 
-    console.log(`[downloadAndSync] Download complete: ${downloadResult.message}`);
-    console.log("[downloadAndSync] Step 2: Syncing to Supabase...");
+    console.log(`[downloadAndSync] Download complete: ${downloadResult.message}`)
+    console.log('[downloadAndSync] Step 2: Syncing to Supabase...')
 
     // Step 2: 다운로드된 CSV로 DB 동기화
-    const syncResult = await syncUSStocks();
+    const syncResult = await syncUSStocks()
 
     if (!syncResult.success) {
       return {
         success: false,
         message: `CSV 다운로드 완료, DB 동기화 실패: ${syncResult.message}`,
         error: syncResult.error,
-      };
+      }
     }
 
     return {
       success: true,
       message: `CSV 다운로드 + DB 동기화 완료 (${syncResult.count}개 종목)`,
       count: syncResult.count,
-    };
+    }
   } catch (error) {
-    console.error("[downloadAndSync] Error:", error);
+    console.error('[downloadAndSync] Error:', error)
     return {
       success: false,
-      message: "CSV 다운로드 + 동기화 중 오류가 발생했습니다.",
+      message: 'CSV 다운로드 + 동기화 중 오류가 발생했습니다.',
       error: error instanceof Error ? error.message : String(error),
-    };
+    }
   }
 }
 
@@ -255,29 +251,29 @@ export async function downloadAndSyncUSStocks(): Promise<SyncStocksResult> {
  * 마지막 미국 종목 동기화 시간 조회
  */
 export async function getUSStocksLastSyncTime(): Promise<{
-  timestamp: string | null;
-  count: number | null;
+  timestamp: string | null
+  count: number | null
 }> {
-  const supabase = createServiceClient();
+  const supabase = createServiceClient()
 
   try {
     const { data, error } = await supabase
-      .from("sync_metadata")
-      .select("value")
-      .eq("key", "us_stocks_last_sync")
-      .single();
+      .from('sync_metadata')
+      .select('value')
+      .eq('key', 'us_stocks_last_sync')
+      .single()
 
     if (error || !data) {
-      return { timestamp: null, count: null };
+      return { timestamp: null, count: null }
     }
 
-    const value = data.value as { timestamp: string; count: number } | null;
+    const value = data.value as { timestamp: string; count: number } | null
     return {
       timestamp: value?.timestamp || null,
       count: value?.count || null,
-    };
+    }
   } catch {
-    return { timestamp: null, count: null };
+    return { timestamp: null, count: null }
   }
 }
 
@@ -285,36 +281,36 @@ export async function getUSStocksLastSyncTime(): Promise<{
  * 국가별 종목 개수 조회
  */
 export async function getStocksCountByMarket(): Promise<{
-  kr: number;
-  us: number;
-  total: number;
+  kr: number
+  us: number
+  total: number
 }> {
-  const supabase = createServiceClient();
+  const supabase = createServiceClient()
 
   try {
     // 한국 종목 - 타입 추론 깊이 문제 회피를 위해 as any 사용
-    const krResult = await (supabase
-      .from("stocks")
-      .select("*", { count: "exact", head: true }) as any)
-      .eq("is_active", true)
-      .eq("country", "KR");
-    const krCount: number = krResult?.count || 0;
+    const krResult = await (
+      supabase.from('stocks').select('*', { count: 'exact', head: true }) as any
+    )
+      .eq('is_active', true)
+      .eq('country', 'KR')
+    const krCount: number = krResult?.count || 0
 
     // 미국 종목
-    const usResult = await (supabase
-      .from("stocks")
-      .select("*", { count: "exact", head: true }) as any)
-      .eq("is_active", true)
-      .eq("country", "US");
-    const usCount: number = usResult?.count || 0;
+    const usResult = await (
+      supabase.from('stocks').select('*', { count: 'exact', head: true }) as any
+    )
+      .eq('is_active', true)
+      .eq('country', 'US')
+    const usCount: number = usResult?.count || 0
 
     return {
       kr: krCount,
       us: usCount,
       total: krCount + usCount,
-    };
+    }
   } catch {
-    return { kr: 0, us: 0, total: 0 };
+    return { kr: 0, us: 0, total: 0 }
   }
 }
 
@@ -327,85 +323,90 @@ export async function getStocksCountByMarket(): Promise<{
  */
 export async function searchStocksFromDB(
   query: string,
-  country?: "KR" | "US"
+  country?: 'KR' | 'US',
 ): Promise<{
-  success: boolean;
+  success: boolean
   stocks: Array<{
-    code: string;
-    name: string;
-    market: string;
-  }>;
-  error?: string;
+    code: string
+    name: string
+    market: string
+  }>
+  error?: string
 }> {
   if (!query || query.trim().length < 1) {
-    return { success: true, stocks: [] };
+    return { success: true, stocks: [] }
   }
 
-  const supabase = createServiceClient();
-  const q = query.trim();
+  const supabase = createServiceClient()
+  const q = query.trim()
 
   try {
     // 쿼리 빌더 - 타입 추론 깊이 문제 회피를 위해 as any 사용
-    let queryBuilder = (supabase
-      .from("stocks")
-      .select("code, name, market") as any)
-      .eq("is_active", true);
+    let queryBuilder = (supabase.from('stocks').select('code, name, market') as any).eq(
+      'is_active',
+      true,
+    )
 
     // 국가 필터 적용
     if (country) {
-      queryBuilder = queryBuilder.eq("country", country);
+      queryBuilder = queryBuilder.eq('country', country)
     }
 
     // ilike로 부분 일치 검색 (code, name, eng_name)
     // 넉넉하게 가져온 후 정렬 (ETF가 알파벳순으로 앞에 와서 개별종목이 밀리는 문제 방지)
     const { data, error } = await queryBuilder
       .or(`code.ilike.%${q}%,name.ilike.%${q}%,eng_name.ilike.%${q}%`)
-      .limit(50);
+      .limit(50)
 
     if (error) {
-      console.error("[searchStocks] Error:", error);
-      throw error;
+      console.error('[searchStocks] Error:', error)
+      throw error
     }
 
     // 정렬: 코드 정확히 일치 → 코드가 검색어로 시작 → 개별종목(비-ETF) 우선 → 이름순
-    const qUpper = q.toUpperCase();
-    const sorted = (data || []).sort((a: { code: string; name: string; market: string }, b: { code: string; name: string; market: string }) => {
-      const aCode = a.code.toUpperCase();
-      const bCode = b.code.toUpperCase();
+    const qUpper = q.toUpperCase()
+    const sorted = (data || []).sort(
+      (
+        a: { code: string; name: string; market: string },
+        b: { code: string; name: string; market: string },
+      ) => {
+        const aCode = a.code.toUpperCase()
+        const bCode = b.code.toUpperCase()
 
-      // 1) 코드 정확히 일치
-      const aExact = aCode === qUpper;
-      const bExact = bCode === qUpper;
-      if (aExact && !bExact) return -1;
-      if (!aExact && bExact) return 1;
+        // 1) 코드 정확히 일치
+        const aExact = aCode === qUpper
+        const bExact = bCode === qUpper
+        if (aExact && !bExact) return -1
+        if (!aExact && bExact) return 1
 
-      // 2) 코드가 검색어로 시작
-      const aStarts = aCode.startsWith(qUpper);
-      const bStarts = bCode.startsWith(qUpper);
-      if (aStarts && !bStarts) return -1;
-      if (!aStarts && bStarts) return 1;
+        // 2) 코드가 검색어로 시작
+        const aStarts = aCode.startsWith(qUpper)
+        const bStarts = bCode.startsWith(qUpper)
+        if (aStarts && !bStarts) return -1
+        if (!aStarts && bStarts) return 1
 
-      // 3) 개별종목(비-ETF) 우선
-      const aIsEtf = a.market === "ETF" || a.market === "US_ETF";
-      const bIsEtf = b.market === "ETF" || b.market === "US_ETF";
-      if (!aIsEtf && bIsEtf) return -1;
-      if (aIsEtf && !bIsEtf) return 1;
+        // 3) 개별종목(비-ETF) 우선
+        const aIsEtf = a.market === 'ETF' || a.market === 'US_ETF'
+        const bIsEtf = b.market === 'ETF' || b.market === 'US_ETF'
+        if (!aIsEtf && bIsEtf) return -1
+        if (aIsEtf && !bIsEtf) return 1
 
-      // 4) 이름순
-      return a.name.localeCompare(b.name);
-    });
+        // 4) 이름순
+        return a.name.localeCompare(b.name)
+      },
+    )
 
     return {
       success: true,
       stocks: sorted.slice(0, 20),
-    };
+    }
   } catch (error) {
-    console.error("[searchStocks] Error:", error);
+    console.error('[searchStocks] Error:', error)
     return {
       success: false,
       stocks: [],
       error: error instanceof Error ? error.message : String(error),
-    };
+    }
   }
 }
 
@@ -413,29 +414,29 @@ export async function searchStocksFromDB(
  * 마지막 동기화 시간 조회
  */
 export async function getLastSyncTime(): Promise<{
-  timestamp: string | null;
-  count: number | null;
+  timestamp: string | null
+  count: number | null
 }> {
-  const supabase = createServiceClient();
+  const supabase = createServiceClient()
 
   try {
     const { data, error } = await supabase
-      .from("sync_metadata")
-      .select("value")
-      .eq("key", "stocks_last_sync")
-      .single();
+      .from('sync_metadata')
+      .select('value')
+      .eq('key', 'stocks_last_sync')
+      .single()
 
     if (error || !data) {
-      return { timestamp: null, count: null };
+      return { timestamp: null, count: null }
     }
 
-    const value = data.value as { timestamp: string; count: number } | null;
+    const value = data.value as { timestamp: string; count: number } | null
     return {
       timestamp: value?.timestamp || null,
       count: value?.count || null,
-    };
+    }
   } catch {
-    return { timestamp: null, count: null };
+    return { timestamp: null, count: null }
   }
 }
 
@@ -443,21 +444,21 @@ export async function getLastSyncTime(): Promise<{
  * 종목 데이터 개수 조회
  */
 export async function getStocksCount(): Promise<number> {
-  const supabase = createServiceClient();
+  const supabase = createServiceClient()
 
   try {
     const { count, error } = await supabase
-      .from("stocks")
-      .select("*", { count: "exact", head: true })
-      .eq("is_active", true);
+      .from('stocks')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_active', true)
 
     if (error) {
-      console.error("[getStocksCount] Error:", error);
-      return 0;
+      console.error('[getStocksCount] Error:', error)
+      return 0
     }
 
-    return count || 0;
+    return count || 0
   } catch {
-    return 0;
+    return 0
   }
 }

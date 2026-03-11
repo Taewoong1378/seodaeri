@@ -1,5 +1,5 @@
 import { auth } from '@repo/auth/server'
-import { NextResponse, type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 
 // 인증이 필요한 라우트
 const protectedRoutes = ['/dashboard', '/portfolio', '/transactions', '/settings', '/onboarding']

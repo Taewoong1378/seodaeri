@@ -1,22 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from 'next/server'
 
 /**
  * WebView에서 쿠키가 자동으로 저장되지 않는 경우를 위한 세션 설정 API
  * HTML 페이지를 반환하여 JavaScript로 쿠키를 설정 (iOS WebView 호환)
  */
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const token = searchParams.get("token");
-  const redirect = searchParams.get("redirect") || "/dashboard";
+  const searchParams = request.nextUrl.searchParams
+  const token = searchParams.get('token')
+  const redirect = searchParams.get('redirect') || '/dashboard'
 
   if (!token) {
-    return NextResponse.redirect(new URL("/login?error=no_token", request.url));
+    return NextResponse.redirect(new URL('/login?error=no_token', request.url))
   }
 
-  const isProduction = process.env.NODE_ENV === "production";
+  const isProduction = process.env.NODE_ENV === 'production'
 
   // 쿠키 만료 시간 (30일)
-  const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+  const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString()
 
   // HTML 페이지에서 JavaScript로 쿠키 설정 후 리다이렉트
   // httpOnly 쿠키는 JavaScript로 설정 불가하므로, 일반 쿠키로 설정
@@ -91,14 +91,14 @@ export async function GET(request: NextRequest) {
   </script>
 </body>
 </html>
-`;
+`
 
   return new NextResponse(html, {
     status: 200,
     headers: {
-      "Content-Type": "text/html; charset=utf-8",
+      'Content-Type': 'text/html; charset=utf-8',
       // Set-Cookie 헤더도 추가 (폴백)
-      "Set-Cookie": `authjs.session-token=${encodeURIComponent(token)}; Path=/; Max-Age=${30 * 24 * 60 * 60}; SameSite=Lax`,
+      'Set-Cookie': `authjs.session-token=${encodeURIComponent(token)}; Path=/; Max-Age=${30 * 24 * 60 * 60}; SameSite=Lax`,
     },
-  });
+  })
 }

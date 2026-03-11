@@ -349,8 +349,8 @@ export async function deleteTransaction(input: DeleteTransactionInput): Promise<
             const rowPriceStr = String(row[offset + 6] || '0') // 단가
             const rowQuantityStr = String(row[offset + 7] || '0') // 수량
 
-            const rowPrice = parseFloat(rowPriceStr.replace(/[₩$,\s]/g, '')) || 0
-            const rowQuantity = parseFloat(rowQuantityStr.replace(/[,\s]/g, '')) || 0
+            const rowPrice = Number.parseFloat(rowPriceStr.replace(/[₩$,\s]/g, '')) || 0
+            const rowQuantity = Number.parseFloat(rowQuantityStr.replace(/[,\s]/g, '')) || 0
 
             // 날짜 형식 맞추기
             const normalizedRowDate = rowDate.replace(/\//g, '-')

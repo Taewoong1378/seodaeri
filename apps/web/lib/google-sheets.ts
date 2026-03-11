@@ -1,4 +1,4 @@
-import { google } from 'googleapis';
+import { google } from 'googleapis'
 
 // 서대리 투자기록시트 필수 탭 목록
 const REQUIRED_SHEET_TABS = [
@@ -7,13 +7,13 @@ const REQUIRED_SHEET_TABS = [
   '5. 계좌내역(누적)',
   '6. 입금내역',
   '7. 배당내역',
-];
+]
 
 export interface SheetValidationResult {
-  valid: boolean;
-  missingTabs: string[];
-  foundTabs: string[];
-  error?: string;
+  valid: boolean
+  missingTabs: string[]
+  foundTabs: string[]
+  error?: string
 }
 
 /**
@@ -21,58 +21,56 @@ export interface SheetValidationResult {
  */
 export async function validateSheetFormat(
   accessToken: string,
-  spreadsheetId: string
+  spreadsheetId: string,
 ): Promise<SheetValidationResult> {
-  console.log('[validateSheetFormat] Validating spreadsheet:', spreadsheetId);
+  console.log('[validateSheetFormat] Validating spreadsheet:', spreadsheetId)
 
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: accessToken });
+  const auth = new google.auth.OAuth2()
+  auth.setCredentials({ access_token: accessToken })
 
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: 'v4', auth })
 
   try {
     // 스프레드시트의 모든 시트 목록 가져오기
     const spreadsheet = await sheets.spreadsheets.get({
       spreadsheetId,
       fields: 'sheets(properties(title))',
-    });
+    })
 
-    const sheetTitles = spreadsheet.data.sheets?.map((s) => s.properties?.title || '') || [];
-    console.log('[validateSheetFormat] Found tabs:', sheetTitles);
+    const sheetTitles = spreadsheet.data.sheets?.map((s) => s.properties?.title || '') || []
+    console.log('[validateSheetFormat] Found tabs:', sheetTitles)
 
     // 시트 이름에서 공백/특수문자 제거하여 비교
     const normalizeSheetName = (name: string) =>
-      name.replace(/[\s\u00A0\u3000\u200B\uFEFF]/g, '').toLowerCase();
+      name.replace(/[\s\u00A0\u3000\u200B\uFEFF]/g, '').toLowerCase()
 
-    const foundTabs: string[] = [];
-    const missingTabs: string[] = [];
+    const foundTabs: string[] = []
+    const missingTabs: string[] = []
 
     for (const requiredTab of REQUIRED_SHEET_TABS) {
-      const normalizedRequired = normalizeSheetName(requiredTab);
-      const found = sheetTitles.some(
-        (title) => normalizeSheetName(title) === normalizedRequired
-      );
+      const normalizedRequired = normalizeSheetName(requiredTab)
+      const found = sheetTitles.some((title) => normalizeSheetName(title) === normalizedRequired)
 
       if (found) {
-        foundTabs.push(requiredTab);
+        foundTabs.push(requiredTab)
       } else {
-        missingTabs.push(requiredTab);
+        missingTabs.push(requiredTab)
       }
     }
 
-    const valid = missingTabs.length === 0;
-    console.log('[validateSheetFormat] Result:', { valid, foundTabs, missingTabs });
+    const valid = missingTabs.length === 0
+    console.log('[validateSheetFormat] Result:', { valid, foundTabs, missingTabs })
 
     return {
       valid,
       foundTabs,
       missingTabs,
-    };
+    }
   } catch (error: any) {
     console.error('[validateSheetFormat] Error:', {
       code: error?.code,
       message: error?.message,
-    });
+    })
 
     // 권한 에러
     if (error?.code === 403) {
@@ -81,7 +79,7 @@ export async function validateSheetFormat(
         foundTabs: [],
         missingTabs: REQUIRED_SHEET_TABS,
         error: '스프레드시트에 접근할 권한이 없습니다.',
-      };
+      }
     }
 
     // 시트를 찾을 수 없음
@@ -91,7 +89,7 @@ export async function validateSheetFormat(
         foundTabs: [],
         missingTabs: REQUIRED_SHEET_TABS,
         error: '스프레드시트를 찾을 수 없습니다.',
-      };
+      }
     }
 
     return {
@@ -99,28 +97,32 @@ export async function validateSheetFormat(
       foundTabs: [],
       missingTabs: REQUIRED_SHEET_TABS,
       error: error?.message || '시트 검증 중 오류가 발생했습니다.',
-    };
+    }
   }
 }
 
 // 서대리 마스터 템플릿 ID (서버/클라이언트 환경변수 모두 지원)
-const MASTER_TEMPLATE_ID = process.env.SEODAERI_TEMPLATE_SHEET_ID
-  || process.env.NEXT_PUBLIC_SEODAERI_TEMPLATE_SHEET_ID
-  || '';
+const MASTER_TEMPLATE_ID =
+  process.env.SEODAERI_TEMPLATE_SHEET_ID || process.env.NEXT_PUBLIC_SEODAERI_TEMPLATE_SHEET_ID || ''
 
 // 디버깅용 로그
-console.log('[google-sheets] MASTER_TEMPLATE_ID:', MASTER_TEMPLATE_ID ? `${MASTER_TEMPLATE_ID.substring(0, 10)}...` : 'NOT SET');
+console.log(
+  '[google-sheets] MASTER_TEMPLATE_ID:',
+  MASTER_TEMPLATE_ID ? `${MASTER_TEMPLATE_ID.substring(0, 10)}...` : 'NOT SET',
+)
 
 /**
  * Google Drive에서 "서대리" 관련 스프레드시트 검색
  */
-export async function findSeodaeriSheet(accessToken: string): Promise<{ id: string; name: string } | null> {
-  console.log('[findSeodaeriSheet] Searching for 서대리 sheet...');
-  
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: accessToken });
+export async function findSeodaeriSheet(
+  accessToken: string,
+): Promise<{ id: string; name: string } | null> {
+  console.log('[findSeodaeriSheet] Searching for 서대리 sheet...')
 
-  const drive = google.drive({ version: 'v3', auth });
+  const auth = new google.auth.OAuth2()
+  auth.setCredentials({ access_token: accessToken })
+
+  const drive = google.drive({ version: 'v3', auth })
 
   try {
     // "서대리" 이름이 포함된 스프레드시트 검색
@@ -129,20 +131,20 @@ export async function findSeodaeriSheet(accessToken: string): Promise<{ id: stri
       fields: 'files(id, name)',
       orderBy: 'modifiedTime desc',
       pageSize: 1,
-    });
+    })
 
-    const files = response.data.files;
-    console.log('[findSeodaeriSheet] Found files:', files?.length || 0);
-    
+    const files = response.data.files
+    console.log('[findSeodaeriSheet] Found files:', files?.length || 0)
+
     if (files && files.length > 0) {
-      console.log('[findSeodaeriSheet] Selected:', { id: files[0]?.id, name: files[0]?.name });
+      console.log('[findSeodaeriSheet] Selected:', { id: files[0]?.id, name: files[0]?.name })
       return {
         id: files[0]?.id!,
         name: files[0]?.name!,
-      };
+      }
     }
 
-    return null;
+    return null
   } catch (error: any) {
     console.error('[findSeodaeriSheet] Error:', {
       code: error?.code,
@@ -150,41 +152,49 @@ export async function findSeodaeriSheet(accessToken: string): Promise<{ id: stri
       message: error?.message,
       errors: error?.response?.data?.error,
       fullError: JSON.stringify(error?.response?.data || error, null, 2),
-    });
-    throw error;
+    })
+    throw error
   }
 }
 
 /**
  * 마스터 템플릿을 복사하여 새 스프레드시트 생성
  */
-export async function copyMasterTemplate(accessToken: string, userName?: string): Promise<{ id: string; name: string }> {
-  console.log('[copyMasterTemplate] Copying template:', { templateId: MASTER_TEMPLATE_ID, userName });
-  
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: accessToken });
+export async function copyMasterTemplate(
+  accessToken: string,
+  userName?: string,
+): Promise<{ id: string; name: string }> {
+  console.log('[copyMasterTemplate] Copying template:', {
+    templateId: MASTER_TEMPLATE_ID,
+    userName,
+  })
 
-  const drive = google.drive({ version: 'v3', auth });
+  const auth = new google.auth.OAuth2()
+  auth.setCredentials({ access_token: accessToken })
+
+  const drive = google.drive({ version: 'v3', auth })
 
   if (!MASTER_TEMPLATE_ID) {
-    throw new Error('마스터 템플릿 ID가 설정되지 않았습니다. SEODAERI_TEMPLATE_SHEET_ID 환경변수를 확인하세요.');
+    throw new Error(
+      '마스터 템플릿 ID가 설정되지 않았습니다. SEODAERI_TEMPLATE_SHEET_ID 환경변수를 확인하세요.',
+    )
   }
 
   try {
-    const newName = `서대리 투자기록 - ${userName || '내 포트폴리오'}`;
+    const newName = `서대리 투자기록 - ${userName || '내 포트폴리오'}`
 
     const response = await drive.files.copy({
       fileId: MASTER_TEMPLATE_ID,
       requestBody: {
         name: newName,
       },
-    });
+    })
 
-    console.log('[copyMasterTemplate] Success:', { id: response.data.id, name: response.data.name });
+    console.log('[copyMasterTemplate] Success:', { id: response.data.id, name: response.data.name })
     return {
       id: response.data.id!,
       name: response.data.name!,
-    };
+    }
   } catch (error: any) {
     console.error('[copyMasterTemplate] Error:', {
       templateId: MASTER_TEMPLATE_ID,
@@ -193,8 +203,8 @@ export async function copyMasterTemplate(accessToken: string, userName?: string)
       message: error?.message,
       errors: error?.response?.data?.error,
       fullError: JSON.stringify(error?.response?.data || error, null, 2),
-    });
-    throw error;
+    })
+    throw error
   }
 }
 
@@ -202,24 +212,24 @@ export async function copyMasterTemplate(accessToken: string, userName?: string)
  * 스프레드시트 데이터 읽기
  */
 export async function fetchSheetData(accessToken: string, spreadsheetId: string, range: string) {
-  console.log('[fetchSheetData] Request:', { spreadsheetId, range, hasToken: !!accessToken });
-  
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: accessToken });
+  console.log('[fetchSheetData] Request:', { spreadsheetId, range, hasToken: !!accessToken })
 
-  const sheets = google.sheets({ version: 'v4', auth });
+  const auth = new google.auth.OAuth2()
+  auth.setCredentials({ access_token: accessToken })
+
+  const sheets = google.sheets({ version: 'v4', auth })
 
   try {
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range,
       valueRenderOption: 'UNFORMATTED_VALUE', // 소수점 등 원본 값 그대로 반환
-    });
-    console.log('[fetchSheetData] Success:', { 
+    })
+    console.log('[fetchSheetData] Success:', {
       rowCount: response.data.values?.length || 0,
       range: response.data.range,
-    });
-    return response.data.values;
+    })
+    return response.data.values
   } catch (error: any) {
     console.error('[fetchSheetData] Error:', {
       spreadsheetId,
@@ -231,8 +241,8 @@ export async function fetchSheetData(accessToken: string, spreadsheetId: string,
       errors: error?.response?.data?.error,
       // 전체 에러 객체 (디버깅용)
       fullError: JSON.stringify(error?.response?.data || error, null, 2),
-    });
-    throw error;
+    })
+    throw error
   }
 }
 
@@ -243,14 +253,14 @@ export async function appendSheetData(
   accessToken: string,
   spreadsheetId: string,
   range: string,
-  values: any[][]
+  values: any[][],
 ) {
-  console.log('[appendSheetData] Appending to:', { spreadsheetId, range, rowCount: values.length });
+  console.log('[appendSheetData] Appending to:', { spreadsheetId, range, rowCount: values.length })
 
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: accessToken });
+  const auth = new google.auth.OAuth2()
+  auth.setCredentials({ access_token: accessToken })
 
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: 'v4', auth })
 
   try {
     const response = await sheets.spreadsheets.values.append({
@@ -260,17 +270,17 @@ export async function appendSheetData(
       requestBody: {
         values,
       },
-    });
-    console.log('[appendSheetData] Success:', response.data.updates);
-    return response.data;
+    })
+    console.log('[appendSheetData] Success:', response.data.updates)
+    return response.data
   } catch (error: any) {
     console.error('[appendSheetData] Error:', {
       code: error?.code,
       message: error?.message,
       status: error?.response?.status,
       errors: error?.response?.data?.error,
-    });
-    throw error;
+    })
+    throw error
   }
 }
 
@@ -281,14 +291,14 @@ export async function updateSheetCell(
   accessToken: string,
   spreadsheetId: string,
   range: string,
-  value: string | number
+  value: string | number,
 ) {
-  console.log('[updateSheetCell] Request:', { spreadsheetId, range, value });
-  
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: accessToken });
+  console.log('[updateSheetCell] Request:', { spreadsheetId, range, value })
 
-  const sheets = google.sheets({ version: 'v4', auth });
+  const auth = new google.auth.OAuth2()
+  auth.setCredentials({ access_token: accessToken })
+
+  const sheets = google.sheets({ version: 'v4', auth })
 
   try {
     const response = await sheets.spreadsheets.values.update({
@@ -298,9 +308,9 @@ export async function updateSheetCell(
       requestBody: {
         values: [[value]],
       },
-    });
-    console.log('[updateSheetCell] Success:', response.data.updatedCells);
-    return response.data;
+    })
+    console.log('[updateSheetCell] Success:', response.data.updatedCells)
+    return response.data
   } catch (error: any) {
     console.error('[updateSheetCell] Error:', {
       spreadsheetId,
@@ -310,8 +320,8 @@ export async function updateSheetCell(
       message: error?.message,
       errors: error?.response?.data?.error,
       fullError: JSON.stringify(error?.response?.data || error, null, 2),
-    });
-    throw error;
+    })
+    throw error
   }
 }
 
@@ -321,14 +331,14 @@ export async function updateSheetCell(
 export async function batchUpdateSheet(
   accessToken: string,
   spreadsheetId: string,
-  data: { range: string; values: any[][] }[]
+  data: { range: string; values: any[][] }[],
 ) {
-  console.log('[batchUpdateSheet] Request:', { spreadsheetId, dataCount: data.length });
-  
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: accessToken });
+  console.log('[batchUpdateSheet] Request:', { spreadsheetId, dataCount: data.length })
 
-  const sheets = google.sheets({ version: 'v4', auth });
+  const auth = new google.auth.OAuth2()
+  auth.setCredentials({ access_token: accessToken })
+
+  const sheets = google.sheets({ version: 'v4', auth })
 
   try {
     const response = await sheets.spreadsheets.values.batchUpdate({
@@ -337,9 +347,9 @@ export async function batchUpdateSheet(
         valueInputOption: 'USER_ENTERED',
         data,
       },
-    });
-    console.log('[batchUpdateSheet] Success:', response.data.totalUpdatedCells);
-    return response.data;
+    })
+    console.log('[batchUpdateSheet] Success:', response.data.totalUpdatedCells)
+    return response.data
   } catch (error: any) {
     console.error('[batchUpdateSheet] Error:', {
       spreadsheetId,
@@ -348,8 +358,8 @@ export async function batchUpdateSheet(
       message: error?.message,
       errors: error?.response?.data?.error,
       fullError: JSON.stringify(error?.response?.data || error, null, 2),
-    });
-    throw error;
+    })
+    throw error
   }
 }
 
@@ -371,51 +381,51 @@ export async function insertRowInDateOrder(
   dateColumn: number,
   newDate: string,
   rowData: any[],
-  headerRows = 1
+  headerRows = 1,
 ): Promise<boolean> {
-  console.log('[insertRowInDateOrder] Starting:', { sheetName, newDate });
+  console.log('[insertRowInDateOrder] Starting:', { sheetName, newDate })
 
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: accessToken });
+  const auth = new google.auth.OAuth2()
+  auth.setCredentials({ access_token: accessToken })
 
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: 'v4', auth })
 
   try {
     // 1. 기존 데이터 읽기
-    const existingData = await fetchSheetData(accessToken, spreadsheetId, range);
-    
+    const existingData = await fetchSheetData(accessToken, spreadsheetId, range)
+
     // 2. 마지막 유효 데이터 행 찾기 (가장 안전한 방식)
-    let lastValidRowIndex = headerRows - 1; // 헤더 행 직전 (0-based)
-    
+    let lastValidRowIndex = headerRows - 1 // 헤더 행 직전 (0-based)
+
     if (existingData && existingData.length > headerRows) {
       for (let i = existingData.length - 1; i >= headerRows; i--) {
-        const row = existingData[i];
-        if (!row || !Array.isArray(row)) continue;
-        
-        const dateVal = row[dateColumn];
+        const row = existingData[i]
+        if (!row || !Array.isArray(row)) continue
+
+        const dateVal = row[dateColumn]
         if (dateVal) {
-          lastValidRowIndex = i;
-          break;
+          lastValidRowIndex = i
+          break
         }
       }
     }
-    
+
     // 마지막 유효 행 다음에 추가
     // existingData 인덱스 + 1 = 시트 행 번호 (1-based)
-    const targetRow = lastValidRowIndex + 2;
-    
-    console.log('[insertRowInDateOrder] Last valid row index:', lastValidRowIndex);
-    console.log('[insertRowInDateOrder] Target row (1-based):', targetRow);
-    
+    const targetRow = lastValidRowIndex + 2
+
+    console.log('[insertRowInDateOrder] Last valid row index:', lastValidRowIndex)
+    console.log('[insertRowInDateOrder] Target row (1-based):', targetRow)
+
     // 3. 데이터 쓰기
     // range에서 열 범위 추출
-    const rangeMatch = range.match(/'([^']+)'!([A-Z]):([A-Z])/);
+    const rangeMatch = range.match(/'([^']+)'!([A-Z]):([A-Z])/)
     if (!rangeMatch) {
-      throw new Error(`Invalid range format: ${range}`);
+      throw new Error(`Invalid range format: ${range}`)
     }
-    const startCol = rangeMatch[2];
-    const endCol = rangeMatch[3];
-    
+    const startCol = rangeMatch[2]
+    const endCol = rangeMatch[3]
+
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: `'${sheetName}'!${startCol}${targetRow}:${endCol}${targetRow}`,
@@ -423,13 +433,13 @@ export async function insertRowInDateOrder(
       requestBody: {
         values: [rowData],
       },
-    });
-    
-    console.log('[insertRowInDateOrder] Success');
-    return true;
+    })
+
+    console.log('[insertRowInDateOrder] Success')
+    return true
   } catch (error) {
-    console.error('[insertRowInDateOrder] Error:', error);
-    throw error;
+    console.error('[insertRowInDateOrder] Error:', error)
+    throw error
   }
 }
 
@@ -442,39 +452,39 @@ export async function insertSheetRow(
   accessToken: string,
   spreadsheetId: string,
   sheetName: string,
-  rowIndex: number
+  rowIndex: number,
 ) {
-  console.log('[insertSheetRow] Inserting row at:', { spreadsheetId, sheetName, rowIndex });
+  console.log('[insertSheetRow] Inserting row at:', { spreadsheetId, sheetName, rowIndex })
 
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: accessToken });
+  const auth = new google.auth.OAuth2()
+  auth.setCredentials({ access_token: accessToken })
 
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: 'v4', auth })
 
   try {
     // 먼저 시트 ID를 가져와야 함 (시트 이름 → 시트 ID)
     const spreadsheet = await sheets.spreadsheets.get({
       spreadsheetId,
       fields: 'sheets(properties(sheetId,title))',
-    });
+    })
 
     // 시트 이름에서 모든 종류의 공백 제거하여 비교
     const normalizeSheetName = (name: string | null | undefined) =>
-      name?.replace(/[\s\u00A0\u3000\u200B\uFEFF]/g, '') || '';
-    const normalizedSearchName = normalizeSheetName(sheetName);
+      name?.replace(/[\s\u00A0\u3000\u200B\uFEFF]/g, '') || ''
+    const normalizedSearchName = normalizeSheetName(sheetName)
 
     const sheet = spreadsheet.data.sheets?.find(
-      (s) => normalizeSheetName(s.properties?.title) === normalizedSearchName
-    );
+      (s) => normalizeSheetName(s.properties?.title) === normalizedSearchName,
+    )
 
     if (!sheet) {
-      console.error('[insertSheetRow] Sheet not found:', sheetName);
-      throw new Error(`시트 "${sheetName}"를 찾을 수 없습니다.`);
+      console.error('[insertSheetRow] Sheet not found:', sheetName)
+      throw new Error(`시트 "${sheetName}"를 찾을 수 없습니다.`)
     }
 
-    const sheetId = sheet.properties?.sheetId;
+    const sheetId = sheet.properties?.sheetId
     if (sheetId === undefined || sheetId === null) {
-      throw new Error(`시트 "${sheetName}"의 ID를 찾을 수 없습니다.`);
+      throw new Error(`시트 "${sheetName}"의 ID를 찾을 수 없습니다.`)
     }
 
     // 행 삽입 요청
@@ -495,13 +505,13 @@ export async function insertSheetRow(
           },
         ],
       },
-    });
+    })
 
-    console.log('[insertSheetRow] Success');
-    return response.data;
+    console.log('[insertSheetRow] Success')
+    return response.data
   } catch (error) {
-    console.error('Error inserting sheet row:', error);
-    throw error;
+    console.error('Error inserting sheet row:', error)
+    throw error
   }
 }
 
@@ -514,58 +524,68 @@ export async function deleteSheetRow(
   accessToken: string,
   spreadsheetId: string,
   sheetName: string,
-  rowIndex: number
+  rowIndex: number,
 ) {
-  console.log('[deleteSheetRow] Deleting row:', { spreadsheetId, sheetName, rowIndex });
+  console.log('[deleteSheetRow] Deleting row:', { spreadsheetId, sheetName, rowIndex })
 
-  const auth = new google.auth.OAuth2();
-  auth.setCredentials({ access_token: accessToken });
+  const auth = new google.auth.OAuth2()
+  auth.setCredentials({ access_token: accessToken })
 
-  const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: 'v4', auth })
 
   try {
     // 먼저 시트 ID를 가져와야 함 (시트 이름 → 시트 ID)
     const spreadsheet = await sheets.spreadsheets.get({
       spreadsheetId,
       fields: 'sheets(properties(sheetId,title))',
-    });
+    })
 
     // 시트 이름에서 모든 종류의 공백 제거하여 비교 (일반 공백, non-breaking space, 전각 공백 등)
     const normalizeSheetName = (name: string | null | undefined) =>
-      name?.replace(/[\s\u00A0\u3000\u200B\uFEFF]/g, '') || '';
-    const normalizedSearchName = normalizeSheetName(sheetName);
+      name?.replace(/[\s\u00A0\u3000\u200B\uFEFF]/g, '') || ''
+    const normalizedSearchName = normalizeSheetName(sheetName)
 
     // 디버깅: 각 문자의 유니코드 코드 포인트 출력
-    const toCharCodes = (s: string) => [...s].map(c => c.charCodeAt(0).toString(16)).join(',');
-    console.log('[deleteSheetRow] Looking for:', normalizedSearchName, 'codes:', toCharCodes(normalizedSearchName));
+    const toCharCodes = (s: string) => [...s].map((c) => c.charCodeAt(0).toString(16)).join(',')
+    console.log(
+      '[deleteSheetRow] Looking for:',
+      normalizedSearchName,
+      'codes:',
+      toCharCodes(normalizedSearchName),
+    )
 
     spreadsheet.data.sheets?.forEach((s, i) => {
-      const normalized = normalizeSheetName(s.properties?.title);
-      const match = normalized === normalizedSearchName;
+      const normalized = normalizeSheetName(s.properties?.title)
+      const match = normalized === normalizedSearchName
       if (normalized.includes('입금') || normalized.includes('6')) {
-        console.log(`[deleteSheetRow] Sheet ${i}: "${normalized}" codes: ${toCharCodes(normalized)} match: ${match}`);
+        console.log(
+          `[deleteSheetRow] Sheet ${i}: "${normalized}" codes: ${toCharCodes(normalized)} match: ${match}`,
+        )
       }
-    });
+    })
 
     const sheet = spreadsheet.data.sheets?.find(
-      (s) => normalizeSheetName(s.properties?.title) === normalizedSearchName
-    );
+      (s) => normalizeSheetName(s.properties?.title) === normalizedSearchName,
+    )
 
     if (!sheet) {
-      console.error('[deleteSheetRow] Sheet not found:', sheetName);
-      console.log('[deleteSheetRow] Available sheets (raw):', spreadsheet.data.sheets?.map(s => s.properties?.title));
-      throw new Error(`시트 "${sheetName}"를 찾을 수 없습니다.`);
+      console.error('[deleteSheetRow] Sheet not found:', sheetName)
+      console.log(
+        '[deleteSheetRow] Available sheets (raw):',
+        spreadsheet.data.sheets?.map((s) => s.properties?.title),
+      )
+      throw new Error(`시트 "${sheetName}"를 찾을 수 없습니다.`)
     }
 
-    const sheetId = sheet.properties?.sheetId;
+    const sheetId = sheet.properties?.sheetId
     if (sheetId === undefined || sheetId === null) {
-      throw new Error(`시트 "${sheetName}"의 ID를 찾을 수 없습니다.`);
+      throw new Error(`시트 "${sheetName}"의 ID를 찾을 수 없습니다.`)
     }
-    console.log('[deleteSheetRow] Found sheet! sheetId:', sheetId);
-    console.log('[deleteSheetRow] Found sheetId:', sheetId, 'for sheet:', sheetName);
+    console.log('[deleteSheetRow] Found sheet! sheetId:', sheetId)
+    console.log('[deleteSheetRow] Found sheetId:', sheetId, 'for sheet:', sheetName)
 
     // 행 삭제 요청
-    console.log('[deleteSheetRow] Sending batchUpdate request to delete row', rowIndex);
+    console.log('[deleteSheetRow] Sending batchUpdate request to delete row', rowIndex)
     const response = await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {
@@ -582,16 +602,16 @@ export async function deleteSheetRow(
           },
         ],
       },
-    });
+    })
 
-    console.log('[deleteSheetRow] Success');
-    return response.data;
+    console.log('[deleteSheetRow] Success')
+    return response.data
   } catch (error: any) {
     console.error('[deleteSheetRow] Error:', {
       code: error?.code,
       message: error?.message,
-    });
-    throw error;
+    })
+    throw error
   }
 }
 
@@ -603,18 +623,18 @@ export async function findSheetRowIndex(
   accessToken: string,
   spreadsheetId: string,
   range: string,
-  matchFn: (row: any[]) => boolean
+  matchFn: (row: any[]) => boolean,
 ): Promise<number> {
-  const rows = await fetchSheetData(accessToken, spreadsheetId, range);
-  if (!rows) return -1;
+  const rows = await fetchSheetData(accessToken, spreadsheetId, range)
+  if (!rows) return -1
 
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
+    const row = rows[i]
     if (row && matchFn(row)) {
-      return i;
+      return i
     }
   }
-  return -1;
+  return -1
 }
 
 // ============================================
@@ -626,60 +646,65 @@ export async function findSheetRowIndex(
  * G5: 총자산(원화 환산), G8: 수익률
  */
 export interface AccountSummary {
-  totalAsset: number;       // 총 자산 (원화)
-  totalYield: number;       // 총 수익률 (%)
-  totalInvested: number;    // 총 투자원금
-  totalProfit: number;      // 총 수익금
+  totalAsset: number // 총 자산 (원화)
+  totalYield: number // 총 수익률 (%)
+  totalInvested: number // 총 투자원금
+  totalProfit: number // 총 수익금
 }
 
 export function parseAccountSummary(rows: any[]): AccountSummary {
   const parseNumber = (val: any): number => {
-    if (!val) return 0;
-    const cleaned = String(val).replace(/[₩$,%\s,]/g, '');
-    return Number.parseFloat(cleaned) || 0;
-  };
+    if (!val) return 0
+    const cleaned = String(val).replace(/[₩$,%\s,]/g, '')
+    return Number.parseFloat(cleaned) || 0
+  }
 
   // 라벨을 찾아서 해당 값을 추출하는 헬퍼 함수
   const findValueByLabel = (labels: string[]): number => {
     for (const row of rows) {
-      if (!row || !Array.isArray(row)) continue;
+      if (!row || !Array.isArray(row)) continue
       for (let i = 0; i < row.length; i++) {
-        const cell = String(row[i] || '').trim();
-        if (labels.some(label => cell.includes(label))) {
+        const cell = String(row[i] || '').trim()
+        if (labels.some((label) => cell.includes(label))) {
           // 라벨 다음 셀에서 값을 찾음
           for (let j = i + 1; j < row.length; j++) {
-            const val = parseNumber(row[j]);
-            if (val !== 0) return val;
+            const val = parseNumber(row[j])
+            if (val !== 0) return val
           }
         }
       }
     }
-    return 0;
-  };
+    return 0
+  }
 
   // 다양한 라벨 패턴으로 검색
-  const totalAsset = findValueByLabel(['총자산', '총 자산', '평가금액', '평가액']);
-  const totalYield = findValueByLabel(['누적 수익률', '수익률', '총수익률']);
-  const totalInvested = findValueByLabel(['투자원금', '투자금액', '원금', '매입금액']);
-  const totalProfit = findValueByLabel(['수익금', '평가손익', '손익']);
+  const totalAsset = findValueByLabel(['총자산', '총 자산', '평가금액', '평가액'])
+  const totalYield = findValueByLabel(['누적 수익률', '수익률', '총수익률'])
+  const totalInvested = findValueByLabel(['투자원금', '투자금액', '원금', '매입금액'])
+  const totalProfit = findValueByLabel(['수익금', '평가손익', '손익'])
 
-  console.log('[parseAccountSummary] Parsed values:', { totalAsset, totalYield, totalInvested, totalProfit });
+  console.log('[parseAccountSummary] Parsed values:', {
+    totalAsset,
+    totalYield,
+    totalInvested,
+    totalProfit,
+  })
 
   return {
     totalAsset,
     totalYield,
     totalInvested,
     totalProfit,
-  };
+  }
 }
 
 /**
  * 월별 손익 데이터 타입
  */
 export interface MonthlyProfitLoss {
-  month: string; // "1월", "2월", ...
-  profit: number; // 수익 (양수일 때)
-  loss: number; // 손실 (음수일 때의 절대값)
+  month: string // "1월", "2월", ...
+  profit: number // 수익 (양수일 때)
+  loss: number // 손실 (음수일 때의 절대값)
 }
 
 /**
@@ -693,75 +718,75 @@ export interface MonthlyProfitLoss {
  * @param targetYear - 조회할 연도 (기본값: 현재 연도)
  */
 export function parseMonthlyProfitLoss(rows: any[], targetYear?: number): MonthlyProfitLoss[] {
-  console.log('[parseMonthlyProfitLoss] Input rows count:', rows?.length);
+  console.log('[parseMonthlyProfitLoss] Input rows count:', rows?.length)
 
-  if (!rows || rows.length === 0) return [];
+  if (!rows || rows.length === 0) return []
 
-  const currentYear = targetYear || new Date().getFullYear();
+  const currentYear = targetYear || new Date().getFullYear()
 
   const parseNumber = (val: any): number => {
-    if (!val || val === '-') return 0;
-    const str = String(val);
+    if (!val || val === '-') return 0
+    const str = String(val)
 
     // 음수 표현 감지: ▼, 괄호(), 또는 - 기호
-    let isNegative = false;
+    let isNegative = false
     if (str.includes('▼') || str.includes('▽') || /^\(.*\)$/.test(str.trim())) {
-      isNegative = true;
+      isNegative = true
     }
 
     // 숫자만 추출 (쉼표, 통화기호, 특수문자 제거)
-    const cleaned = str.replace(/[₩$,%\s▼▽()]/g, '').replace(/,/g, '');
-    let num = Number.parseFloat(cleaned) || 0;
+    const cleaned = str.replace(/[₩$,%\s▼▽()]/g, '').replace(/,/g, '')
+    let num = Number.parseFloat(cleaned) || 0
 
     // 음수 처리
     if (isNegative && num > 0) {
-      num = -num;
+      num = -num
     }
 
-    return num;
-  };
-
-  // 월별 데이터를 담을 Map (1월~12월)
-  const monthlyData = new Map<number, number>();
-
-  for (const row of rows) {
-    if (!row || !Array.isArray(row) || row.length < 6) continue;
-
-    // E열(index 0) = 연도, F열(index 1) = 월, J열(index 5) = 월수익
-    const yearVal = String(row[0] || '').trim();
-    const monthVal = String(row[1] || '').trim();
-    const profitVal = row[5];
-
-    // 연도 파싱 (숫자만 추출)
-    const year = Number.parseInt(yearVal.replace(/[^0-9]/g, ''), 10);
-    if (year !== currentYear) continue;
-
-    // 월 파싱 ("1월" -> 1, "12월" -> 12)
-    const monthMatch = monthVal.match(/(\d+)/);
-    if (!monthMatch) continue;
-    const month = Number.parseInt(monthMatch[1] || '', 10);
-    if (month < 1 || month > 12) continue;
-
-    // 월수익 파싱
-    const profit = parseNumber(profitVal);
-    monthlyData.set(month, profit);
+    return num
   }
 
-  console.log('[parseMonthlyProfitLoss] Found data for months:', Array.from(monthlyData.keys()));
+  // 월별 데이터를 담을 Map (1월~12월)
+  const monthlyData = new Map<number, number>()
+
+  for (const row of rows) {
+    if (!row || !Array.isArray(row) || row.length < 6) continue
+
+    // E열(index 0) = 연도, F열(index 1) = 월, J열(index 5) = 월수익
+    const yearVal = String(row[0] || '').trim()
+    const monthVal = String(row[1] || '').trim()
+    const profitVal = row[5]
+
+    // 연도 파싱 (숫자만 추출)
+    const year = Number.parseInt(yearVal.replace(/[^0-9]/g, ''), 10)
+    if (year !== currentYear) continue
+
+    // 월 파싱 ("1월" -> 1, "12월" -> 12)
+    const monthMatch = monthVal.match(/(\d+)/)
+    if (!monthMatch) continue
+    const month = Number.parseInt(monthMatch[1] || '', 10)
+    if (month < 1 || month > 12) continue
+
+    // 월수익 파싱
+    const profit = parseNumber(profitVal)
+    monthlyData.set(month, profit)
+  }
+
+  console.log('[parseMonthlyProfitLoss] Found data for months:', Array.from(monthlyData.keys()))
 
   // 1월~12월 결과 생성
-  const results: MonthlyProfitLoss[] = [];
+  const results: MonthlyProfitLoss[] = []
   for (let i = 1; i <= 12; i++) {
-    const netValue = monthlyData.get(i) || 0;
+    const netValue = monthlyData.get(i) || 0
     results.push({
       month: `${i}월`,
       profit: netValue > 0 ? netValue : 0,
       loss: netValue < 0 ? Math.abs(netValue) : 0,
-    });
+    })
   }
 
-  console.log('[parseMonthlyProfitLoss] Parsed results:', JSON.stringify(results));
-  return results;
+  console.log('[parseMonthlyProfitLoss] Parsed results:', JSON.stringify(results))
+  return results
 }
 
 /**
@@ -769,133 +794,144 @@ export function parseMonthlyProfitLoss(rows: any[], targetYear?: number): Monthl
  * 시트 구조가 다를 수 있으므로 유연하게 처리
  */
 export interface DividendRecord {
-  date: string;
-  ticker: string;
-  name: string;
-  amountKRW: number;
-  amountUSD: number;
-  totalKRW: number; // J열 원화환산 (시트 수식으로 계산된 값)
-  account?: string; // K열 계좌 유형
+  date: string
+  ticker: string
+  name: string
+  amountKRW: number
+  amountUSD: number
+  totalKRW: number // J열 원화환산 (시트 수식으로 계산된 값)
+  account?: string // K열 계좌 유형
 }
 
 export function parseDividendData(rows: any[]): DividendRecord[] {
-  if (!rows || rows.length <= 1) return [];
+  if (!rows || rows.length <= 1) return []
 
   const parseNumber = (val: any): number => {
-    if (!val) return 0;
-    const cleaned = String(val).replace(/[₩$,\s]/g, '');
-    return Number.parseFloat(cleaned) || 0;
-  };
+    if (!val) return 0
+    const cleaned = String(val).replace(/[₩$,\s]/g, '')
+    return Number.parseFloat(cleaned) || 0
+  }
 
   // 날짜 형식 감지 (YYYY/MM/DD, YYYY-MM-DD, MM/DD/YYYY, 시리얼넘버 등)
   const parseDate = (val: any): string | null => {
-    if (!val) return null;
+    if (!val) return null
 
     // 시리얼 넘버 처리 (UNFORMATTED_VALUE로 숫자가 오는 경우)
     if (typeof val === 'number' && val > 30000 && val < 100000) {
       // Google Sheets 시리얼: 1899-12-30 기준
-      const date = new Date((val - 25569) * 86400 * 1000);
-      const year = date.getUTCFullYear();
-      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(date.getUTCDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      const date = new Date((val - 25569) * 86400 * 1000)
+      const year = date.getUTCFullYear()
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(date.getUTCDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
     }
 
-    const str = String(val).trim();
+    const str = String(val).trim()
 
     // YYYY/MM/DD 또는 YYYY-MM-DD 형식
-    const match1 = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+    const match1 = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/)
     if (match1) {
-      return `${match1[1]}-${match1[2]?.padStart(2, '0')}-${match1[3]?.padStart(2, '0')}`;
+      return `${match1[1]}-${match1[2]?.padStart(2, '0')}-${match1[3]?.padStart(2, '0')}`
     }
 
     // MM/DD/YYYY 형식
-    const match2 = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+    const match2 = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
     if (match2) {
-      return `${match2[3]}-${match2[1]?.padStart(2, '0')}-${match2[2]?.padStart(2, '0')}`;
+      return `${match2[3]}-${match2[1]?.padStart(2, '0')}-${match2[2]?.padStart(2, '0')}`
     }
 
-    return null;
-  };
+    return null
+  }
 
   // 헤더 행을 분석하여 컬럼 인덱스 찾기
-  const headerRow = rows[0] || [];
-  let dateCol = -1;
-  let tickerCol = -1;
-  let nameCol = -1;
-  let amountKRWCol = -1;
-  let amountUSDCol = -1;
+  const headerRow = rows[0] || []
+  let dateCol = -1
+  let tickerCol = -1
+  let nameCol = -1
+  let amountKRWCol = -1
+  let amountUSDCol = -1
 
   for (let i = 0; i < headerRow.length; i++) {
-    const header = String(headerRow[i] || '').toLowerCase();
+    const header = String(headerRow[i] || '').toLowerCase()
     if (header.includes('날짜') || header.includes('date') || header.includes('일자')) {
-      dateCol = i;
-    } else if (header.includes('종목코드') || header.includes('ticker') || header.includes('코드')) {
-      tickerCol = i;
+      dateCol = i
+    } else if (
+      header.includes('종목코드') ||
+      header.includes('ticker') ||
+      header.includes('코드')
+    ) {
+      tickerCol = i
     } else if (header.includes('종목명') || header.includes('name') || header.includes('종목')) {
-      nameCol = i;
+      nameCol = i
     } else if (header.includes('원화') || header.includes('krw') || header.includes('배당금')) {
-      if (amountKRWCol === -1) amountKRWCol = i;
+      if (amountKRWCol === -1) amountKRWCol = i
     } else if (header.includes('달러') || header.includes('usd') || header.includes('$')) {
-      amountUSDCol = i;
+      amountUSDCol = i
     }
   }
 
   // 헤더를 찾지 못한 경우 기본값 사용
   // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산
-  if (dateCol === -1) dateCol = 1; // B열 (날짜)
-  if (tickerCol === -1) tickerCol = 5; // F열 (종목코드)
-  if (nameCol === -1) nameCol = 6; // G열 (종목명)
-  if (amountKRWCol === -1) amountKRWCol = 7; // H열 (원화 배당금)
-  if (amountUSDCol === -1) amountUSDCol = 8; // I열 (외화 배당금)
-  const totalKRWCol = 9; // J열 (원화환산 - 시트 수식으로 계산됨)
+  if (dateCol === -1) dateCol = 1 // B열 (날짜)
+  if (tickerCol === -1) tickerCol = 5 // F열 (종목코드)
+  if (nameCol === -1) nameCol = 6 // G열 (종목명)
+  if (amountKRWCol === -1) amountKRWCol = 7 // H열 (원화 배당금)
+  if (amountUSDCol === -1) amountUSDCol = 8 // I열 (외화 배당금)
+  const totalKRWCol = 9 // J열 (원화환산 - 시트 수식으로 계산됨)
 
-  console.log('[parseDividendData] Column indices:', { dateCol, tickerCol, nameCol, amountKRWCol, amountUSDCol, totalKRWCol });
+  console.log('[parseDividendData] Column indices:', {
+    dateCol,
+    tickerCol,
+    nameCol,
+    amountKRWCol,
+    amountUSDCol,
+    totalKRWCol,
+  })
 
-  const results: DividendRecord[] = [];
+  const results: DividendRecord[] = []
 
   // 데이터 행 파싱 (헤더 제외)
   for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row || !Array.isArray(row)) continue;
+    const row = rows[i]
+    if (!row || !Array.isArray(row)) continue
 
     // 날짜 찾기 - 여러 컬럼 시도
-    let date: string | null = null;
+    let date: string | null = null
     for (let col = 0; col < Math.min(row.length, 5); col++) {
-      date = parseDate(row[col]);
-      if (date) break;
+      date = parseDate(row[col])
+      if (date) break
     }
 
-    if (!date) continue; // 유효한 날짜 없으면 skip
+    if (!date) continue // 유효한 날짜 없으면 skip
 
     // 배당금 찾기 - 숫자 값이 있는 컬럼 탐색
-    let amountKRW = parseNumber(row[amountKRWCol]);
-    let amountUSD = parseNumber(row[amountUSDCol]);
+    let amountKRW = parseNumber(row[amountKRWCol])
+    let amountUSD = parseNumber(row[amountUSDCol])
 
     // 배당금이 0이면 다른 컬럼에서 찾기
     if (amountKRW === 0 && amountUSD === 0) {
       for (let col = 5; col < row.length; col++) {
-        const val = parseNumber(row[col]);
+        const val = parseNumber(row[col])
         if (val > 0) {
           // USD인지 KRW인지 추정 (금액 크기로)
           if (val > 1000) {
-            amountKRW = val;
+            amountKRW = val
           } else {
-            amountUSD = val;
+            amountUSD = val
           }
-          break;
+          break
         }
       }
     }
 
     // J열 원화환산 값 파싱 (시트 수식으로 계산된 값)
-    const totalKRWRaw = parseNumber(row[totalKRWCol]);
+    const totalKRWRaw = parseNumber(row[totalKRWCol])
 
     // 배당금이 하나라도 있으면 기록
     if (amountKRW > 0 || amountUSD > 0 || totalKRWRaw > 0) {
       // 소수점 반올림하여 정수로 저장
-      const totalKRW = totalKRWRaw > 0 ? Math.round(totalKRWRaw) : Math.round(amountKRW);
-      const accountVal = String(row[10] || '').trim(); // K열 (index 10) 계좌 유형
+      const totalKRW = totalKRWRaw > 0 ? Math.round(totalKRWRaw) : Math.round(amountKRW)
+      const accountVal = String(row[10] || '').trim() // K열 (index 10) 계좌 유형
       results.push({
         date,
         ticker: String(row[tickerCol] || ''),
@@ -904,44 +940,44 @@ export function parseDividendData(rows: any[]): DividendRecord[] {
         amountUSD,
         totalKRW,
         account: accountVal || undefined,
-      });
+      })
     }
   }
 
-  console.log('[parseDividendData] Parsed records count:', results.length);
+  console.log('[parseDividendData] Parsed records count:', results.length)
   if (results.length > 0) {
-    console.log('[parseDividendData] First 3 records:', results.slice(0, 3));
+    console.log('[parseDividendData] First 3 records:', results.slice(0, 3))
   }
 
-  return results;
+  return results
 }
 
 /**
  * 월별 배당금 집계
  */
 export interface MonthlyDividend {
-  month: string;
-  year: number;
-  amount: number;
+  month: string
+  year: number
+  amount: number
 }
 
 export function aggregateMonthlyDividends(dividends: DividendRecord[]): MonthlyDividend[] {
-  const monthlyMap = new Map<string, { year: number; month: number; amount: number }>();
+  const monthlyMap = new Map<string, { year: number; month: number; amount: number }>()
 
   for (const d of dividends) {
-    const date = new Date(d.date);
-    if (Number.isNaN(date.getTime())) continue;
+    const date = new Date(d.date)
+    if (Number.isNaN(date.getTime())) continue
 
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const key = `${year}-${month.toString().padStart(2, '0')}`;
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const key = `${year}-${month.toString().padStart(2, '0')}`
 
     // 시트에서 계산된 totalKRW 사용
-    const existing = monthlyMap.get(key);
+    const existing = monthlyMap.get(key)
     if (existing) {
-      existing.amount += d.totalKRW;
+      existing.amount += d.totalKRW
     } else {
-      monthlyMap.set(key, { year, month, amount: d.totalKRW });
+      monthlyMap.set(key, { year, month, amount: d.totalKRW })
     }
   }
 
@@ -953,11 +989,11 @@ export function aggregateMonthlyDividends(dividends: DividendRecord[]): MonthlyD
       amount: Math.round(amount),
     }))
     .sort((a, b) => {
-      if (a.year !== b.year) return a.year - b.year;
-      return Number.parseInt(a.month) - Number.parseInt(b.month);
-    });
+      if (a.year !== b.year) return a.year - b.year
+      return Number.parseInt(a.month) - Number.parseInt(b.month)
+    })
 
-  return results;
+  return results
 }
 
 /**
@@ -965,10 +1001,10 @@ export function aggregateMonthlyDividends(dividends: DividendRecord[]): MonthlyD
  */
 export interface DividendByYearData {
   data: {
-    month: string; // '1', '2', ... '12'
-    [year: string]: number | string; // '2023': 1116, '2024': 4710
-  }[];
-  years: number[]; // [2023, 2024, 2025]
+    month: string // '1', '2', ... '12'
+    [year: string]: number | string // '2023': 1116, '2024': 4710
+  }[]
+  years: number[] // [2023, 2024, 2025]
 }
 
 /**
@@ -976,10 +1012,10 @@ export interface DividendByYearData {
  */
 export interface YearlyDividendSummaryData {
   data: {
-    year: string; // '2023년'
-    amount: number;
-  }[];
-  cagr?: number; // 연평균 배당성장률 (%, 예: 25.7)
+    year: string // '2023년'
+    amount: number
+  }[]
+  cagr?: number // 연평균 배당성장률 (%, 예: 25.7)
 }
 
 /**
@@ -987,107 +1023,110 @@ export interface YearlyDividendSummaryData {
  */
 export interface RollingAverageDividendData {
   data: {
-    month: string; // 'YY.MM' 형식
-    average: number;
-  }[];
+    month: string // 'YY.MM' 형식
+    average: number
+  }[]
 }
 
-export function calculateRollingAverageDividend(dividends: DividendRecord[], startMonth?: string): RollingAverageDividendData | null {
-  if (!dividends || dividends.length === 0) return null;
+export function calculateRollingAverageDividend(
+  dividends: DividendRecord[],
+  startMonth?: string,
+): RollingAverageDividendData | null {
+  if (!dividends || dividends.length === 0) return null
 
   // 월별 배당금 집계
-  const monthlyMap = new Map<string, number>();
+  const monthlyMap = new Map<string, number>()
 
   for (const d of dividends) {
-    const date = new Date(d.date);
-    if (Number.isNaN(date.getTime())) continue;
+    const date = new Date(d.date)
+    if (Number.isNaN(date.getTime())) continue
 
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const key = `${year}-${String(month).padStart(2, '0')}`;
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const key = `${year}-${String(month).padStart(2, '0')}`
 
     // 시트에서 계산된 totalKRW 사용
-    const existing = monthlyMap.get(key) || 0;
-    monthlyMap.set(key, existing + d.totalKRW);
+    const existing = monthlyMap.get(key) || 0
+    monthlyMap.set(key, existing + d.totalKRW)
   }
 
   // 월별 데이터를 정렬
-  const sortedMonths = Array.from(monthlyMap.keys()).sort();
-  if (sortedMonths.length === 0) return null;
+  const sortedMonths = Array.from(monthlyMap.keys()).sort()
+  if (sortedMonths.length === 0) return null
 
   // startMonth(YY.MM 형식)가 제공되면 그것을 시작 시점으로 사용
-  let rangeStart: string;
+  let rangeStart: string
   if (startMonth) {
     // YY.MM → YYYY-MM 변환
-    const [yy, mm] = startMonth.split('.');
-    rangeStart = `20${yy}-${mm}`;
+    const [yy, mm] = startMonth.split('.')
+    rangeStart = `20${yy}-${mm}`
   } else {
-    rangeStart = sortedMonths[0] ?? '2023-01';
+    rangeStart = sortedMonths[0] ?? '2023-01'
   }
 
   // 시작월과 첫 배당월 중 더 이른 것을 사용
-  const firstMonth = sortedMonths[0] ?? '2023-01';
-  const effectiveFirst = rangeStart < firstMonth ? rangeStart : firstMonth;
+  const firstMonth = sortedMonths[0] ?? '2023-01'
+  const effectiveFirst = rangeStart < firstMonth ? rangeStart : firstMonth
 
-  const lastMonth = sortedMonths[sortedMonths.length - 1];
-  const [firstYear, firstMon] = effectiveFirst.split('-').map(Number);
-  const [lastYear, lastMon] = (lastMonth ?? '2025-12').split('-').map(Number);
+  const lastMonth = sortedMonths[sortedMonths.length - 1]
+  const [firstYear, firstMon] = effectiveFirst.split('-').map(Number)
+  const [lastYear, lastMon] = (lastMonth ?? '2025-12').split('-').map(Number)
 
-  const allMonths: string[] = [];
-  let y = firstYear ?? 2023;
-  let m = firstMon ?? 1;
-  const endY = lastYear ?? 2025;
-  const endM = lastMon ?? 12;
+  const allMonths: string[] = []
+  let y = firstYear ?? 2023
+  let m = firstMon ?? 1
+  const endY = lastYear ?? 2025
+  const endM = lastMon ?? 12
 
   while (y < endY || (y === endY && m <= endM)) {
-    allMonths.push(`${y}-${String(m).padStart(2, '0')}`);
-    m++;
+    allMonths.push(`${y}-${String(m).padStart(2, '0')}`)
+    m++
     if (m > 12) {
-      m = 1;
-      y++;
+      m = 1
+      y++
     }
   }
 
   // 12개월 롤링 평균 계산
-  const data: RollingAverageDividendData['data'] = [];
+  const data: RollingAverageDividendData['data'] = []
 
   for (let i = 0; i < allMonths.length; i++) {
-    const currentKey = allMonths[i];
-    if (!currentKey) continue;
+    const currentKey = allMonths[i]
+    if (!currentKey) continue
 
     // 현재 월 포함 최근 12개월의 배당금 합계
-    let sum = 0;
-    let count = 0;
+    let sum = 0
+    let count = 0
 
     for (let j = Math.max(0, i - 11); j <= i; j++) {
-      const monthKey = allMonths[j];
+      const monthKey = allMonths[j]
       if (monthKey) {
-        sum += monthlyMap.get(monthKey) || 0;
-        count++;
+        sum += monthlyMap.get(monthKey) || 0
+        count++
       }
     }
 
     // 항상 12로 나누어 12개월 평균 계산 (시트 BE열 수식과 동일)
-    const average = count > 0 ? Math.round(sum / 12) : 0;
+    const average = count > 0 ? Math.round(sum / 12) : 0
 
     // YY.MM 형식으로 변환
-    const [yearStr, monthStr] = currentKey.split('-');
-    const displayMonth = `${(yearStr ?? '23').slice(2)}.${monthStr}`;
+    const [yearStr, monthStr] = currentKey.split('-')
+    const displayMonth = `${(yearStr ?? '23').slice(2)}.${monthStr}`
 
-    data.push({ month: displayMonth, average });
+    data.push({ month: displayMonth, average })
   }
 
   // startMonth가 명시적으로 주어졌으면 해당 시점부터 전체 표시
   // 그렇지 않으면 첫 배당 입금 월부터 데이터 시작 (앞쪽 0값 제거)
-  let recentData = data;
+  let recentData = data
   if (!startMonth) {
-    const firstNonZeroIndex = data.findIndex(d => d.average > 0);
-    if (firstNonZeroIndex > 0) recentData = data.slice(firstNonZeroIndex);
+    const firstNonZeroIndex = data.findIndex((d) => d.average > 0)
+    if (firstNonZeroIndex > 0) recentData = data.slice(firstNonZeroIndex)
   }
 
-  console.log('[calculateRollingAverageDividend] Data points:', recentData.length);
+  console.log('[calculateRollingAverageDividend] Data points:', recentData.length)
 
-  return { data: recentData };
+  return { data: recentData }
 }
 
 /**
@@ -1095,188 +1134,193 @@ export function calculateRollingAverageDividend(dividends: DividendRecord[], sta
  */
 export interface CumulativeDividendData {
   data: {
-    month: string; // 'YY.MM' 형식
-    cumulative: number;
-  }[];
+    month: string // 'YY.MM' 형식
+    cumulative: number
+  }[]
 }
 
-export function calculateCumulativeDividend(dividends: DividendRecord[]): CumulativeDividendData | null {
-  if (!dividends || dividends.length === 0) return null;
+export function calculateCumulativeDividend(
+  dividends: DividendRecord[],
+): CumulativeDividendData | null {
+  if (!dividends || dividends.length === 0) return null
 
   // 월별 배당금 집계
-  const monthlyMap = new Map<string, number>();
+  const monthlyMap = new Map<string, number>()
 
   for (const d of dividends) {
-    const date = new Date(d.date);
-    if (Number.isNaN(date.getTime())) continue;
+    const date = new Date(d.date)
+    if (Number.isNaN(date.getTime())) continue
 
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const key = `${year}-${String(month).padStart(2, '0')}`;
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const key = `${year}-${String(month).padStart(2, '0')}`
 
     // 시트에서 계산된 totalKRW 사용
-    const existing = monthlyMap.get(key) || 0;
-    monthlyMap.set(key, existing + d.totalKRW);
+    const existing = monthlyMap.get(key) || 0
+    monthlyMap.set(key, existing + d.totalKRW)
   }
 
   // 월별 데이터를 정렬
-  const sortedMonths = Array.from(monthlyMap.keys()).sort();
-  if (sortedMonths.length === 0) return null;
+  const sortedMonths = Array.from(monthlyMap.keys()).sort()
+  if (sortedMonths.length === 0) return null
 
   // 첫 번째 배당 월부터 현재까지 모든 월 생성
-  const firstMonth = sortedMonths[0];
-  const [firstYear, firstMon] = (firstMonth ?? '2023-01').split('-').map(Number);
+  const firstMonth = sortedMonths[0]
+  const [firstYear, firstMon] = (firstMonth ?? '2023-01').split('-').map(Number)
 
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth() + 1
 
-  const data: { month: string; cumulative: number }[] = [];
-  let cumulative = 0;
+  const data: { month: string; cumulative: number }[] = []
+  let cumulative = 0
 
-  let year = firstYear ?? 2023;
-  let month = firstMon ?? 1;
+  let year = firstYear ?? 2023
+  let month = firstMon ?? 1
 
   while (year < currentYear || (year === currentYear && month <= currentMonth)) {
-    const key = `${year}-${String(month).padStart(2, '0')}`;
-    const monthlyAmount = monthlyMap.get(key) || 0;
-    cumulative += monthlyAmount;
+    const key = `${year}-${String(month).padStart(2, '0')}`
+    const monthlyAmount = monthlyMap.get(key) || 0
+    cumulative += monthlyAmount
 
     // YY.MM 형식으로 변환
-    const displayMonth = `${String(year).slice(2)}.${String(month).padStart(2, '0')}`;
-    data.push({ month: displayMonth, cumulative: Math.round(cumulative) });
+    const displayMonth = `${String(year).slice(2)}.${String(month).padStart(2, '0')}`
+    data.push({ month: displayMonth, cumulative: Math.round(cumulative) })
 
     // 다음 달로 이동
-    month++;
+    month++
     if (month > 12) {
-      month = 1;
-      year++;
+      month = 1
+      year++
     }
   }
 
   // 전체 데이터 반환 (차트에서 스크롤/적응형 표시)
-  console.log('[calculateCumulativeDividend] Data points:', data.length);
+  console.log('[calculateCumulativeDividend] Data points:', data.length)
 
-  return { data };
+  return { data }
 }
 
-export function aggregateYearlyDividends(dividends: DividendRecord[]): YearlyDividendSummaryData | null {
-  if (!dividends || dividends.length === 0) return null;
+export function aggregateYearlyDividends(
+  dividends: DividendRecord[],
+): YearlyDividendSummaryData | null {
+  if (!dividends || dividends.length === 0) return null
 
   // 연도별 집계
-  const yearMap = new Map<number, number>();
+  const yearMap = new Map<number, number>()
 
   for (const d of dividends) {
-    const date = new Date(d.date);
-    if (Number.isNaN(date.getTime())) continue;
+    const date = new Date(d.date)
+    if (Number.isNaN(date.getTime())) continue
 
-    const year = date.getFullYear();
+    const year = date.getFullYear()
     // 시트에서 계산된 totalKRW 사용
-    const existing = yearMap.get(year) || 0;
-    yearMap.set(year, existing + d.totalKRW);
+    const existing = yearMap.get(year) || 0
+    yearMap.set(year, existing + d.totalKRW)
   }
 
   // 배당금이 있는 연도만 필터링하고 정렬
   const years = Array.from(yearMap.entries())
     .filter(([_, amount]) => amount > 0)
-    .sort((a, b) => a[0] - b[0]);
+    .sort((a, b) => a[0] - b[0])
 
-  if (years.length === 0) return null;
+  if (years.length === 0) return null
 
   const data = years.map(([year, amount]) => ({
     year: `${year}년`,
     amount: Math.round(amount),
-  }));
+  }))
 
   // 연평균 배당성장률 (CAGR) 계산: 시트 RATE 함수와 동일
   // nper = yearsDiff + 1 (시트에서 첫 해를 period 1로 카운트)
-  let cagr: number | undefined;
+  let cagr: number | undefined
   if (years.length >= 2) {
-    const firstYear = years[0]!;
-    const lastYear = years[years.length - 1]!;
-    const nper = lastYear[0] - firstYear[0] + 1;
+    const firstYear = years[0]!
+    const lastYear = years[years.length - 1]!
+    const nper = lastYear[0] - firstYear[0] + 1
     if (nper > 1 && firstYear[1] > 0 && lastYear[1] > 0) {
-      cagr = Math.round((Math.pow(lastYear[1] / firstYear[1], 1 / nper) - 1) * 1000) / 10; // 소수점 1자리 %
+      cagr = Math.round(((lastYear[1] / firstYear[1]) ** (1 / nper) - 1) * 1000) / 10 // 소수점 1자리 %
     }
   }
 
-  console.log('[aggregateYearlyDividends] Data:', data, 'CAGR:', cagr);
+  console.log('[aggregateYearlyDividends] Data:', data, 'CAGR:', cagr)
 
-  return { data, cagr };
+  return { data, cagr }
 }
 
 export function aggregateDividendsByYear(dividends: DividendRecord[]): DividendByYearData | null {
-  if (!dividends || dividends.length === 0) return null;
+  if (!dividends || dividends.length === 0) return null
 
   // 연도-월별 집계
-  const yearMonthMap = new Map<string, number>();
-  const yearsSet = new Set<number>();
+  const yearMonthMap = new Map<string, number>()
+  const yearsSet = new Set<number>()
 
   for (const d of dividends) {
-    const date = new Date(d.date);
-    if (Number.isNaN(date.getTime())) continue;
+    const date = new Date(d.date)
+    if (Number.isNaN(date.getTime())) continue
 
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const key = `${year}-${month}`;
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const key = `${year}-${month}`
 
-    yearsSet.add(year);
+    yearsSet.add(year)
 
     // 시트에서 계산된 totalKRW 사용
-    const existing = yearMonthMap.get(key) || 0;
-    yearMonthMap.set(key, existing + d.totalKRW);
+    const existing = yearMonthMap.get(key) || 0
+    yearMonthMap.set(key, existing + d.totalKRW)
   }
 
-  const years = Array.from(yearsSet).sort((a, b) => a - b);
+  const years = Array.from(yearsSet).sort((a, b) => a - b)
 
   // 12개월 데이터 생성
-  const data: DividendByYearData['data'] = [];
+  const data: DividendByYearData['data'] = []
   for (let month = 1; month <= 12; month++) {
-    const monthData: DividendByYearData['data'][0] = { month: `${month}` };
+    const monthData: DividendByYearData['data'][0] = { month: `${month}` }
 
     for (const year of years) {
-      const key = `${year}-${month}`;
-      const amount = yearMonthMap.get(key) || 0;
-      monthData[String(year)] = Math.round(amount);
+      const key = `${year}-${month}`
+      const amount = yearMonthMap.get(key) || 0
+      monthData[String(year)] = Math.round(amount)
     }
 
-    data.push(monthData);
+    data.push(monthData)
   }
 
-  console.log('[aggregateDividendsByYear] Years:', years);
-  console.log('[aggregateDividendsByYear] Sample data:', data.slice(0, 3));
+  console.log('[aggregateDividendsByYear] Years:', years)
+  console.log('[aggregateDividendsByYear] Sample data:', data.slice(0, 3))
 
-  return { data, years };
+  return { data, years }
 }
 
 export interface DividendAccountData {
-  thisMonthDividend: number;
-  yearlyDividend: number;
-  monthlyDividends: MonthlyDividend[];
-  dividendByYear: DividendByYearData | null;
-  yearlyDividendSummary: YearlyDividendSummaryData | null;
-  rollingAverageDividend: RollingAverageDividendData | null;
-  cumulativeDividend: CumulativeDividendData | null;
+  thisMonthDividend: number
+  yearlyDividend: number
+  monthlyDividends: MonthlyDividend[]
+  dividendByYear: DividendByYearData | null
+  yearlyDividendSummary: YearlyDividendSummaryData | null
+  rollingAverageDividend: RollingAverageDividendData | null
+  cumulativeDividend: CumulativeDividendData | null
 }
 
-export function computeDividendAccountData(dividends: DividendRecord[], startMonth?: string): DividendAccountData {
-  const monthlyDividends = aggregateMonthlyDividends(dividends);
-  const dividendByYear = aggregateDividendsByYear(dividends);
-  const yearlyDividendSummary = aggregateYearlyDividends(dividends);
-  const rollingAverageDividend = calculateRollingAverageDividend(dividends, startMonth);
-  const cumulativeDividend = calculateCumulativeDividend(dividends);
+export function computeDividendAccountData(
+  dividends: DividendRecord[],
+  startMonth?: string,
+): DividendAccountData {
+  const monthlyDividends = aggregateMonthlyDividends(dividends)
+  const dividendByYear = aggregateDividendsByYear(dividends)
+  const yearlyDividendSummary = aggregateYearlyDividends(dividends)
+  const rollingAverageDividend = calculateRollingAverageDividend(dividends, startMonth)
+  const cumulativeDividend = calculateCumulativeDividend(dividends)
 
-  const now = new Date();
-  const thisMonth = `${now.getMonth() + 1}월`;
-  const thisYear = now.getFullYear();
-  const thisMonthData = monthlyDividends.find(
-    (m) => m.month === thisMonth && m.year === thisYear
-  );
-  const thisMonthDividend = thisMonthData?.amount || 0;
+  const now = new Date()
+  const thisMonth = `${now.getMonth() + 1}월`
+  const thisYear = now.getFullYear()
+  const thisMonthData = monthlyDividends.find((m) => m.month === thisMonth && m.year === thisYear)
+  const thisMonthDividend = thisMonthData?.amount || 0
 
   const yearlyDividend = monthlyDividends
     .filter((m) => m.year === thisYear)
-    .reduce((sum, m) => sum + m.amount, 0);
+    .reduce((sum, m) => sum + m.amount, 0)
 
   return {
     thisMonthDividend,
@@ -1286,57 +1330,57 @@ export function computeDividendAccountData(dividends: DividendRecord[], startMon
     yearlyDividendSummary,
     rollingAverageDividend,
     cumulativeDividend,
-  };
+  }
 }
 
 // Helper to parse '3. 종목현황' tab
 // 실제 시트 구조: [empty, index, 국가, 종목코드, 종목명, 수량, 평단가(원), 평단가($), 현재가(원), 현재가($), 평가액, 투자비중, ...]
 export interface PortfolioItem {
-  ticker: string;
-  name: string;
-  country: string;
-  currency: string;
-  quantity: number;
-  avgPrice: number;
-  avgPriceOriginal?: number; // 원본 통화 평단가 (USD 주식의 달러 평단가, 편집용)
-  currentPrice: number;
-  totalValue: number;
-  profit: number;
-  yieldPercent: number;
-  weight: number; // 시트의 투자비중
-  rowIndex: number; // 시트 행 번호 (업데이트용)
+  ticker: string
+  name: string
+  country: string
+  currency: string
+  quantity: number
+  avgPrice: number
+  avgPriceOriginal?: number // 원본 통화 평단가 (USD 주식의 달러 평단가, 편집용)
+  currentPrice: number
+  totalValue: number
+  profit: number
+  yieldPercent: number
+  weight: number // 시트의 투자비중
+  rowIndex: number // 시트 행 번호 (업데이트용)
 }
 
 export function parsePortfolioData(rows: any[], exchangeRate?: number): PortfolioItem[] {
-  if (!rows || rows.length <= 1) return [];
+  if (!rows || rows.length <= 1) return []
 
   const parseNumber = (val: any): number => {
-    if (!val) return 0;
-    const cleaned = String(val).replace(/[₩$,%\s,]/g, '');
-    return Number.parseFloat(cleaned) || 0;
-  };
+    if (!val) return 0
+    const cleaned = String(val).replace(/[₩$,%\s,]/g, '')
+    return Number.parseFloat(cleaned) || 0
+  }
 
-  const results: PortfolioItem[] = [];
+  const results: PortfolioItem[] = []
 
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row || !Array.isArray(row)) continue;
+    const row = rows[i]
+    if (!row || !Array.isArray(row)) continue
 
     // 종목코드/종목명 확인
-    const ticker = String(row[3] || '').trim();
-    const name = String(row[4] || '').trim();
+    const ticker = String(row[3] || '').trim()
+    const name = String(row[4] || '').trim()
 
     // 헤더 행 제외
-    if (!ticker || ticker.includes('종목') || ticker.includes('티커')) continue;
+    if (!ticker || ticker.includes('종목') || ticker.includes('티커')) continue
 
     // 빈 행 제외 (종목명도 없는 경우)
-    if (!name) continue;
+    if (!name) continue
 
     // CASH 특수 처리: G=원화금액, H=달러금액 (F=수량은 무시)
     if (ticker === 'CASH' || ticker === '현금' || name === '현금') {
-      const krwAmount = parseNumber(row[6]); // G열: 평단가(원화) = 원화 현금
-      const usdAmount = parseNumber(row[7]); // H열: 평단가(달러) = 달러 현금
-      const totalValue = krwAmount + usdAmount * (exchangeRate || 1400);
+      const krwAmount = parseNumber(row[6]) // G열: 평단가(원화) = 원화 현금
+      const usdAmount = parseNumber(row[7]) // H열: 평단가(달러) = 달러 현금
+      const totalValue = krwAmount + usdAmount * (exchangeRate || 1400)
 
       if (totalValue > 0) {
         results.push({
@@ -1353,42 +1397,45 @@ export function parsePortfolioData(rows: any[], exchangeRate?: number): Portfoli
           yieldPercent: 0,
           weight: 0,
           rowIndex: i + 1,
-        });
+        })
       }
-      continue;
+      continue
     }
 
-    const country = String(row[2] || '').trim();
-    const quantity = parseNumber(row[5]);
-    const avgPriceKRW = parseNumber(row[6]); // 원화 평단가 (G열)
-    const avgPriceUSD = parseNumber(row[7]); // 달러 평단가 (H열)
+    const country = String(row[2] || '').trim()
+    const quantity = parseNumber(row[5])
+    const avgPriceKRW = parseNumber(row[6]) // 원화 평단가 (G열)
+    const avgPriceUSD = parseNumber(row[7]) // 달러 평단가 (H열)
     // 미국 주식: G열(원화)이 0이면 H열(달러)을 KRW로 환산하여 사용
     // (수동 추가 시 G열이 비어있고 H열에만 달러 평단가가 있을 수 있음)
-    const usedUSDFallback = avgPriceKRW === 0 && country === '미국' && avgPriceUSD > 0;
-    const avgPrice = avgPriceKRW > 0
-      ? avgPriceKRW
-      : (usedUSDFallback ? Math.round(avgPriceUSD * (exchangeRate || 1400)) : 0);
-    const currentPrice = parseNumber(row[8]); // 원화 현재가
+    const usedUSDFallback = avgPriceKRW === 0 && country === '미국' && avgPriceUSD > 0
+    const avgPrice =
+      avgPriceKRW > 0
+        ? avgPriceKRW
+        : usedUSDFallback
+          ? Math.round(avgPriceUSD * (exchangeRate || 1400))
+          : 0
+    const currentPrice = parseNumber(row[8]) // 원화 현재가
 
     // 평가액: 시트에서 직접 가져오거나 계산
-    let totalValue = parseNumber(row[10]); // 평가액 [원화] 컬럼 (K열, index 10)
+    let totalValue = parseNumber(row[10]) // 평가액 [원화] 컬럼 (K열, index 10)
     if (totalValue === 0 && currentPrice > 0 && quantity > 0) {
-      totalValue = currentPrice * quantity;
+      totalValue = currentPrice * quantity
     }
 
     // 평가액이 0이면 skip (빈 행)
-    if (totalValue === 0) continue;
+    if (totalValue === 0) continue
 
     // 투자비중: 시트에서 직접 가져옴 (%)
     // UNFORMATTED_VALUE로 인해 퍼센트가 소수점 형식으로 옴 (28.6% -> 0.286)
-    let weight = parseNumber(row[11]); // 투자비중 컬럼 (L열, index 11)
+    let weight = parseNumber(row[11]) // 투자비중 컬럼 (L열, index 11)
     if (weight > 0 && weight < 1) {
-      weight = weight * 100; // 소수점 형식을 퍼센트로 변환
+      weight = weight * 100 // 소수점 형식을 퍼센트로 변환
     }
 
-    const invested = avgPrice * quantity;
-    const profit = totalValue - invested;
-    const yieldPercent = invested > 0 ? (profit / invested) * 100 : 0;
+    const invested = avgPrice * quantity
+    const profit = totalValue - invested
+    const yieldPercent = invested > 0 ? (profit / invested) * 100 : 0
 
     results.push({
       ticker,
@@ -1397,33 +1444,33 @@ export function parsePortfolioData(rows: any[], exchangeRate?: number): Portfoli
       currency: country === '한국' ? 'KRW' : 'USD',
       quantity,
       avgPrice,
-      avgPriceOriginal: country === '미국' ? (avgPriceUSD || undefined) : undefined,
+      avgPriceOriginal: country === '미국' ? avgPriceUSD || undefined : undefined,
       currentPrice,
       totalValue,
       profit,
       yieldPercent,
       weight,
       rowIndex: i + 1,
-    });
+    })
   }
 
-  console.log('[parsePortfolioData] Parsed items:', results.length);
+  console.log('[parsePortfolioData] Parsed items:', results.length)
   if (results.length > 0) {
-    console.log('[parsePortfolioData] First 3 items:', JSON.stringify(results.slice(0, 3)));
+    console.log('[parsePortfolioData] First 3 items:', JSON.stringify(results.slice(0, 3)))
   }
 
-  return results;
+  return results
 }
 
 /**
  * '6. 입금내역' 탭에서 입금/출금 데이터 파싱
  */
 export interface DepositRecord {
-  date: string;
-  type: 'DEPOSIT' | 'WITHDRAW';
-  amount: number;
-  memo: string;
-  account: string; // 계좌(증권사) 정보
+  date: string
+  type: 'DEPOSIT' | 'WITHDRAW'
+  amount: number
+  memo: string
+  account: string // 계좌(증권사) 정보
 }
 
 /**
@@ -1432,175 +1479,177 @@ export interface DepositRecord {
  * 별도의 계좌 목록 시트에서 가져옴
  */
 export function parseAccountList(rows: any[]): string[] {
-  if (!rows || rows.length === 0) return [];
+  if (!rows || rows.length === 0) return []
 
-  const accounts: Set<string> = new Set();
+  const accounts: Set<string> = new Set()
 
   for (const row of rows) {
-    if (!row || !Array.isArray(row)) continue;
+    if (!row || !Array.isArray(row)) continue
     // 첫 번째 컬럼에서 계좌명 추출
-    const accountName = String(row[0] || '').trim();
+    const accountName = String(row[0] || '').trim()
     if (accountName && !accountName.includes('계좌') && accountName !== '구분') {
-      accounts.add(accountName);
+      accounts.add(accountName)
     }
   }
 
   // Set을 배열로 변환
-  const result = Array.from(accounts);
-  console.log('[parseAccountList] Parsed accounts:', result);
-  return result;
+  const result = Array.from(accounts)
+  console.log('[parseAccountList] Parsed accounts:', result)
+  return result
 }
 
 /**
  * 입금내역에서 사용된 계좌 목록 추출
  */
 export function extractAccountsFromDeposits(rows: any[]): string[] {
-  if (!rows || rows.length <= 1) return [];
+  if (!rows || rows.length <= 1) return []
 
-  const accounts: Set<string> = new Set();
+  const accounts: Set<string> = new Set()
 
   // E열(index 4)이 계좌 컬럼으로 추정
   for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row || !Array.isArray(row)) continue;
+    const row = rows[i]
+    if (!row || !Array.isArray(row)) continue
 
     // 여러 컬럼에서 계좌 찾기 (보통 4~5번째 컬럼)
     for (let col = 3; col <= 5; col++) {
-      const cellValue = String(row[col] || '').trim();
+      const cellValue = String(row[col] || '').trim()
       // 계좌명처럼 보이는 값 (일반계좌, 개인연금, IRP 등)
-      if (cellValue &&
-          (cellValue.includes('계좌') ||
-           cellValue.includes('연금') ||
-           cellValue.includes('IRP') ||
-           cellValue.includes('ISA') ||
-           cellValue.includes('DC'))) {
-        accounts.add(cellValue);
+      if (
+        cellValue &&
+        (cellValue.includes('계좌') ||
+          cellValue.includes('연금') ||
+          cellValue.includes('IRP') ||
+          cellValue.includes('ISA') ||
+          cellValue.includes('DC'))
+      ) {
+        accounts.add(cellValue)
       }
     }
   }
 
-  const result = Array.from(accounts);
-  console.log('[extractAccountsFromDeposits] Extracted accounts:', result);
-  return result;
+  const result = Array.from(accounts)
+  console.log('[extractAccountsFromDeposits] Extracted accounts:', result)
+  return result
 }
 
 export function parseDepositData(rows: any[]): DepositRecord[] {
-  if (!rows || rows.length <= 1) return [];
+  if (!rows || rows.length <= 1) return []
 
   const parseNumber = (val: any): number => {
-    if (!val) return 0;
+    if (!val) return 0
     // - 기호도 제거하고 절대값으로 반환
-    const cleaned = String(val).replace(/[₩$,\s-]/g, '');
-    return Number.parseFloat(cleaned) || 0;
-  };
+    const cleaned = String(val).replace(/[₩$,\s-]/g, '')
+    return Number.parseFloat(cleaned) || 0
+  }
 
   const isNegativeAmount = (val: any): boolean => {
-    if (!val) return false;
-    const str = String(val);
-    return str.includes('-') || str.startsWith('-');
-  };
+    if (!val) return false
+    const str = String(val)
+    return str.includes('-') || str.startsWith('-')
+  }
 
   const parseDate = (val: any): string | null => {
-    if (!val) return null;
+    if (!val) return null
 
     // Google Sheets 시리얼 넘버 처리 (UNFORMATTED_VALUE로 인해 날짜가 숫자로 옴)
     if (typeof val === 'number' && val > 30000 && val < 100000) {
       // Google Sheets 시리얼 넘버: 1899-12-30 기준
-      const date = new Date((val - 25569) * 86400 * 1000);
-      const year = date.getUTCFullYear();
-      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(date.getUTCDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      const date = new Date((val - 25569) * 86400 * 1000)
+      const year = date.getUTCFullYear()
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(date.getUTCDate()).padStart(2, '0')
+      return `${year}-${month}-${day}`
     }
 
-    const str = String(val).trim();
+    const str = String(val).trim()
 
     // YYYY/MM/DD 또는 YYYY-MM-DD 형식
-    const match1 = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+    const match1 = str.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/)
     if (match1) {
-      return `${match1[1]}-${match1[2]?.padStart(2, '0')}-${match1[3]?.padStart(2, '0')}`;
+      return `${match1[1]}-${match1[2]?.padStart(2, '0')}-${match1[3]?.padStart(2, '0')}`
     }
 
-    return null;
-  };
+    return null
+  }
 
-  const results: DepositRecord[] = [];
+  const results: DepositRecord[] = []
 
   // 헤더 행 분석
-  const headerRow = rows[0] || [];
-  let dateCol = -1;
-  let accountCol = -1; // 계좌(증권사) 컬럼
-  let typeCol = -1; // 구분 컬럼 (입금/출금)
-  let amountCol = -1;
-  let memoCol = -1;
+  const headerRow = rows[0] || []
+  let dateCol = -1
+  let accountCol = -1 // 계좌(증권사) 컬럼
+  let typeCol = -1 // 구분 컬럼 (입금/출금)
+  let amountCol = -1
+  let memoCol = -1
 
   for (let i = 0; i < headerRow.length; i++) {
-    const header = String(headerRow[i] || '').toLowerCase();
+    const header = String(headerRow[i] || '').toLowerCase()
     if (header.includes('날짜') || header.includes('일자') || header.includes('date')) {
-      dateCol = i;
+      dateCol = i
     } else if (header.includes('계좌') || header.includes('증권사') || header.includes('account')) {
-      accountCol = i;
+      accountCol = i
     } else if (header.includes('구분') || header.includes('type')) {
-      typeCol = i;
+      typeCol = i
     } else if (header.includes('금액') || header.includes('입금') || header.includes('amount')) {
-      if (amountCol === -1) amountCol = i;
+      if (amountCol === -1) amountCol = i
     } else if (header.includes('메모') || header.includes('비고') || header.includes('memo')) {
-      memoCol = i;
+      memoCol = i
     }
   }
 
   // 헤더를 찾지 못한 경우 기본값 (일자=0, 구분=4, 계좌=5, 금액=6, 비고=7)
-  if (dateCol === -1) dateCol = 0;
-  if (typeCol === -1) typeCol = 4; // E열이 구분 (입금/출금)
-  if (accountCol === -1) accountCol = 5; // F열이 계좌(증권사)
-  if (amountCol === -1) amountCol = 6;
-  if (memoCol === -1) memoCol = 7;
+  if (dateCol === -1) dateCol = 0
+  if (typeCol === -1) typeCol = 4 // E열이 구분 (입금/출금)
+  if (accountCol === -1) accountCol = 5 // F열이 계좌(증권사)
+  if (amountCol === -1) amountCol = 6
+  if (memoCol === -1) memoCol = 7
 
-  console.log('[parseDepositData] Header row:', JSON.stringify(headerRow));
-  console.log('[parseDepositData] Column indices:', { dateCol, typeCol, amountCol, memoCol });
+  console.log('[parseDepositData] Header row:', JSON.stringify(headerRow))
+  console.log('[parseDepositData] Column indices:', { dateCol, typeCol, amountCol, memoCol })
 
   // 첫 10개 행 디버깅 (구조 파악)
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
-    const row = rows[i];
+    const row = rows[i]
     if (row && row.length > 0) {
-      console.log(`[parseDepositData] Row ${i} (${row.length} cols):`, JSON.stringify(row));
+      console.log(`[parseDepositData] Row ${i} (${row.length} cols):`, JSON.stringify(row))
     }
   }
 
   for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row || !Array.isArray(row)) continue;
+    const row = rows[i]
+    if (!row || !Array.isArray(row)) continue
 
     // 날짜 찾기 (여러 컬럼에서 검색)
-    let date: string | null = null;
-    let dateColIdx = -1;
+    let date: string | null = null
+    let dateColIdx = -1
     for (let col = 0; col < Math.min(row.length, 5); col++) {
-      date = parseDate(row[col]);
+      date = parseDate(row[col])
       if (date) {
-        dateColIdx = col;
-        break;
+        dateColIdx = col
+        break
       }
     }
-    if (!date) continue;
+    if (!date) continue
 
     // 금액 찾기 - ₩ 기호가 포함된 컬럼 찾기
-    let amount = 0;
-    let memoValue = '';
-    let isWithdraw = false;
+    let amount = 0
+    let memoValue = ''
+    let isWithdraw = false
 
     for (let col = 0; col < row.length; col++) {
-      const cellValue = String(row[col] || '');
+      const cellValue = String(row[col] || '')
       // ₩ 기호가 있는 컬럼이 금액
       if (cellValue.includes('₩') || cellValue.includes('\\')) {
-        isWithdraw = isNegativeAmount(cellValue);
-        const parsed = parseNumber(cellValue);
+        isWithdraw = isNegativeAmount(cellValue)
+        const parsed = parseNumber(cellValue)
         if (parsed > 0) {
-          amount = parsed;
+          amount = parsed
           // 다음 컬럼이 memo
           if (col + 1 < row.length) {
-            memoValue = String(row[col + 1] || '');
+            memoValue = String(row[col + 1] || '')
           }
-          break;
+          break
         }
       }
     }
@@ -1608,34 +1657,36 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
     // ₩ 기호가 없으면 큰 숫자(10000 이상) 찾기
     if (amount === 0) {
       for (let col = dateColIdx + 1; col < row.length; col++) {
-        const cellValue = String(row[col] || '');
-        isWithdraw = isNegativeAmount(cellValue);
-        const parsed = parseNumber(cellValue);
+        const cellValue = String(row[col] || '')
+        isWithdraw = isNegativeAmount(cellValue)
+        const parsed = parseNumber(cellValue)
         if (parsed >= 10000) {
-          amount = parsed;
+          amount = parsed
           if (col + 1 < row.length) {
-            memoValue = String(row[col + 1] || '');
+            memoValue = String(row[col + 1] || '')
           }
-          break;
+          break
         }
       }
     }
 
-    if (amount === 0) continue;
+    if (amount === 0) continue
 
     // 구분 컬럼에서 입금/출금 확인 (더 정확한 방법)
-    const typeValue = String(row[typeCol] || '').trim().toLowerCase();
+    const typeValue = String(row[typeCol] || '')
+      .trim()
+      .toLowerCase()
     if (typeValue.includes('출금') || typeValue === 'withdraw') {
-      isWithdraw = true;
+      isWithdraw = true
     } else if (typeValue.includes('입금') || typeValue === 'deposit') {
-      isWithdraw = false;
+      isWithdraw = false
     }
     // typeValue가 비어있으면 금액의 음수 여부로 판단 (위에서 이미 설정됨)
 
-    const type: 'DEPOSIT' | 'WITHDRAW' = isWithdraw ? 'WITHDRAW' : 'DEPOSIT';
+    const type: 'DEPOSIT' | 'WITHDRAW' = isWithdraw ? 'WITHDRAW' : 'DEPOSIT'
 
     // 계좌 정보 추출
-    const accountValue = String(row[accountCol] || '').trim();
+    const accountValue = String(row[accountCol] || '').trim()
 
     const record: DepositRecord = {
       date,
@@ -1643,18 +1694,18 @@ export function parseDepositData(rows: any[]): DepositRecord[] {
       amount: Math.abs(amount),
       memo: memoValue,
       account: accountValue,
-    };
+    }
 
     // 처음 5개 결과 디버깅
     if (results.length < 5) {
-      console.log(`[parseDepositData] Parsed record ${results.length + 1}:`, JSON.stringify(record));
+      console.log(`[parseDepositData] Parsed record ${results.length + 1}:`, JSON.stringify(record))
     }
 
-    results.push(record);
+    results.push(record)
   }
 
-  console.log('[parseDepositData] Parsed records:', results.length);
-  return results;
+  console.log('[parseDepositData] Parsed records:', results.length)
+  return results
 }
 
 /**
@@ -1667,27 +1718,27 @@ export function calculateNewAvgPrice(
   currentAvgPrice: number,
   tradeQty: number,
   tradePrice: number,
-  tradeType: 'BUY' | 'SELL'
+  tradeType: 'BUY' | 'SELL',
 ): { newQty: number; newAvgPrice: number } {
   if (tradeType === 'BUY') {
-    const totalCost = (currentQty * currentAvgPrice) + (tradeQty * tradePrice);
-    const newQty = currentQty + tradeQty;
-    const newAvgPrice = newQty > 0 ? totalCost / newQty : 0;
-    return { newQty, newAvgPrice: Math.round(newAvgPrice * 100) / 100 };
+    const totalCost = currentQty * currentAvgPrice + tradeQty * tradePrice
+    const newQty = currentQty + tradeQty
+    const newAvgPrice = newQty > 0 ? totalCost / newQty : 0
+    return { newQty, newAvgPrice: Math.round(newAvgPrice * 100) / 100 }
   }
 
   // SELL
-  const newQty = Math.max(0, currentQty - tradeQty);
-  return { newQty, newAvgPrice: currentAvgPrice }; // 평단가 유지
+  const newQty = Math.max(0, currentQty - tradeQty)
+  return { newQty, newAvgPrice: currentAvgPrice } // 평단가 유지
 }
 
 /**
  * 월별 계좌추세 데이터 타입 (누적입금액 vs 계좌총액)
  */
 export interface AccountTrendData {
-  date: string; // "23.01" 형식
-  cumulativeDeposit: number; // 누적입금액
-  totalAccount: number; // 계좌총액
+  date: string // "23.01" 형식
+  cumulativeDeposit: number // 누적입금액
+  totalAccount: number // 계좌총액
 }
 
 /**
@@ -1695,17 +1746,17 @@ export interface AccountTrendData {
  * 범위: G17:AB78 (G열=날짜, H열=누적입금액, L열=계좌총액)
  */
 export function parseAccountTrendData(rows: any[]): AccountTrendData[] {
-  if (!rows || rows.length === 0) return [];
+  if (!rows || rows.length === 0) return []
 
   const parseNumber = (val: any): number => {
-    if (!val) return 0;
-    const cleaned = String(val).replace(/[₩$,%\s,]/g, '');
-    return Number.parseFloat(cleaned) || 0;
-  };
+    if (!val) return 0
+    const cleaned = String(val).replace(/[₩$,%\s,]/g, '')
+    return Number.parseFloat(cleaned) || 0
+  }
 
-  console.log('[parseAccountTrendData] Total rows:', rows.length);
+  console.log('[parseAccountTrendData] Total rows:', rows.length)
 
-  const results: AccountTrendData[] = [];
+  const results: AccountTrendData[] = []
 
   // G17:AB78 범위에서 가져왔으므로:
   // - Column 0 (G) = 날짜 (YY.MM 형식)
@@ -1713,15 +1764,15 @@ export function parseAccountTrendData(rows: any[]): AccountTrendData[] {
   // - Column 5 (L) = 누적입금액 (G+5=L)
 
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row || !Array.isArray(row) || row.length === 0) continue;
+    const row = rows[i]
+    if (!row || !Array.isArray(row) || row.length === 0) continue
 
     // 첫 번째 셀에서 날짜 찾기 (YY.MM 형식)
-    const dateCell = String(row[0] || '').trim();
-    if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue;
+    const dateCell = String(row[0] || '').trim()
+    if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue
 
-    const totalAccount = parseNumber(row[1]); // H열 (index 1) - 계좌총액
-    const cumulativeDeposit = parseNumber(row[5]); // L열 (index 5) - 누적입금액
+    const totalAccount = parseNumber(row[1]) // H열 (index 1) - 계좌총액
+    const cumulativeDeposit = parseNumber(row[5]) // L열 (index 5) - 누적입금액
 
     // 데이터가 있는 행만 포함
     if (cumulativeDeposit > 0 || totalAccount > 0) {
@@ -1729,30 +1780,30 @@ export function parseAccountTrendData(rows: any[]): AccountTrendData[] {
         date: dateCell,
         cumulativeDeposit: Math.round(cumulativeDeposit),
         totalAccount: Math.round(totalAccount),
-      });
+      })
     }
   }
 
-  console.log('[parseAccountTrendData] Parsed records:', results.length);
+  console.log('[parseAccountTrendData] Parsed records:', results.length)
   if (results.length > 0) {
-    console.log('[parseAccountTrendData] First:', JSON.stringify(results[0]));
-    console.log('[parseAccountTrendData] Last:', JSON.stringify(results[results.length - 1]));
+    console.log('[parseAccountTrendData] First:', JSON.stringify(results[0]))
+    console.log('[parseAccountTrendData] Last:', JSON.stringify(results[results.length - 1]))
   }
 
-  return results;
+  return results
 }
 
 /**
  * 월별 수익률 비교 데이터 타입
  */
 export interface PerformanceComparisonData {
-  date: string; // "23.01" 형식
-  portfolio: number; // 계좌종합 수익률 (%)
-  kospi: number; // 코스피 수익률 (%)
-  sp500: number; // S&P500 수익률 (%)
-  nasdaq: number; // 나스닥 수익률 (%)
-  sp500Dollar?: number; // S&P500 달러환율 적용 수익률 (%)
-  nasdaqDollar?: number; // 나스닥 달러환율 적용 수익률 (%)
+  date: string // "23.01" 형식
+  portfolio: number // 계좌종합 수익률 (%)
+  kospi: number // 코스피 수익률 (%)
+  sp500: number // S&P500 수익률 (%)
+  nasdaq: number // 나스닥 수익률 (%)
+  sp500Dollar?: number // S&P500 달러환율 적용 수익률 (%)
+  nasdaqDollar?: number // 나스닥 달러환율 적용 수익률 (%)
 }
 
 /**
@@ -1760,29 +1811,29 @@ export interface PerformanceComparisonData {
  * 범위: G17:AB78 (G열=날짜, O~R열=수익률 데이터)
  */
 export function parsePerformanceComparisonData(rows: any[]): PerformanceComparisonData[] {
-  if (!rows || rows.length === 0) return [];
+  if (!rows || rows.length === 0) return []
 
   const parsePercent = (val: any): number => {
-    if (!val) return 0;
-    const str = String(val).replace(/[%,\s]/g, '');
-    const num = Number.parseFloat(str);
+    if (!val) return 0
+    const str = String(val).replace(/[%,\s]/g, '')
+    const num = Number.parseFloat(str)
     // 소수점 형태(0.15)를 퍼센트(15%)로 변환
     if (!Number.isNaN(num) && Math.abs(num) < 10) {
-      return num * 100;
+      return num * 100
     }
-    return num || 0;
-  };
+    return num || 0
+  }
 
-  console.log('[parsePerformanceComparisonData] Total rows:', rows.length);
-  console.log('[parsePerformanceComparisonData] First row:', JSON.stringify(rows[0]));
+  console.log('[parsePerformanceComparisonData] Total rows:', rows.length)
+  console.log('[parsePerformanceComparisonData] First row:', JSON.stringify(rows[0]))
   if (rows.length > 1) {
-    console.log('[parsePerformanceComparisonData] Second row:', JSON.stringify(rows[1]));
+    console.log('[parsePerformanceComparisonData] Second row:', JSON.stringify(rows[1]))
   }
   if (rows.length > 2) {
-    console.log('[parsePerformanceComparisonData] Third row:', JSON.stringify(rows[2]));
+    console.log('[parsePerformanceComparisonData] Third row:', JSON.stringify(rows[2]))
   }
 
-  const results: PerformanceComparisonData[] = [];
+  const results: PerformanceComparisonData[] = []
 
   // G17:AB78 범위에서 가져왔으므로:
   // - Column 0 (G) = 날짜 (YY.MM 형식)
@@ -1793,35 +1844,35 @@ export function parsePerformanceComparisonData(rows: any[]): PerformanceComparis
   // 하지만 실제 구조를 확인해야 함
 
   // 첫 번째 행은 헤더일 수 있으므로 스킵
-  const startIdx = rows[0] && String(rows[0][0]).includes('날짜') ? 1 : 0;
+  const startIdx = rows[0] && String(rows[0][0]).includes('날짜') ? 1 : 0
 
   for (let i = startIdx; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row || !Array.isArray(row) || row.length === 0) continue;
+    const row = rows[i]
+    if (!row || !Array.isArray(row) || row.length === 0) continue
 
     // 첫 번째 셀에서 날짜 찾기 (YY.MM 형식)
-    const dateCell = String(row[0] || '').trim();
-    if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue;
+    const dateCell = String(row[0] || '').trim()
+    if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue
 
     // 수익률 데이터 찾기 (인덱스 8, 9, 10, 11)
     // 데이터는 100을 기준점으로 하는 인덱스 형식 (100 = 0%, 150 = 50%)
-    const portfolioIdx = parsePercent(row[8]);
-    const kospiIdx = parsePercent(row[9]);
-    const sp500Idx = parsePercent(row[10]);
-    const nasdaqIdx = parsePercent(row[11]);
+    const portfolioIdx = parsePercent(row[8])
+    const kospiIdx = parsePercent(row[9])
+    const sp500Idx = parsePercent(row[10])
+    const nasdaqIdx = parsePercent(row[11])
 
     // 달러환율 적용 지수 (enrichedRows에서만 존재)
-    const sp500DollarIdx = parsePercent(row[28]); // AI열: S&P500 달러환율 적용
-    const nasdaqDollarIdx = parsePercent(row[29]); // AJ열: NASDAQ 달러환율 적용
+    const sp500DollarIdx = parsePercent(row[28]) // AI열: S&P500 달러환율 적용
+    const nasdaqDollarIdx = parsePercent(row[29]) // AJ열: NASDAQ 달러환율 적용
 
     // 인덱스 값을 백분율 변화로 변환 (100 -> 0%, 150 -> 50%)
-    const portfolio = portfolioIdx > 0 ? portfolioIdx - 100 : 0;
-    const kospi = kospiIdx > 0 ? kospiIdx - 100 : 0;
-    const sp500 = sp500Idx > 0 ? sp500Idx - 100 : 0;
-    const nasdaq = nasdaqIdx > 0 ? nasdaqIdx - 100 : 0;
+    const portfolio = portfolioIdx > 0 ? portfolioIdx - 100 : 0
+    const kospi = kospiIdx > 0 ? kospiIdx - 100 : 0
+    const sp500 = sp500Idx > 0 ? sp500Idx - 100 : 0
+    const nasdaq = nasdaqIdx > 0 ? nasdaqIdx - 100 : 0
 
     // 미래 데이터(모든 인덱스가 0)는 제외
-    if (portfolioIdx === 0 && kospiIdx === 0 && sp500Idx === 0 && nasdaqIdx === 0) continue;
+    if (portfolioIdx === 0 && kospiIdx === 0 && sp500Idx === 0 && nasdaqIdx === 0) continue
 
     const item: PerformanceComparisonData = {
       date: dateCell,
@@ -1829,26 +1880,29 @@ export function parsePerformanceComparisonData(rows: any[]): PerformanceComparis
       kospi: Math.round(kospi * 10) / 10,
       sp500: Math.round(sp500 * 10) / 10,
       nasdaq: Math.round(nasdaq * 10) / 10,
-    };
+    }
 
     // 달러환율 적용 값이 있으면 추가
     if (sp500DollarIdx > 0) {
-      item.sp500Dollar = Math.round((sp500DollarIdx - 100) * 10) / 10;
+      item.sp500Dollar = Math.round((sp500DollarIdx - 100) * 10) / 10
     }
     if (nasdaqDollarIdx > 0) {
-      item.nasdaqDollar = Math.round((nasdaqDollarIdx - 100) * 10) / 10;
+      item.nasdaqDollar = Math.round((nasdaqDollarIdx - 100) * 10) / 10
     }
 
-    results.push(item);
+    results.push(item)
   }
 
-  console.log('[parsePerformanceComparisonData] Parsed records:', results.length);
+  console.log('[parsePerformanceComparisonData] Parsed records:', results.length)
   if (results.length > 0) {
-    console.log('[parsePerformanceComparisonData] First:', JSON.stringify(results[0]));
-    console.log('[parsePerformanceComparisonData] Last:', JSON.stringify(results[results.length - 1]));
+    console.log('[parsePerformanceComparisonData] First:', JSON.stringify(results[0]))
+    console.log(
+      '[parsePerformanceComparisonData] Last:',
+      JSON.stringify(results[results.length - 1]),
+    )
   }
 
-  return results;
+  return results
 }
 
 /**
@@ -1856,23 +1910,23 @@ export function parsePerformanceComparisonData(rows: any[]): PerformanceComparis
  */
 export interface YieldComparisonData {
   cumulativeYield: {
-    account: number;
-    kospi: number;
-    sp500: number;
-    nasdaq: number;
-  };
+    account: number
+    kospi: number
+    sp500: number
+    nasdaq: number
+  }
   thisYearYield: {
-    account: number;
-    kospi: number;
-    sp500: number;
-    nasdaq: number;
-  };
+    account: number
+    kospi: number
+    sp500: number
+    nasdaq: number
+  }
   annualizedYield: {
-    account: number;
-    kospi: number;
-    sp500: number;
-    nasdaq: number;
-  };
+    account: number
+    kospi: number
+    sp500: number
+    nasdaq: number
+  }
 }
 
 /**
@@ -1880,26 +1934,26 @@ export interface YieldComparisonData {
  */
 export interface YieldComparisonDollarData {
   cumulativeYield: {
-    account: number;
-    kospi: number;
-    sp500: number;
-    nasdaq: number;
-    dollar: number;
-  };
+    account: number
+    kospi: number
+    sp500: number
+    nasdaq: number
+    dollar: number
+  }
   thisYearYield: {
-    account: number;
-    kospi: number;
-    sp500: number;
-    nasdaq: number;
-    dollar: number; // 달러 환율 수익률
-  };
+    account: number
+    kospi: number
+    sp500: number
+    nasdaq: number
+    dollar: number // 달러 환율 수익률
+  }
   annualizedYield: {
-    account: number;
-    kospi: number;
-    sp500: number;
-    nasdaq: number;
-    dollar: number; // 달러 환율 연평균 수익률
-  };
+    account: number
+    kospi: number
+    sp500: number
+    nasdaq: number
+    dollar: number // 달러 환율 연평균 수익률
+  }
 }
 
 /**
@@ -1908,21 +1962,21 @@ export interface YieldComparisonDollarData {
 export interface MonthlyYieldComparisonData {
   currentMonthYield: {
     // 이번 달(12월) 수익률
-    account: number;
-    kospi: number;
-    sp500: number;
-    nasdaq: number;
-    dollar: number;
-  };
+    account: number
+    kospi: number
+    sp500: number
+    nasdaq: number
+    dollar: number
+  }
   thisYearYield: {
     // 올해 수익률
-    account: number;
-    kospi: number;
-    sp500: number;
-    nasdaq: number;
-    dollar: number;
-  };
-  currentMonth: string; // "8월" 형식
+    account: number
+    kospi: number
+    sp500: number
+    nasdaq: number
+    dollar: number
+  }
+  currentMonth: string // "8월" 형식
 }
 
 /**
@@ -1930,18 +1984,18 @@ export interface MonthlyYieldComparisonData {
  */
 export interface MonthlyYieldComparisonDollarAppliedData {
   currentMonthYield: {
-    account: number;
-    kospi: number;
-    sp500: number; // 달러환율 적용
-    nasdaq: number; // 달러환율 적용
-  };
+    account: number
+    kospi: number
+    sp500: number // 달러환율 적용
+    nasdaq: number // 달러환율 적용
+  }
   thisYearYield: {
-    account: number;
-    kospi: number;
-    sp500: number; // 달러환율 적용
-    nasdaq: number; // 달러환율 적용
-  };
-  currentMonth: string;
+    account: number
+    kospi: number
+    sp500: number // 달러환율 적용
+    nasdaq: number // 달러환율 적용
+  }
+  currentMonth: string
 }
 
 /**
@@ -1949,21 +2003,21 @@ export interface MonthlyYieldComparisonDollarAppliedData {
  * 올해 1월~현재까지 월별 수익률 추이
  */
 export interface MajorIndexYieldComparisonData {
-  months: string[]; // ['시작', '1월', '2월', ...]
-  sp500: number[]; // 각 월의 S&P500 수익률
-  nasdaq: number[]; // 각 월의 NASDAQ 수익률
-  kospi: number[]; // 각 월의 KOSPI 수익률
-  account: (number | null)[]; // 각 월의 계좌 수익률 (데이터 없으면 null)
+  months: string[] // ['시작', '1월', '2월', ...]
+  sp500: number[] // 각 월의 S&P500 수익률
+  nasdaq: number[] // 각 월의 NASDAQ 수익률
+  kospi: number[] // 각 월의 KOSPI 수익률
+  account: (number | null)[] // 각 월의 계좌 수익률 (데이터 없으면 null)
   // 환율 적용 데이터 (선택)
-  sp500Dollar?: number[];
-  nasdaqDollar?: number[];
-  dollar?: number[]; // 달러 환율 수익률
+  sp500Dollar?: number[]
+  nasdaqDollar?: number[]
+  dollar?: number[] // 달러 환율 수익률
   // 추가 시장 지표 (선택)
-  gold?: number[];          // 금 수익률 (USD 기준, 기본)
-  bitcoin?: number[];       // 비트코인 수익률 (USD 기준, 기본)
-  realEstate?: number[];    // 부동산 수익률
-  goldDollar?: number[];    // 금 수익률 (환율 적용, KRW 기준)
-  bitcoinDollar?: number[]; // 비트코인 수익률 (환율 적용, KRW 기준)
+  gold?: number[] // 금 수익률 (USD 기준, 기본)
+  bitcoin?: number[] // 비트코인 수익률 (USD 기준, 기본)
+  realEstate?: number[] // 부동산 수익률
+  goldDollar?: number[] // 금 수익률 (환율 적용, KRW 기준)
+  bitcoinDollar?: number[] // 비트코인 수익률 (환율 적용, KRW 기준)
 }
 
 /**
@@ -1971,24 +2025,24 @@ export interface MajorIndexYieldComparisonData {
  * 현재 연월의 데이터에서 올해 수익률과 연평균 수익률 계산
  */
 export function parseYieldComparisonData(rows: any[]): YieldComparisonData | null {
-  if (!rows || rows.length === 0) return null;
+  if (!rows || rows.length === 0) return null
 
   const parsePercent = (val: any): number => {
-    if (!val) return 0;
-    const str = String(val).replace(/[%,\s]/g, '');
-    const num = Number.parseFloat(str);
+    if (!val) return 0
+    const str = String(val).replace(/[%,\s]/g, '')
+    const num = Number.parseFloat(str)
     // 소수점 형태(0.15)를 퍼센트(15%)로 변환
     if (!Number.isNaN(num) && Math.abs(num) < 10) {
-      return num * 100;
+      return num * 100
     }
-    return num || 0;
-  };
+    return num || 0
+  }
 
   // 현재 연월 계산
-  const now = new Date();
-  const currentYY = String(now.getFullYear()).slice(2);
-  const currentMM = String(now.getMonth() + 1).padStart(2, '0');
-  const currentDateStr = `${currentYY}.${currentMM}`;
+  const now = new Date()
+  const currentYY = String(now.getFullYear()).slice(2)
+  const currentMM = String(now.getMonth() + 1).padStart(2, '0')
+  const currentDateStr = `${currentYY}.${currentMM}`
 
   // G17:AB78 범위 기준 컬럼 인덱스:
   // G(0)=날짜, H(1)=계좌총액, ...
@@ -1996,147 +2050,177 @@ export function parseYieldComparisonData(rows: any[]): YieldComparisonData | nul
   // T(13)=코스피가격, U(14)=S&P500가격, V(15)=나스닥가격
 
   // 현재 월 데이터 찾기
-  let currentRow: any[] | null = null;
-  let prevYearDecRow: any[] | null = null; // 작년 12월 데이터
-  let currentRowDate: string | null = null;
+  let currentRow: any[] | null = null
+  let prevYearDecRow: any[] | null = null // 작년 12월 데이터
+  let currentRowDate: string | null = null
 
   // 먼저 현재 월 또는 가장 최근 데이터 찾기
   for (const row of rows) {
-    if (!row || !Array.isArray(row) || row.length === 0) continue;
-    const dateCell = String(row[0] || '').trim();
+    if (!row || !Array.isArray(row) || row.length === 0) continue
+    const dateCell = String(row[0] || '').trim()
 
     if (dateCell === currentDateStr) {
-      currentRow = row;
-      currentRowDate = dateCell;
-      break;
+      currentRow = row
+      currentRowDate = dateCell
+      break
     }
   }
 
   // 현재 월 데이터가 없으면 가장 최근 데이터 사용
   if (!currentRow) {
     for (let i = rows.length - 1; i >= 0; i--) {
-      const row = rows[i];
-      if (!row || !Array.isArray(row) || row.length === 0) continue;
-      const dateCell = String(row[0] || '').trim();
+      const row = rows[i]
+      if (!row || !Array.isArray(row) || row.length === 0) continue
+      const dateCell = String(row[0] || '').trim()
       if (/^\d{2}\.\d{2}$/.test(dateCell)) {
-        currentRow = row;
-        currentRowDate = dateCell;
-        break;
+        currentRow = row
+        currentRowDate = dateCell
+        break
       }
     }
   }
 
-  if (!currentRow || !currentRowDate) return null;
+  if (!currentRow || !currentRowDate) return null
 
   // 현재 데이터 연도 기준으로 작년 12월 찾기
-  const currentYearPart = currentRowDate.split('.')[0] ?? '00';
-  const currentDataYear = Number.parseInt(currentYearPart, 10);
-  const prevYearDecStr = `${String(currentDataYear - 1).padStart(2, '0')}.12`;
+  const currentYearPart = currentRowDate.split('.')[0] ?? '00'
+  const currentDataYear = Number.parseInt(currentYearPart, 10)
+  const prevYearDecStr = `${String(currentDataYear - 1).padStart(2, '0')}.12`
 
-  console.log('[parseYieldComparisonData] Looking for prev year dec:', prevYearDecStr);
+  console.log('[parseYieldComparisonData] Looking for prev year dec:', prevYearDecStr)
 
   for (const row of rows) {
-    if (!row || !Array.isArray(row) || row.length === 0) continue;
-    const dateCell = String(row[0] || '').trim();
+    if (!row || !Array.isArray(row) || row.length === 0) continue
+    const dateCell = String(row[0] || '').trim()
 
     if (dateCell === prevYearDecStr) {
-      prevYearDecRow = row;
-      break;
+      prevYearDecRow = row
+      break
     }
   }
 
-  if (!currentRow) return null;
+  if (!currentRow) return null
 
   // 숫자 파싱 (가격용 - 퍼센트 변환 없이 순수 숫자)
   const parseNumber = (val: any): number => {
-    if (!val) return 0;
-    const str = String(val).replace(/[,\s₩$]/g, '');
-    const num = Number.parseFloat(str);
-    return Number.isNaN(num) ? 0 : num;
-  };
+    if (!val) return 0
+    const str = String(val).replace(/[,\s₩$]/g, '')
+    const num = Number.parseFloat(str)
+    return Number.isNaN(num) ? 0 : num
+  }
 
   // 올해 수익률용: O열(계좌지수), T열(코스피가격), U열(S&P500가격), V열(나스닥가격)
-  const currentAccountIdx = parseNumber(currentRow[8]); // O열: 계좌종합 (100 기준 지수)
-  const currentKospiPrice = parseNumber(currentRow[13]); // T열: 코스피 가격
-  const currentSp500Price = parseNumber(currentRow[14]); // U열: S&P500 가격
-  const currentNasdaqPrice = parseNumber(currentRow[15]); // V열: 나스닥 가격
+  const currentAccountIdx = parseNumber(currentRow[8]) // O열: 계좌종합 (100 기준 지수)
+  const currentKospiPrice = parseNumber(currentRow[13]) // T열: 코스피 가격
+  const currentSp500Price = parseNumber(currentRow[14]) // U열: S&P500 가격
+  const currentNasdaqPrice = parseNumber(currentRow[15]) // V열: 나스닥 가격
 
   // 연평균 수익률용: O열(계좌지수), P열(코스피지수), Q열(S&P500지수), R열(나스닥지수)
-  const currentKospiIdx = parseNumber(currentRow[9]); // P열: 코스피 지수 (100 기준)
-  const currentSp500Idx = parseNumber(currentRow[10]); // Q열: S&P500 지수 (100 기준)
-  const currentNasdaqIdx = parseNumber(currentRow[11]); // R열: 나스닥 지수 (100 기준)
+  const currentKospiIdx = parseNumber(currentRow[9]) // P열: 코스피 지수 (100 기준)
+  const currentSp500Idx = parseNumber(currentRow[10]) // Q열: S&P500 지수 (100 기준)
+  const currentNasdaqIdx = parseNumber(currentRow[11]) // R열: 나스닥 지수 (100 기준)
 
-  let prevAccountIdx = 100;
-  let prevKospiPrice = 1;
-  let prevSp500Price = 1;
-  let prevNasdaqPrice = 1;
+  let prevAccountIdx = 100
+  let prevKospiPrice = 1
+  let prevSp500Price = 1
+  let prevNasdaqPrice = 1
 
   if (prevYearDecRow) {
-    prevAccountIdx = parseNumber(prevYearDecRow[8]) || 100;
-    prevKospiPrice = parseNumber(prevYearDecRow[13]) || 1;
-    prevSp500Price = parseNumber(prevYearDecRow[14]) || 1;
-    prevNasdaqPrice = parseNumber(prevYearDecRow[15]) || 1;
+    prevAccountIdx = parseNumber(prevYearDecRow[8]) || 100
+    prevKospiPrice = parseNumber(prevYearDecRow[13]) || 1
+    prevSp500Price = parseNumber(prevYearDecRow[14]) || 1
+    prevNasdaqPrice = parseNumber(prevYearDecRow[15]) || 1
   }
 
   // 디버깅 로그
-  console.log('[parseYieldComparisonData] Current row date:', currentRowDate);
-  console.log('[parseYieldComparisonData] Prev year dec row date:', prevYearDecRow?.[0]);
-  console.log('[parseYieldComparisonData] RAW O열 - Current:', currentRow[8], 'Prev:', prevYearDecRow?.[8]);
-  console.log('[parseYieldComparisonData] Current values - Account:', currentAccountIdx, 'KOSPI:', currentKospiPrice, 'S&P500:', currentSp500Price, 'NASDAQ:', currentNasdaqPrice);
-  console.log('[parseYieldComparisonData] Prev values - Account:', prevAccountIdx, 'KOSPI:', prevKospiPrice, 'S&P500:', prevSp500Price, 'NASDAQ:', prevNasdaqPrice);
-  console.log('[parseYieldComparisonData] 계좌 올해 수익률 계산:', currentAccountIdx, '/', prevAccountIdx, '=', (currentAccountIdx / prevAccountIdx - 1) * 100);
+  console.log('[parseYieldComparisonData] Current row date:', currentRowDate)
+  console.log('[parseYieldComparisonData] Prev year dec row date:', prevYearDecRow?.[0])
+  console.log(
+    '[parseYieldComparisonData] RAW O열 - Current:',
+    currentRow[8],
+    'Prev:',
+    prevYearDecRow?.[8],
+  )
+  console.log(
+    '[parseYieldComparisonData] Current values - Account:',
+    currentAccountIdx,
+    'KOSPI:',
+    currentKospiPrice,
+    'S&P500:',
+    currentSp500Price,
+    'NASDAQ:',
+    currentNasdaqPrice,
+  )
+  console.log(
+    '[parseYieldComparisonData] Prev values - Account:',
+    prevAccountIdx,
+    'KOSPI:',
+    prevKospiPrice,
+    'S&P500:',
+    prevSp500Price,
+    'NASDAQ:',
+    prevNasdaqPrice,
+  )
+  console.log(
+    '[parseYieldComparisonData] 계좌 올해 수익률 계산:',
+    currentAccountIdx,
+    '/',
+    prevAccountIdx,
+    '=',
+    (currentAccountIdx / prevAccountIdx - 1) * 100,
+  )
 
   // 올해 수익률 계산 (작년말 대비 증감률)
   // 계좌: O열 지수 기준, 지수(KOSPI/S&P500/NASDAQ): T/U/V열 가격 기준
   const thisYearYield = {
-    account: prevAccountIdx > 0 ? ((currentAccountIdx / prevAccountIdx) - 1) * 100 : 0,
-    kospi: prevKospiPrice > 0 ? ((currentKospiPrice / prevKospiPrice) - 1) * 100 : 0,
-    sp500: prevSp500Price > 0 ? ((currentSp500Price / prevSp500Price) - 1) * 100 : 0,
-    nasdaq: prevNasdaqPrice > 0 ? ((currentNasdaqPrice / prevNasdaqPrice) - 1) * 100 : 0,
-  };
+    account: prevAccountIdx > 0 ? (currentAccountIdx / prevAccountIdx - 1) * 100 : 0,
+    kospi: prevKospiPrice > 0 ? (currentKospiPrice / prevKospiPrice - 1) * 100 : 0,
+    sp500: prevSp500Price > 0 ? (currentSp500Price / prevSp500Price - 1) * 100 : 0,
+    nasdaq: prevNasdaqPrice > 0 ? (currentNasdaqPrice / prevNasdaqPrice - 1) * 100 : 0,
+  }
 
   // 누적 수익률 (연평균 수익률 계산용) - O, P, Q, R열 지수 기준
-  const cumulativeYield = currentAccountIdx - 100;
-  const cumulativeKospi = currentKospiIdx - 100;
-  const cumulativeSp500 = currentSp500Idx - 100;
-  const cumulativeNasdaq = currentNasdaqIdx - 100;
+  const cumulativeYield = currentAccountIdx - 100
+  const cumulativeKospi = currentKospiIdx - 100
+  const cumulativeSp500 = currentSp500Idx - 100
+  const cumulativeNasdaq = currentNasdaqIdx - 100
 
   // 투자 기간 계산 (첫 데이터부터 현재까지)
-  let firstDate: string | null = null;
+  let firstDate: string | null = null
   for (const row of rows) {
-    if (!row || !Array.isArray(row)) continue;
-    const dateCell = String(row[0] || '').trim();
+    if (!row || !Array.isArray(row)) continue
+    const dateCell = String(row[0] || '').trim()
     if (/^\d{2}\.\d{2}$/.test(dateCell)) {
-      firstDate = dateCell;
-      break;
+      firstDate = dateCell
+      break
     }
   }
 
-  let years = 1;
+  let years = 1
   if (firstDate) {
-    const [firstYY] = firstDate.split('.').map(Number);
-    const firstYear = 2000 + (firstYY || 0);
-    const currentYear = now.getFullYear();
+    const [firstYY] = firstDate.split('.').map(Number)
+    const firstYear = 2000 + (firstYY || 0)
+    const currentYear = now.getFullYear()
     // 시트와 동일하게 연도 차이만 사용 (월 무시)
-    years = Math.max(1, currentYear - firstYear);
+    years = Math.max(1, currentYear - firstYear)
   }
 
   // 연평균 수익률 계산: (1 + 누적수익률)^(1/연수) - 1
   const calcAnnualized = (cumulative: number): number => {
-    const total = 1 + cumulative / 100;
-    if (total <= 0 || years <= 0) return 0;
-    return (total ** (1 / years) - 1) * 100;
-  };
+    const total = 1 + cumulative / 100
+    if (total <= 0 || years <= 0) return 0
+    return (total ** (1 / years) - 1) * 100
+  }
 
   const annualizedYield = {
     account: calcAnnualized(cumulativeYield),
     kospi: calcAnnualized(cumulativeKospi),
     sp500: calcAnnualized(cumulativeSp500),
     nasdaq: calcAnnualized(cumulativeNasdaq),
-  };
+  }
 
   // 소수점 한 자리로 반올림
-  const round = (n: number) => Math.round(n * 10) / 10;
+  const round = (n: number) => Math.round(n * 10) / 10
 
   return {
     cumulativeYield: {
@@ -2157,7 +2241,7 @@ export function parseYieldComparisonData(rows: any[]): YieldComparisonData | nul
       sp500: round(annualizedYield.sp500),
       nasdaq: round(annualizedYield.nasdaq),
     },
-  };
+  }
 }
 
 /**
@@ -2169,194 +2253,234 @@ export function parseYieldComparisonData(rows: any[]): YieldComparisonData | nul
  *   (기본 지수 컬럼 O~R에서 +20 오프셋)
  */
 export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDollarData | null {
-  if (!rows || rows.length === 0) return null;
+  if (!rows || rows.length === 0) return null
 
   // 헤더 행 로그
-  const headerRow = rows[0];
-  console.log('[parseYieldComparisonDollarData] Header row (28-36):', headerRow?.slice(28, 37));
+  const headerRow = rows[0]
+  console.log('[parseYieldComparisonDollarData] Header row (28-36):', headerRow?.slice(28, 37))
 
   const parsePercent = (val: any): number => {
-    if (!val || val === '#NUM!' || val === '#VALUE!' || val === '#DIV/0!' || val === '#REF!') return 0;
-    const str = String(val).replace(/[%,\s]/g, '');
-    const num = Number.parseFloat(str);
-    if (Number.isNaN(num)) return 0;
+    if (!val || val === '#NUM!' || val === '#VALUE!' || val === '#DIV/0!' || val === '#REF!')
+      return 0
+    const str = String(val).replace(/[%,\s]/g, '')
+    const num = Number.parseFloat(str)
+    if (Number.isNaN(num)) return 0
     // 소수점 형태(0.15 = 15%)를 퍼센트로 변환
     if (Math.abs(num) < 2 && num !== 0) {
-      return num * 100;
+      return num * 100
     }
-    return num;
-  };
+    return num
+  }
 
   // 현재 연월 계산
-  const now = new Date();
-  const currentYY = String(now.getFullYear()).slice(2);
-  const currentMM = String(now.getMonth() + 1).padStart(2, '0');
-  const currentDateStr = `${currentYY}.${currentMM}`;
+  const now = new Date()
+  const currentYY = String(now.getFullYear()).slice(2)
+  const currentMM = String(now.getMonth() + 1).padStart(2, '0')
+  const currentDateStr = `${currentYY}.${currentMM}`
 
   // 현재 월 데이터 찾기
-  let currentRow: any[] | null = null;
-  let prevYearDecRow: any[] | null = null;
-  let currentRowDate: string | null = null;
+  let currentRow: any[] | null = null
+  let prevYearDecRow: any[] | null = null
+  let currentRowDate: string | null = null
 
   // 먼저 현재 월 또는 가장 최근 데이터 찾기
   for (const row of rows) {
-    if (!row || !Array.isArray(row) || row.length === 0) continue;
-    const dateCell = String(row[0] || '').trim();
+    if (!row || !Array.isArray(row) || row.length === 0) continue
+    const dateCell = String(row[0] || '').trim()
 
     if (dateCell === currentDateStr) {
-      currentRow = row;
-      currentRowDate = dateCell;
-      break;
+      currentRow = row
+      currentRowDate = dateCell
+      break
     }
   }
 
   // 현재 월 데이터가 없으면 가장 최근 데이터 사용
   if (!currentRow) {
     for (let i = rows.length - 1; i >= 0; i--) {
-      const row = rows[i];
-      if (!row || !Array.isArray(row) || row.length === 0) continue;
-      const dateCell = String(row[0] || '').trim();
+      const row = rows[i]
+      if (!row || !Array.isArray(row) || row.length === 0) continue
+      const dateCell = String(row[0] || '').trim()
       if (/^\d{2}\.\d{2}$/.test(dateCell)) {
-        currentRow = row;
-        currentRowDate = dateCell;
-        break;
+        currentRow = row
+        currentRowDate = dateCell
+        break
       }
     }
   }
 
   if (!currentRow || !currentRowDate) {
-    return null;
+    return null
   }
 
   // 현재 데이터 연도 기준으로 작년 12월 찾기
-  const currentYearPart = currentRowDate.split('.')[0] ?? '00';
-  const currentDataYear = Number.parseInt(currentYearPart, 10);
-  const prevYearDecStr = `${String(currentDataYear - 1).padStart(2, '0')}.12`;
+  const currentYearPart = currentRowDate.split('.')[0] ?? '00'
+  const currentDataYear = Number.parseInt(currentYearPart, 10)
+  const prevYearDecStr = `${String(currentDataYear - 1).padStart(2, '0')}.12`
 
   for (const row of rows) {
-    if (!row || !Array.isArray(row) || row.length === 0) continue;
-    const dateCell = String(row[0] || '').trim();
+    if (!row || !Array.isArray(row) || row.length === 0) continue
+    const dateCell = String(row[0] || '').trim()
 
     if (dateCell === prevYearDecStr) {
-      prevYearDecRow = row;
-      break;
+      prevYearDecRow = row
+      break
     }
   }
 
   // Debug: 현재 행의 컬럼 값 출력
-  console.log('[parseYieldComparisonDollarData] Current date:', currentRowDate);
-  console.log('[parseYieldComparisonDollarData] Prev year dec:', prevYearDecStr, prevYearDecRow?.[0]);
-  console.log('[parseYieldComparisonDollarData] Row length:', currentRow.length);
-  console.log('[parseYieldComparisonDollarData] Header 20-27 (AA~AH):', headerRow?.slice(20, 28));
-  console.log('[parseYieldComparisonDollarData] Columns 20-27 (AA~AH):', currentRow.slice(20, 28));
-  console.log('[parseYieldComparisonDollarData] Columns 28-36 (AI~AQ):', currentRow.slice(28, 37));
+  console.log('[parseYieldComparisonDollarData] Current date:', currentRowDate)
+  console.log(
+    '[parseYieldComparisonDollarData] Prev year dec:',
+    prevYearDecStr,
+    prevYearDecRow?.[0],
+  )
+  console.log('[parseYieldComparisonDollarData] Row length:', currentRow.length)
+  console.log('[parseYieldComparisonDollarData] Header 20-27 (AA~AH):', headerRow?.slice(20, 28))
+  console.log('[parseYieldComparisonDollarData] Columns 20-27 (AA~AH):', currentRow.slice(20, 28))
+  console.log('[parseYieldComparisonDollarData] Columns 28-36 (AI~AQ):', currentRow.slice(28, 37))
 
   // G17:AQ200 범위 기준 컬럼 인덱스 (G=0 기준):
-  const COL_ACCOUNT = 8;          // O열 - 계좌종합 지수 (100 기준)
-  const COL_KOSPI_PRICE = 13;     // T열 - 코스피 가격 (YieldComparisonChart와 동일하게 올해 수익률용)
-  const COL_KOSPI_IDX = 9;        // P열 - 코스피 지수 (100 기준, 연평균용)
-  const COL_DOLLAR_THIS_YEAR = 23; // AD열 - 달러 환율값 (올해 수익률 계산용)
+  const COL_ACCOUNT = 8 // O열 - 계좌종합 지수 (100 기준)
+  const COL_KOSPI_PRICE = 13 // T열 - 코스피 가격 (YieldComparisonChart와 동일하게 올해 수익률용)
+  const COL_KOSPI_IDX = 9 // P열 - 코스피 지수 (100 기준, 연평균용)
+  const COL_DOLLAR_THIS_YEAR = 23 // AD열 - 달러 환율값 (올해 수익률 계산용)
   // 100 기준 지수 컬럼 (연평균 수익률 계산용)
-  const COL_DOLLAR_IDX = 33;      // AN열 - 달러환율 지수 (100 기준)
-  const COL_SP500_DOLLAR_IDX = 34; // AO열 - S&P500 달러환율 지수 (100 기준)
-  const COL_NASDAQ_DOLLAR_IDX = 35; // AP열 - 나스닥 달러환율 지수 (100 기준)
+  const COL_DOLLAR_IDX = 33 // AN열 - 달러환율 지수 (100 기준)
+  const COL_SP500_DOLLAR_IDX = 34 // AO열 - S&P500 달러환율 지수 (100 기준)
+  const COL_NASDAQ_DOLLAR_IDX = 35 // AP열 - 나스닥 달러환율 지수 (100 기준)
 
   // 환율 값 파싱 (₩1,467 → 1467)
   const parseExchangeRate = (val: any): number => {
-    if (!val) return 0;
-    const str = String(val).replace(/[₩$,\s원]/g, '');
-    const num = Number.parseFloat(str);
-    return Number.isNaN(num) ? 0 : num;
-  };
+    if (!val) return 0
+    const str = String(val).replace(/[₩$,\s원]/g, '')
+    const num = Number.parseFloat(str)
+    return Number.isNaN(num) ? 0 : num
+  }
 
   // 숫자 파싱 (가격용 - 퍼센트 변환 없이 순수 숫자)
   const parseNumber = (val: any): number => {
-    if (!val) return 0;
-    const str = String(val).replace(/[,\s₩$]/g, '');
-    const num = Number.parseFloat(str);
-    return Number.isNaN(num) ? 0 : num;
-  };
+    if (!val) return 0
+    const str = String(val).replace(/[,\s₩$]/g, '')
+    const num = Number.parseFloat(str)
+    return Number.isNaN(num) ? 0 : num
+  }
 
   // 첫 번째 데이터 행 찾기 (투자 기간 계산용)
-  let firstDate: string | null = null;
+  let firstDate: string | null = null
   for (const row of rows) {
-    if (!row || !Array.isArray(row)) continue;
-    const dateCell = String(row[0] || '').trim();
+    if (!row || !Array.isArray(row)) continue
+    const dateCell = String(row[0] || '').trim()
     if (/^\d{2}\.\d{2}$/.test(dateCell)) {
-      firstDate = dateCell;
-      break;
+      firstDate = dateCell
+      break
     }
   }
 
   // 올해 수익률용 데이터
-  const currentAccountIdx = parsePercent(currentRow[COL_ACCOUNT]); // O열: 계좌 지수 (100 기준)
-  const currentKospiPrice = parseNumber(currentRow[COL_KOSPI_PRICE]); // T열: 코스피 가격 (올해 수익률용)
+  const currentAccountIdx = parsePercent(currentRow[COL_ACCOUNT]) // O열: 계좌 지수 (100 기준)
+  const currentKospiPrice = parseNumber(currentRow[COL_KOSPI_PRICE]) // T열: 코스피 가격 (올해 수익률용)
   // 달러 환율값 (올해 수익률 계산용) - AD열
-  const currentDollarExchangeRate = parseExchangeRate(currentRow[COL_DOLLAR_THIS_YEAR]);
+  const currentDollarExchangeRate = parseExchangeRate(currentRow[COL_DOLLAR_THIS_YEAR])
 
   // 연평균 수익률용 데이터 (100 기준 지수 컬럼)
-  const currentKospiIdx = parsePercent(currentRow[COL_KOSPI_IDX]); // P열: 코스피 지수 (100 기준)
-  const currentDollarIdx = parsePercent(currentRow[COL_DOLLAR_IDX]); // AN열: 달러환율 지수 (100 기준)
-  const currentSp500DollarIdx = parsePercent(currentRow[COL_SP500_DOLLAR_IDX]); // AO열: S&P500 달러환율 지수 (100 기준)
-  const currentNasdaqDollarIdx = parsePercent(currentRow[COL_NASDAQ_DOLLAR_IDX]); // AP열: 나스닥 달러환율 지수 (100 기준)
+  const currentKospiIdx = parsePercent(currentRow[COL_KOSPI_IDX]) // P열: 코스피 지수 (100 기준)
+  const currentDollarIdx = parsePercent(currentRow[COL_DOLLAR_IDX]) // AN열: 달러환율 지수 (100 기준)
+  const currentSp500DollarIdx = parsePercent(currentRow[COL_SP500_DOLLAR_IDX]) // AO열: S&P500 달러환율 지수 (100 기준)
+  const currentNasdaqDollarIdx = parsePercent(currentRow[COL_NASDAQ_DOLLAR_IDX]) // AP열: 나스닥 달러환율 지수 (100 기준)
 
-  let prevAccountIdx = 100;
-  let prevKospiPrice = 1;
-  let prevDollarExchangeRate = 0;
-  let prevDollarIdx = 100;
-  let prevSp500DollarIdx = 100;
-  let prevNasdaqDollarIdx = 100;
+  let prevAccountIdx = 100
+  let prevKospiPrice = 1
+  let prevDollarExchangeRate = 0
+  let prevDollarIdx = 100
+  let prevSp500DollarIdx = 100
+  let prevNasdaqDollarIdx = 100
 
   if (prevYearDecRow) {
-    prevAccountIdx = parsePercent(prevYearDecRow[COL_ACCOUNT]) || 100;
-    prevKospiPrice = parseNumber(prevYearDecRow[COL_KOSPI_PRICE]) || 1;
-    prevDollarExchangeRate = parseExchangeRate(prevYearDecRow[COL_DOLLAR_THIS_YEAR]);
-    prevDollarIdx = parsePercent(prevYearDecRow[COL_DOLLAR_IDX]) || 100;
-    prevSp500DollarIdx = parsePercent(prevYearDecRow[COL_SP500_DOLLAR_IDX]) || 100;
-    prevNasdaqDollarIdx = parsePercent(prevYearDecRow[COL_NASDAQ_DOLLAR_IDX]) || 100;
+    prevAccountIdx = parsePercent(prevYearDecRow[COL_ACCOUNT]) || 100
+    prevKospiPrice = parseNumber(prevYearDecRow[COL_KOSPI_PRICE]) || 1
+    prevDollarExchangeRate = parseExchangeRate(prevYearDecRow[COL_DOLLAR_THIS_YEAR])
+    prevDollarIdx = parsePercent(prevYearDecRow[COL_DOLLAR_IDX]) || 100
+    prevSp500DollarIdx = parsePercent(prevYearDecRow[COL_SP500_DOLLAR_IDX]) || 100
+    prevNasdaqDollarIdx = parsePercent(prevYearDecRow[COL_NASDAQ_DOLLAR_IDX]) || 100
   }
 
-  console.log('[parseYieldComparisonDollarData] First date:', firstDate);
-  console.log('[parseYieldComparisonDollarData] Current - Account:', currentAccountIdx, 'KospiPrice:', currentKospiPrice);
-  console.log('[parseYieldComparisonDollarData] Current 100-base indices - Dollar:', currentDollarIdx, 'S&P500:', currentSp500DollarIdx, 'NASDAQ:', currentNasdaqDollarIdx);
-  console.log('[parseYieldComparisonDollarData] Prev (Dec) - Account:', prevAccountIdx, 'KospiPrice:', prevKospiPrice);
-  console.log('[parseYieldComparisonDollarData] Prev 100-base indices - Dollar:', prevDollarIdx, 'S&P500:', prevSp500DollarIdx, 'NASDAQ:', prevNasdaqDollarIdx);
+  console.log('[parseYieldComparisonDollarData] First date:', firstDate)
+  console.log(
+    '[parseYieldComparisonDollarData] Current - Account:',
+    currentAccountIdx,
+    'KospiPrice:',
+    currentKospiPrice,
+  )
+  console.log(
+    '[parseYieldComparisonDollarData] Current 100-base indices - Dollar:',
+    currentDollarIdx,
+    'S&P500:',
+    currentSp500DollarIdx,
+    'NASDAQ:',
+    currentNasdaqDollarIdx,
+  )
+  console.log(
+    '[parseYieldComparisonDollarData] Prev (Dec) - Account:',
+    prevAccountIdx,
+    'KospiPrice:',
+    prevKospiPrice,
+  )
+  console.log(
+    '[parseYieldComparisonDollarData] Prev 100-base indices - Dollar:',
+    prevDollarIdx,
+    'S&P500:',
+    prevSp500DollarIdx,
+    'NASDAQ:',
+    prevNasdaqDollarIdx,
+  )
 
   // 올해 수익률 계산 (작년말 대비 증감률)
   // 모든 값은 100 기준 지수 사용
   const thisYearYield = {
-    account: prevAccountIdx > 0 ? ((currentAccountIdx / prevAccountIdx) - 1) * 100 : 0,
-    kospi: prevKospiPrice > 0 ? ((currentKospiPrice / prevKospiPrice) - 1) * 100 : 0,
-    sp500: prevSp500DollarIdx > 0 ? ((currentSp500DollarIdx / prevSp500DollarIdx) - 1) * 100 : 0,
-    nasdaq: prevNasdaqDollarIdx > 0 ? ((currentNasdaqDollarIdx / prevNasdaqDollarIdx) - 1) * 100 : 0,
+    account: prevAccountIdx > 0 ? (currentAccountIdx / prevAccountIdx - 1) * 100 : 0,
+    kospi: prevKospiPrice > 0 ? (currentKospiPrice / prevKospiPrice - 1) * 100 : 0,
+    sp500: prevSp500DollarIdx > 0 ? (currentSp500DollarIdx / prevSp500DollarIdx - 1) * 100 : 0,
+    nasdaq: prevNasdaqDollarIdx > 0 ? (currentNasdaqDollarIdx / prevNasdaqDollarIdx - 1) * 100 : 0,
     // 달러 올해 수익률: 100 기준 지수 사용
-    dollar: prevDollarIdx > 0 ? ((currentDollarIdx / prevDollarIdx) - 1) * 100 : 0,
-  };
+    dollar: prevDollarIdx > 0 ? (currentDollarIdx / prevDollarIdx - 1) * 100 : 0,
+  }
 
   // 누적 수익률 계산 (모두 100 기준 지수이므로 -100)
-  const cumulativeYield = currentAccountIdx - 100;
-  const cumulativeKospi = currentKospiIdx - 100;
-  const cumulativeSp500 = currentSp500DollarIdx - 100;
-  const cumulativeNasdaq = currentNasdaqDollarIdx - 100;
-  const cumulativeDollar = currentDollarIdx - 100;
+  const cumulativeYield = currentAccountIdx - 100
+  const cumulativeKospi = currentKospiIdx - 100
+  const cumulativeSp500 = currentSp500DollarIdx - 100
+  const cumulativeNasdaq = currentNasdaqDollarIdx - 100
+  const cumulativeDollar = currentDollarIdx - 100
 
-  console.log('[parseYieldComparisonDollarData] Cumulative - Account:', cumulativeYield, 'Kospi:', cumulativeKospi, 'S&P500:', cumulativeSp500, 'NASDAQ:', cumulativeNasdaq, 'Dollar:', cumulativeDollar);
+  console.log(
+    '[parseYieldComparisonDollarData] Cumulative - Account:',
+    cumulativeYield,
+    'Kospi:',
+    cumulativeKospi,
+    'S&P500:',
+    cumulativeSp500,
+    'NASDAQ:',
+    cumulativeNasdaq,
+    'Dollar:',
+    cumulativeDollar,
+  )
 
-  let years = 1;
+  let years = 1
   if (firstDate) {
-    const [firstYY] = firstDate.split('.').map(Number);
-    const firstYear = 2000 + (firstYY || 0);
-    const currentYear = now.getFullYear();
+    const [firstYY] = firstDate.split('.').map(Number)
+    const firstYear = 2000 + (firstYY || 0)
+    const currentYear = now.getFullYear()
     // 시트와 동일하게 연도 차이만 사용 (월 무시)
-    years = Math.max(1, currentYear - firstYear);
+    years = Math.max(1, currentYear - firstYear)
   }
 
   // 연평균 수익률 계산
   const calcAnnualized = (cumulative: number): number => {
-    const total = 1 + cumulative / 100;
-    if (total <= 0 || years <= 0) return 0;
-    return (total ** (1 / years) - 1) * 100;
-  };
+    const total = 1 + cumulative / 100
+    if (total <= 0 || years <= 0) return 0
+    return (total ** (1 / years) - 1) * 100
+  }
 
   const annualizedYield = {
     account: calcAnnualized(cumulativeYield),
@@ -2364,9 +2488,9 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
     sp500: calcAnnualized(cumulativeSp500),
     nasdaq: calcAnnualized(cumulativeNasdaq),
     dollar: calcAnnualized(cumulativeDollar),
-  };
+  }
 
-  const round = (n: number) => Math.round(n * 10) / 10;
+  const round = (n: number) => Math.round(n * 10) / 10
 
   const result: YieldComparisonDollarData = {
     cumulativeYield: {
@@ -2390,11 +2514,11 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
       nasdaq: round(annualizedYield.nasdaq),
       dollar: round(annualizedYield.dollar),
     },
-  };
+  }
 
-  console.log('[parseYieldComparisonDollarData] Result:', JSON.stringify(result));
+  console.log('[parseYieldComparisonDollarData] Result:', JSON.stringify(result))
 
-  return result;
+  return result
 }
 
 /**
@@ -2407,143 +2531,146 @@ export function parseYieldComparisonDollarData(rows: any[]): YieldComparisonDoll
  * - O열(10) = 계좌종합 지수, P열(11) = 코스피, Q열(12) = S&P500, R열(13) = 나스닥
  */
 export function parseMonthlyYieldComparisonData(rows: any[]): MonthlyYieldComparisonData | null {
-  if (!rows || rows.length === 0) return null;
+  if (!rows || rows.length === 0) return null
 
   const parseNumber = (val: any): number => {
-    if (!val || val === '#NUM!' || val === '#VALUE!') return 0;
-    const str = String(val).replace(/[₩$,\s]/g, '');
-    const num = Number.parseFloat(str);
-    return Number.isNaN(num) ? 0 : num;
-  };
+    if (!val || val === '#NUM!' || val === '#VALUE!') return 0
+    const str = String(val).replace(/[₩$,\s]/g, '')
+    const num = Number.parseFloat(str)
+    return Number.isNaN(num) ? 0 : num
+  }
 
   // 현재 연월 계산
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth() + 1
 
   // 컬럼 인덱스 (E열 시작 기준)
-  const COL_YEAR = 0; // E열 - 연도
-  const COL_MONTH = 1; // F열 - 월
-  const COL_ACCOUNT_IDX = 10; // O열 - 계좌종합 지수
-  const COL_KOSPI_IDX = 11; // P열 - 코스피 지수
-  const COL_SP500_IDX = 12; // Q열 - S&P500 지수
-  const COL_NASDAQ_IDX = 13; // R열 - 나스닥 지수
+  const COL_YEAR = 0 // E열 - 연도
+  const COL_MONTH = 1 // F열 - 월
+  const COL_ACCOUNT_IDX = 10 // O열 - 계좌종합 지수
+  const COL_KOSPI_IDX = 11 // P열 - 코스피 지수
+  const COL_SP500_IDX = 12 // Q열 - S&P500 지수
+  const COL_NASDAQ_IDX = 13 // R열 - 나스닥 지수
 
   // 데이터 행 찾기
-  let currentRow: any[] | null = null;
-  let prevMonthRow: any[] | null = null;
-  let prevYearDecRow: any[] | null = null; // 작년 12월
+  let currentRow: any[] | null = null
+  let prevMonthRow: any[] | null = null
+  let prevYearDecRow: any[] | null = null // 작년 12월
 
   // 전월 계산
-  const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
-  const prevMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+  const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1
+  const prevMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear
 
   for (const row of rows) {
-    if (!row || !Array.isArray(row) || row.length < 14) continue;
+    if (!row || !Array.isArray(row) || row.length < 14) continue
 
-    const yearVal = String(row[COL_YEAR] || '').trim();
-    const monthVal = String(row[COL_MONTH] || '').trim();
+    const yearVal = String(row[COL_YEAR] || '').trim()
+    const monthVal = String(row[COL_MONTH] || '').trim()
 
-    const year = Number.parseInt(yearVal.replace(/[^0-9]/g, ''), 10);
-    const monthMatch = monthVal.match(/(\d+)/);
-    if (!monthMatch) continue;
-    const month = Number.parseInt(monthMatch[1] || '', 10);
+    const year = Number.parseInt(yearVal.replace(/[^0-9]/g, ''), 10)
+    const monthMatch = monthVal.match(/(\d+)/)
+    if (!monthMatch) continue
+    const month = Number.parseInt(monthMatch[1] || '', 10)
 
     // 현재 월 데이터
     if (year === currentYear && month === currentMonth) {
-      currentRow = row;
+      currentRow = row
     }
     // 전월 데이터
     if (year === prevMonthYear && month === prevMonth) {
-      prevMonthRow = row;
+      prevMonthRow = row
     }
     // 작년 12월 데이터
     if (year === currentYear - 1 && month === 12) {
-      prevYearDecRow = row;
+      prevYearDecRow = row
     }
   }
 
   // 현재 월 데이터가 없으면 가장 최근 데이터 사용
   if (!currentRow) {
     for (let i = rows.length - 1; i >= 0; i--) {
-      const row = rows[i];
-      if (!row || !Array.isArray(row) || row.length < 14) continue;
-      const yearVal = String(row[COL_YEAR] || '').trim();
+      const row = rows[i]
+      if (!row || !Array.isArray(row) || row.length < 14) continue
+      const yearVal = String(row[COL_YEAR] || '').trim()
       if (/^\d{4}$/.test(yearVal)) {
-        currentRow = row;
+        currentRow = row
         // 전월도 찾기
-        const monthVal = String(row[COL_MONTH] || '').trim();
-        const monthMatch = monthVal.match(/(\d+)/);
+        const monthVal = String(row[COL_MONTH] || '').trim()
+        const monthMatch = monthVal.match(/(\d+)/)
         if (monthMatch) {
-          const foundMonth = Number.parseInt(monthMatch[1] || '', 10);
-          const foundYear = Number.parseInt(yearVal, 10);
+          const foundMonth = Number.parseInt(monthMatch[1] || '', 10)
+          const foundYear = Number.parseInt(yearVal, 10)
           // 전월 찾기
-          const targetPrevMonth = foundMonth === 1 ? 12 : foundMonth - 1;
-          const targetPrevYear = foundMonth === 1 ? foundYear - 1 : foundYear;
+          const targetPrevMonth = foundMonth === 1 ? 12 : foundMonth - 1
+          const targetPrevYear = foundMonth === 1 ? foundYear - 1 : foundYear
           for (let j = i - 1; j >= 0; j--) {
-            const prevRow = rows[j];
-            if (!prevRow || !Array.isArray(prevRow)) continue;
-            const pYear = Number.parseInt(String(prevRow[COL_YEAR] || '').replace(/[^0-9]/g, ''), 10);
-            const pMonthMatch = String(prevRow[COL_MONTH] || '').match(/(\d+)/);
+            const prevRow = rows[j]
+            if (!prevRow || !Array.isArray(prevRow)) continue
+            const pYear = Number.parseInt(
+              String(prevRow[COL_YEAR] || '').replace(/[^0-9]/g, ''),
+              10,
+            )
+            const pMonthMatch = String(prevRow[COL_MONTH] || '').match(/(\d+)/)
             if (pMonthMatch) {
-              const pMonth = Number.parseInt(pMonthMatch[1] || '', 10);
+              const pMonth = Number.parseInt(pMonthMatch[1] || '', 10)
               if (pYear === targetPrevYear && pMonth === targetPrevMonth) {
-                prevMonthRow = prevRow;
-                break;
+                prevMonthRow = prevRow
+                break
               }
             }
           }
         }
-        break;
+        break
       }
     }
   }
 
-  if (!currentRow) return null;
+  if (!currentRow) return null
 
   // 현재 데이터
-  const accountIdx = parseNumber(currentRow[COL_ACCOUNT_IDX]);
-  const kospiIdx = parseNumber(currentRow[COL_KOSPI_IDX]);
-  const sp500Idx = parseNumber(currentRow[COL_SP500_IDX]);
-  const nasdaqIdx = parseNumber(currentRow[COL_NASDAQ_IDX]);
+  const accountIdx = parseNumber(currentRow[COL_ACCOUNT_IDX])
+  const kospiIdx = parseNumber(currentRow[COL_KOSPI_IDX])
+  const sp500Idx = parseNumber(currentRow[COL_SP500_IDX])
+  const nasdaqIdx = parseNumber(currentRow[COL_NASDAQ_IDX])
 
   // 전월 데이터
-  const prevAccountIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_ACCOUNT_IDX]) : accountIdx;
-  const prevKospiIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_KOSPI_IDX]) : kospiIdx;
-  const prevSp500Idx = prevMonthRow ? parseNumber(prevMonthRow[COL_SP500_IDX]) : sp500Idx;
-  const prevNasdaqIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_NASDAQ_IDX]) : nasdaqIdx;
+  const prevAccountIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_ACCOUNT_IDX]) : accountIdx
+  const prevKospiIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_KOSPI_IDX]) : kospiIdx
+  const prevSp500Idx = prevMonthRow ? parseNumber(prevMonthRow[COL_SP500_IDX]) : sp500Idx
+  const prevNasdaqIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_NASDAQ_IDX]) : nasdaqIdx
 
   // 작년 12월 데이터
-  const prevYearAccountIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_ACCOUNT_IDX]) : 100;
-  const prevYearKospiIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_KOSPI_IDX]) : 100;
-  const prevYearSp500Idx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_SP500_IDX]) : 100;
-  const prevYearNasdaqIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_NASDAQ_IDX]) : 100;
+  const prevYearAccountIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_ACCOUNT_IDX]) : 100
+  const prevYearKospiIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_KOSPI_IDX]) : 100
+  const prevYearSp500Idx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_SP500_IDX]) : 100
+  const prevYearNasdaqIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_NASDAQ_IDX]) : 100
 
   // 이번 달 수익률 계산 (인덱스 기반 - 다른 지수와 동일 방식)
   // K열 월수익률은 UNFORMATTED_VALUE로 소수점 형태(0.027=2.7%)이므로 사용하지 않음
   const currentMonthYield = {
-    account: prevAccountIdx > 0 && accountIdx > 0 ? ((accountIdx / prevAccountIdx) - 1) * 100 : 0,
-    kospi: prevKospiIdx > 0 ? ((kospiIdx / prevKospiIdx) - 1) * 100 : 0,
-    sp500: prevSp500Idx > 0 ? ((sp500Idx / prevSp500Idx) - 1) * 100 : 0,
-    nasdaq: prevNasdaqIdx > 0 ? ((nasdaqIdx / prevNasdaqIdx) - 1) * 100 : 0,
+    account: prevAccountIdx > 0 && accountIdx > 0 ? (accountIdx / prevAccountIdx - 1) * 100 : 0,
+    kospi: prevKospiIdx > 0 ? (kospiIdx / prevKospiIdx - 1) * 100 : 0,
+    sp500: prevSp500Idx > 0 ? (sp500Idx / prevSp500Idx - 1) * 100 : 0,
+    nasdaq: prevNasdaqIdx > 0 ? (nasdaqIdx / prevNasdaqIdx - 1) * 100 : 0,
     dollar: 0, // 별도 계산 필요
-  };
+  }
 
   // 올해 수익률 계산 (작년 12월 대비)
   const thisYearYield = {
-    account: prevYearAccountIdx > 0 ? ((accountIdx / prevYearAccountIdx) - 1) * 100 : 0,
-    kospi: prevYearKospiIdx > 0 ? ((kospiIdx / prevYearKospiIdx) - 1) * 100 : 0,
-    sp500: prevYearSp500Idx > 0 ? ((sp500Idx / prevYearSp500Idx) - 1) * 100 : 0,
-    nasdaq: prevYearNasdaqIdx > 0 ? ((nasdaqIdx / prevYearNasdaqIdx) - 1) * 100 : 0,
+    account: prevYearAccountIdx > 0 ? (accountIdx / prevYearAccountIdx - 1) * 100 : 0,
+    kospi: prevYearKospiIdx > 0 ? (kospiIdx / prevYearKospiIdx - 1) * 100 : 0,
+    sp500: prevYearSp500Idx > 0 ? (sp500Idx / prevYearSp500Idx - 1) * 100 : 0,
+    nasdaq: prevYearNasdaqIdx > 0 ? (nasdaqIdx / prevYearNasdaqIdx - 1) * 100 : 0,
     dollar: 0, // 별도 계산 필요
-  };
+  }
 
   // 현재 월 추출
-  const currentMonthVal = String(currentRow[COL_MONTH] || '').trim();
-  const monthMatch = currentMonthVal.match(/(\d+)/);
-  const displayMonth = monthMatch ? `${monthMatch[1]}월` : `${currentMonth}월`;
+  const currentMonthVal = String(currentRow[COL_MONTH] || '').trim()
+  const monthMatch = currentMonthVal.match(/(\d+)/)
+  const displayMonth = monthMatch ? `${monthMatch[1]}월` : `${currentMonth}월`
 
-  const round = (n: number) => Math.round(n * 10) / 10;
+  const round = (n: number) => Math.round(n * 10) / 10
 
   const result: MonthlyYieldComparisonData = {
     currentMonthYield: {
@@ -2561,148 +2688,152 @@ export function parseMonthlyYieldComparisonData(rows: any[]): MonthlyYieldCompar
       dollar: round(thisYearYield.dollar),
     },
     currentMonth: displayMonth,
-  };
+  }
 
-  console.log('[parseMonthlyYieldComparisonData] Result:', JSON.stringify(result));
+  console.log('[parseMonthlyYieldComparisonData] Result:', JSON.stringify(result))
 
-  return result;
+  return result
 }
 
 /**
  * "5. 계좌내역(누적)" 시트에서 월별 수익률 비교 데이터 파싱 (DOLLAR 포함)
  * G17:AQ78 범위 사용 (기존 dollarYieldRows)
  */
-export function parseMonthlyYieldComparisonWithDollar(rows: any[]): MonthlyYieldComparisonData | null {
-  if (!rows || rows.length === 0) return null;
+export function parseMonthlyYieldComparisonWithDollar(
+  rows: any[],
+): MonthlyYieldComparisonData | null {
+  if (!rows || rows.length === 0) return null
 
   const parseNumber = (val: any): number => {
-    if (!val || val === '#NUM!' || val === '#VALUE!') return 0;
-    const str = String(val).replace(/[₩$,\s]/g, '');
-    const num = Number.parseFloat(str);
-    return Number.isNaN(num) ? 0 : num;
-  };
+    if (!val || val === '#NUM!' || val === '#VALUE!') return 0
+    const str = String(val).replace(/[₩$,\s]/g, '')
+    const num = Number.parseFloat(str)
+    return Number.isNaN(num) ? 0 : num
+  }
 
-  const now = new Date();
-  const currentYY = String(now.getFullYear()).slice(2);
-  const currentMM = String(now.getMonth() + 1).padStart(2, '0');
-  const currentDateStr = `${currentYY}.${currentMM}`;
+  const now = new Date()
+  const currentYY = String(now.getFullYear()).slice(2)
+  const currentMM = String(now.getMonth() + 1).padStart(2, '0')
+  const currentDateStr = `${currentYY}.${currentMM}`
 
   // 전월 계산
-  const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
-  const prevMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-  const prevMonthDateStr = `${String(prevMonthYear).slice(2)}.${String(prevMonth).padStart(2, '0')}`;
+  const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth()
+  const prevMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
+  const prevMonthDateStr = `${String(prevMonthYear).slice(2)}.${String(prevMonth).padStart(2, '0')}`
 
   // 작년 12월
-  const prevYearDateStr = `${String(now.getFullYear() - 1).slice(2)}.12`;
+  const prevYearDateStr = `${String(now.getFullYear() - 1).slice(2)}.12`
 
   // G17:AQ78 범위 기준 컬럼 인덱스 (G=0)
-  const COL_DATE = 0; // G열 - 날짜
-  const COL_ACCOUNT_IDX = 8; // O열 - 계좌종합 지수
-  const COL_KOSPI_IDX = 9; // P열 - 코스피 지수
-  const COL_SP500_IDX = 10; // Q열 - S&P500 지수
-  const COL_NASDAQ_IDX = 11; // R열 - 나스닥 지수
-  const COL_DOLLAR = 33; // AN열 - 달러환율 지수 (다른 지수와 동일 기준)
+  const COL_DATE = 0 // G열 - 날짜
+  const COL_ACCOUNT_IDX = 8 // O열 - 계좌종합 지수
+  const COL_KOSPI_IDX = 9 // P열 - 코스피 지수
+  const COL_SP500_IDX = 10 // Q열 - S&P500 지수
+  const COL_NASDAQ_IDX = 11 // R열 - 나스닥 지수
+  const COL_DOLLAR = 33 // AN열 - 달러환율 지수 (다른 지수와 동일 기준)
 
-  let currentRow: any[] | null = null;
-  let prevMonthRow: any[] | null = null;
-  let prevYearDecRow: any[] | null = null;
+  let currentRow: any[] | null = null
+  let prevMonthRow: any[] | null = null
+  let prevYearDecRow: any[] | null = null
 
   for (const row of rows) {
-    if (!row || !Array.isArray(row) || row.length === 0) continue;
-    const dateCell = String(row[COL_DATE] || '').trim();
+    if (!row || !Array.isArray(row) || row.length === 0) continue
+    const dateCell = String(row[COL_DATE] || '').trim()
 
-    if (dateCell === currentDateStr) currentRow = row;
-    if (dateCell === prevMonthDateStr) prevMonthRow = row;
-    if (dateCell === prevYearDateStr) prevYearDecRow = row;
+    if (dateCell === currentDateStr) currentRow = row
+    if (dateCell === prevMonthDateStr) prevMonthRow = row
+    if (dateCell === prevYearDateStr) prevYearDecRow = row
   }
 
   // 현재 월 데이터가 없으면 가장 최근 데이터 사용
   if (!currentRow) {
     for (let i = rows.length - 1; i >= 0; i--) {
-      const row = rows[i];
-      if (!row || !Array.isArray(row) || row.length === 0) continue;
-      const dateCell = String(row[COL_DATE] || '').trim();
+      const row = rows[i]
+      if (!row || !Array.isArray(row) || row.length === 0) continue
+      const dateCell = String(row[COL_DATE] || '').trim()
       if (/^\d{2}\.\d{2}$/.test(dateCell)) {
-        currentRow = row;
+        currentRow = row
         // 전월도 찾기
-        const [yy, mm] = dateCell.split('.').map(Number);
-        const targetPrevMM = mm === 1 ? 12 : (mm ?? 0) - 1;
-        const targetPrevYY = mm === 1 ? (yy ?? 0) - 1 : yy;
-        const targetPrevDateStr = `${String(targetPrevYY).padStart(2, '0')}.${String(targetPrevMM).padStart(2, '0')}`;
+        const [yy, mm] = dateCell.split('.').map(Number)
+        const targetPrevMM = mm === 1 ? 12 : (mm ?? 0) - 1
+        const targetPrevYY = mm === 1 ? (yy ?? 0) - 1 : yy
+        const targetPrevDateStr = `${String(targetPrevYY).padStart(2, '0')}.${String(targetPrevMM).padStart(2, '0')}`
         for (let j = i - 1; j >= 0; j--) {
-          const prevRow = rows[j];
-          if (!prevRow) continue;
+          const prevRow = rows[j]
+          if (!prevRow) continue
           if (String(prevRow[COL_DATE] || '').trim() === targetPrevDateStr) {
-            prevMonthRow = prevRow;
-            break;
+            prevMonthRow = prevRow
+            break
           }
         }
-        break;
+        break
       }
     }
   }
 
-  if (!currentRow) return null;
+  if (!currentRow) return null
 
   // prevMonthRow 재탐색: 정확한 날짜 매칭 실패 시 currentRow 직전 행 사용
   if (!prevMonthRow) {
-    let lastValidRow: any[] | null = null;
+    let lastValidRow: any[] | null = null
     for (const row of rows) {
-      if (!row || !Array.isArray(row)) continue;
-      const dateCell = String(row[COL_DATE] || '').trim();
-      if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue;
-      if (row === currentRow) break;
-      lastValidRow = row;
+      if (!row || !Array.isArray(row)) continue
+      const dateCell = String(row[COL_DATE] || '').trim()
+      if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue
+      if (row === currentRow) break
+      lastValidRow = row
     }
-    if (lastValidRow) prevMonthRow = lastValidRow;
+    if (lastValidRow) prevMonthRow = lastValidRow
   }
 
   // 현재 데이터
-  const accountIdx = parseNumber(currentRow[COL_ACCOUNT_IDX]);
-  const kospiIdx = parseNumber(currentRow[COL_KOSPI_IDX]);
-  const sp500Idx = parseNumber(currentRow[COL_SP500_IDX]);
-  const nasdaqIdx = parseNumber(currentRow[COL_NASDAQ_IDX]);
-  const dollarRate = parseNumber(currentRow[COL_DOLLAR]);
+  const accountIdx = parseNumber(currentRow[COL_ACCOUNT_IDX])
+  const kospiIdx = parseNumber(currentRow[COL_KOSPI_IDX])
+  const sp500Idx = parseNumber(currentRow[COL_SP500_IDX])
+  const nasdaqIdx = parseNumber(currentRow[COL_NASDAQ_IDX])
+  const dollarRate = parseNumber(currentRow[COL_DOLLAR])
 
   // 전월 데이터
-  const prevAccountIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_ACCOUNT_IDX]) : accountIdx;
-  const prevKospiIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_KOSPI_IDX]) : kospiIdx;
-  const prevSp500Idx = prevMonthRow ? parseNumber(prevMonthRow[COL_SP500_IDX]) : sp500Idx;
-  const prevNasdaqIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_NASDAQ_IDX]) : nasdaqIdx;
-  const prevDollarRate = prevMonthRow ? parseNumber(prevMonthRow[COL_DOLLAR]) : dollarRate;
+  const prevAccountIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_ACCOUNT_IDX]) : accountIdx
+  const prevKospiIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_KOSPI_IDX]) : kospiIdx
+  const prevSp500Idx = prevMonthRow ? parseNumber(prevMonthRow[COL_SP500_IDX]) : sp500Idx
+  const prevNasdaqIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_NASDAQ_IDX]) : nasdaqIdx
+  const prevDollarRate = prevMonthRow ? parseNumber(prevMonthRow[COL_DOLLAR]) : dollarRate
 
   // 작년 12월 데이터
-  const prevYearAccountIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_ACCOUNT_IDX]) : 100;
-  const prevYearKospiIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_KOSPI_IDX]) : 100;
-  const prevYearSp500Idx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_SP500_IDX]) : 100;
-  const prevYearNasdaqIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_NASDAQ_IDX]) : 100;
-  const prevYearDollarRate = prevYearDecRow ? parseNumber(prevYearDecRow[COL_DOLLAR]) : dollarRate;
+  const prevYearAccountIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_ACCOUNT_IDX]) : 100
+  const prevYearKospiIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_KOSPI_IDX]) : 100
+  const prevYearSp500Idx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_SP500_IDX]) : 100
+  const prevYearNasdaqIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_NASDAQ_IDX]) : 100
+  const prevYearDollarRate = prevYearDecRow ? parseNumber(prevYearDecRow[COL_DOLLAR]) : dollarRate
 
   // 이번 달 수익률 (인덱스 기반 - 다른 지수와 동일 방식)
   // K열 월수익률은 UNFORMATTED_VALUE로 소수점 형태(0.027=2.7%)이므로 사용하지 않음
   const currentMonthYield = {
-    account: prevAccountIdx > 0 && accountIdx > 0 ? ((accountIdx / prevAccountIdx) - 1) * 100 : 0,
-    kospi: prevKospiIdx > 0 ? ((kospiIdx / prevKospiIdx) - 1) * 100 : 0,
-    sp500: prevSp500Idx > 0 ? ((sp500Idx / prevSp500Idx) - 1) * 100 : 0,
-    nasdaq: prevNasdaqIdx > 0 ? ((nasdaqIdx / prevNasdaqIdx) - 1) * 100 : 0,
-    dollar: prevDollarRate > 0 ? ((dollarRate / prevDollarRate) - 1) * 100 : 0,
-  };
+    account: prevAccountIdx > 0 && accountIdx > 0 ? (accountIdx / prevAccountIdx - 1) * 100 : 0,
+    kospi: prevKospiIdx > 0 ? (kospiIdx / prevKospiIdx - 1) * 100 : 0,
+    sp500: prevSp500Idx > 0 ? (sp500Idx / prevSp500Idx - 1) * 100 : 0,
+    nasdaq: prevNasdaqIdx > 0 ? (nasdaqIdx / prevNasdaqIdx - 1) * 100 : 0,
+    dollar: prevDollarRate > 0 ? (dollarRate / prevDollarRate - 1) * 100 : 0,
+  }
 
   // 올해 수익률
   const thisYearYield = {
-    account: prevYearAccountIdx > 0 ? ((accountIdx / prevYearAccountIdx) - 1) * 100 : 0,
-    kospi: prevYearKospiIdx > 0 ? ((kospiIdx / prevYearKospiIdx) - 1) * 100 : 0,
-    sp500: prevYearSp500Idx > 0 ? ((sp500Idx / prevYearSp500Idx) - 1) * 100 : 0,
-    nasdaq: prevYearNasdaqIdx > 0 ? ((nasdaqIdx / prevYearNasdaqIdx) - 1) * 100 : 0,
-    dollar: prevYearDollarRate > 0 ? ((dollarRate / prevYearDollarRate) - 1) * 100 : 0,
-  };
+    account: prevYearAccountIdx > 0 ? (accountIdx / prevYearAccountIdx - 1) * 100 : 0,
+    kospi: prevYearKospiIdx > 0 ? (kospiIdx / prevYearKospiIdx - 1) * 100 : 0,
+    sp500: prevYearSp500Idx > 0 ? (sp500Idx / prevYearSp500Idx - 1) * 100 : 0,
+    nasdaq: prevYearNasdaqIdx > 0 ? (nasdaqIdx / prevYearNasdaqIdx - 1) * 100 : 0,
+    dollar: prevYearDollarRate > 0 ? (dollarRate / prevYearDollarRate - 1) * 100 : 0,
+  }
 
   // 현재 월 추출
-  const dateCell = String(currentRow[COL_DATE] || '').trim();
-  const monthMatch = dateCell.match(/\.(\d{2})$/);
-  const displayMonth = monthMatch ? `${Number.parseInt(monthMatch[1] || '0', 10)}월` : `${now.getMonth() + 1}월`;
+  const dateCell = String(currentRow[COL_DATE] || '').trim()
+  const monthMatch = dateCell.match(/\.(\d{2})$/)
+  const displayMonth = monthMatch
+    ? `${Number.parseInt(monthMatch[1] || '0', 10)}월`
+    : `${now.getMonth() + 1}월`
 
-  const round = (n: number) => Math.round(n * 10) / 10;
+  const round = (n: number) => Math.round(n * 10) / 10
 
   const result: MonthlyYieldComparisonData = {
     currentMonthYield: {
@@ -2720,11 +2851,11 @@ export function parseMonthlyYieldComparisonWithDollar(rows: any[]): MonthlyYield
       dollar: round(thisYearYield.dollar),
     },
     currentMonth: displayMonth,
-  };
+  }
 
-  console.log('[parseMonthlyYieldComparisonWithDollar] Result:', JSON.stringify(result));
+  console.log('[parseMonthlyYieldComparisonWithDollar] Result:', JSON.stringify(result))
 
-  return result;
+  return result
 }
 
 /**
@@ -2733,131 +2864,143 @@ export function parseMonthlyYieldComparisonWithDollar(rows: any[]): MonthlyYield
  * DOLLAR는 제외
  * G17:AQ78 범위 사용
  */
-export function parseMonthlyYieldComparisonDollarApplied(rows: any[]): MonthlyYieldComparisonDollarAppliedData | null {
-  if (!rows || rows.length === 0) return null;
+export function parseMonthlyYieldComparisonDollarApplied(
+  rows: any[],
+): MonthlyYieldComparisonDollarAppliedData | null {
+  if (!rows || rows.length === 0) return null
 
   const parseNumber = (val: any): number => {
-    if (!val || val === '#NUM!' || val === '#VALUE!') return 0;
-    const str = String(val).replace(/[₩$,\s]/g, '');
-    const num = Number.parseFloat(str);
-    return Number.isNaN(num) ? 0 : num;
-  };
+    if (!val || val === '#NUM!' || val === '#VALUE!') return 0
+    const str = String(val).replace(/[₩$,\s]/g, '')
+    const num = Number.parseFloat(str)
+    return Number.isNaN(num) ? 0 : num
+  }
 
-  const now = new Date();
-  const currentYY = String(now.getFullYear()).slice(2);
-  const currentMM = String(now.getMonth() + 1).padStart(2, '0');
-  const currentDateStr = `${currentYY}.${currentMM}`;
+  const now = new Date()
+  const currentYY = String(now.getFullYear()).slice(2)
+  const currentMM = String(now.getMonth() + 1).padStart(2, '0')
+  const currentDateStr = `${currentYY}.${currentMM}`
 
   // 전월 계산
-  const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
-  const prevMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-  const prevMonthDateStr = `${String(prevMonthYear).slice(2)}.${String(prevMonth).padStart(2, '0')}`;
+  const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth()
+  const prevMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
+  const prevMonthDateStr = `${String(prevMonthYear).slice(2)}.${String(prevMonth).padStart(2, '0')}`
 
   // 작년 12월
-  const prevYearDateStr = `${String(now.getFullYear() - 1).slice(2)}.12`;
+  const prevYearDateStr = `${String(now.getFullYear() - 1).slice(2)}.12`
 
   // G17:AQ78 범위 기준 컬럼 인덱스 (G=0)
-  const COL_DATE = 0; // G열 - 날짜
-  const COL_ACCOUNT_IDX = 8; // O열 - 계좌종합 지수
-  const COL_KOSPI_IDX = 9; // P열 - 코스피 지수
-  const COL_SP500_DOLLAR_IDX = 28; // AI열 - S&P500 달러환율 적용 지수
-  const COL_NASDAQ_DOLLAR_IDX = 29; // AJ열 - NASDAQ 달러환율 적용 지수
+  const COL_DATE = 0 // G열 - 날짜
+  const COL_ACCOUNT_IDX = 8 // O열 - 계좌종합 지수
+  const COL_KOSPI_IDX = 9 // P열 - 코스피 지수
+  const COL_SP500_DOLLAR_IDX = 28 // AI열 - S&P500 달러환율 적용 지수
+  const COL_NASDAQ_DOLLAR_IDX = 29 // AJ열 - NASDAQ 달러환율 적용 지수
 
-  let currentRow: any[] | null = null;
-  let prevMonthRow: any[] | null = null;
-  let prevYearDecRow: any[] | null = null;
+  let currentRow: any[] | null = null
+  let prevMonthRow: any[] | null = null
+  let prevYearDecRow: any[] | null = null
 
   for (const row of rows) {
-    if (!row || !Array.isArray(row) || row.length === 0) continue;
-    const dateCell = String(row[COL_DATE] || '').trim();
+    if (!row || !Array.isArray(row) || row.length === 0) continue
+    const dateCell = String(row[COL_DATE] || '').trim()
 
-    if (dateCell === currentDateStr) currentRow = row;
-    if (dateCell === prevMonthDateStr) prevMonthRow = row;
-    if (dateCell === prevYearDateStr) prevYearDecRow = row;
+    if (dateCell === currentDateStr) currentRow = row
+    if (dateCell === prevMonthDateStr) prevMonthRow = row
+    if (dateCell === prevYearDateStr) prevYearDecRow = row
   }
 
   // 현재 월 데이터가 없으면 가장 최근 데이터 사용
   if (!currentRow) {
     for (let i = rows.length - 1; i >= 0; i--) {
-      const row = rows[i];
-      if (!row || !Array.isArray(row) || row.length === 0) continue;
-      const dateCell = String(row[COL_DATE] || '').trim();
+      const row = rows[i]
+      if (!row || !Array.isArray(row) || row.length === 0) continue
+      const dateCell = String(row[COL_DATE] || '').trim()
       if (/^\d{2}\.\d{2}$/.test(dateCell)) {
-        currentRow = row;
+        currentRow = row
         // 전월도 찾기
-        const [yy, mm] = dateCell.split('.').map(Number);
-        const targetPrevMM = mm === 1 ? 12 : (mm ?? 0) - 1;
-        const targetPrevYY = mm === 1 ? (yy ?? 0) - 1 : yy;
-        const targetPrevDateStr = `${String(targetPrevYY).padStart(2, '0')}.${String(targetPrevMM).padStart(2, '0')}`;
+        const [yy, mm] = dateCell.split('.').map(Number)
+        const targetPrevMM = mm === 1 ? 12 : (mm ?? 0) - 1
+        const targetPrevYY = mm === 1 ? (yy ?? 0) - 1 : yy
+        const targetPrevDateStr = `${String(targetPrevYY).padStart(2, '0')}.${String(targetPrevMM).padStart(2, '0')}`
         for (let j = i - 1; j >= 0; j--) {
-          const prevRow = rows[j];
-          if (!prevRow) continue;
+          const prevRow = rows[j]
+          if (!prevRow) continue
           if (String(prevRow[COL_DATE] || '').trim() === targetPrevDateStr) {
-            prevMonthRow = prevRow;
-            break;
+            prevMonthRow = prevRow
+            break
           }
         }
-        break;
+        break
       }
     }
   }
 
-  if (!currentRow) return null;
+  if (!currentRow) return null
 
   // prevMonthRow 재탐색: 정확한 날짜 매칭 실패 시 currentRow 직전 행 사용
   if (!prevMonthRow) {
-    let lastValidRow: any[] | null = null;
+    let lastValidRow: any[] | null = null
     for (const row of rows) {
-      if (!row || !Array.isArray(row)) continue;
-      const dateCell = String(row[COL_DATE] || '').trim();
-      if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue;
-      if (row === currentRow) break;
-      lastValidRow = row;
+      if (!row || !Array.isArray(row)) continue
+      const dateCell = String(row[COL_DATE] || '').trim()
+      if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue
+      if (row === currentRow) break
+      lastValidRow = row
     }
-    if (lastValidRow) prevMonthRow = lastValidRow;
+    if (lastValidRow) prevMonthRow = lastValidRow
   }
 
   // 현재 데이터
-  const accountIdx = parseNumber(currentRow[COL_ACCOUNT_IDX]);
-  const kospiIdx = parseNumber(currentRow[COL_KOSPI_IDX]);
-  const sp500DollarIdx = parseNumber(currentRow[COL_SP500_DOLLAR_IDX]);
-  const nasdaqDollarIdx = parseNumber(currentRow[COL_NASDAQ_DOLLAR_IDX]);
+  const accountIdx = parseNumber(currentRow[COL_ACCOUNT_IDX])
+  const kospiIdx = parseNumber(currentRow[COL_KOSPI_IDX])
+  const sp500DollarIdx = parseNumber(currentRow[COL_SP500_DOLLAR_IDX])
+  const nasdaqDollarIdx = parseNumber(currentRow[COL_NASDAQ_DOLLAR_IDX])
 
   // 전월 데이터
-  const prevAccountIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_ACCOUNT_IDX]) : accountIdx;
-  const prevKospiIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_KOSPI_IDX]) : kospiIdx;
-  const prevSp500DollarIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_SP500_DOLLAR_IDX]) : sp500DollarIdx;
-  const prevNasdaqDollarIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_NASDAQ_DOLLAR_IDX]) : nasdaqDollarIdx;
+  const prevAccountIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_ACCOUNT_IDX]) : accountIdx
+  const prevKospiIdx = prevMonthRow ? parseNumber(prevMonthRow[COL_KOSPI_IDX]) : kospiIdx
+  const prevSp500DollarIdx = prevMonthRow
+    ? parseNumber(prevMonthRow[COL_SP500_DOLLAR_IDX])
+    : sp500DollarIdx
+  const prevNasdaqDollarIdx = prevMonthRow
+    ? parseNumber(prevMonthRow[COL_NASDAQ_DOLLAR_IDX])
+    : nasdaqDollarIdx
 
   // 작년 12월 데이터
-  const prevYearAccountIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_ACCOUNT_IDX]) : 100;
-  const prevYearKospiIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_KOSPI_IDX]) : 100;
-  const prevYearSp500DollarIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_SP500_DOLLAR_IDX]) : 100;
-  const prevYearNasdaqDollarIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_NASDAQ_DOLLAR_IDX]) : 100;
+  const prevYearAccountIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_ACCOUNT_IDX]) : 100
+  const prevYearKospiIdx = prevYearDecRow ? parseNumber(prevYearDecRow[COL_KOSPI_IDX]) : 100
+  const prevYearSp500DollarIdx = prevYearDecRow
+    ? parseNumber(prevYearDecRow[COL_SP500_DOLLAR_IDX])
+    : 100
+  const prevYearNasdaqDollarIdx = prevYearDecRow
+    ? parseNumber(prevYearDecRow[COL_NASDAQ_DOLLAR_IDX])
+    : 100
 
   // 이번 달 수익률 (인덱스 기반 - 다른 지수와 동일 방식)
   // K열 월수익률은 UNFORMATTED_VALUE로 소수점 형태(0.027=2.7%)이므로 사용하지 않음
   const currentMonthYield = {
-    account: prevAccountIdx > 0 && accountIdx > 0 ? ((accountIdx / prevAccountIdx) - 1) * 100 : 0,
-    kospi: prevKospiIdx > 0 ? ((kospiIdx / prevKospiIdx) - 1) * 100 : 0,
-    sp500: prevSp500DollarIdx > 0 ? ((sp500DollarIdx / prevSp500DollarIdx) - 1) * 100 : 0,
-    nasdaq: prevNasdaqDollarIdx > 0 ? ((nasdaqDollarIdx / prevNasdaqDollarIdx) - 1) * 100 : 0,
-  };
+    account: prevAccountIdx > 0 && accountIdx > 0 ? (accountIdx / prevAccountIdx - 1) * 100 : 0,
+    kospi: prevKospiIdx > 0 ? (kospiIdx / prevKospiIdx - 1) * 100 : 0,
+    sp500: prevSp500DollarIdx > 0 ? (sp500DollarIdx / prevSp500DollarIdx - 1) * 100 : 0,
+    nasdaq: prevNasdaqDollarIdx > 0 ? (nasdaqDollarIdx / prevNasdaqDollarIdx - 1) * 100 : 0,
+  }
 
   // 올해 수익률
   const thisYearYield = {
-    account: prevYearAccountIdx > 0 ? ((accountIdx / prevYearAccountIdx) - 1) * 100 : 0,
-    kospi: prevYearKospiIdx > 0 ? ((kospiIdx / prevYearKospiIdx) - 1) * 100 : 0,
-    sp500: prevYearSp500DollarIdx > 0 ? ((sp500DollarIdx / prevYearSp500DollarIdx) - 1) * 100 : 0,
-    nasdaq: prevYearNasdaqDollarIdx > 0 ? ((nasdaqDollarIdx / prevYearNasdaqDollarIdx) - 1) * 100 : 0,
-  };
+    account: prevYearAccountIdx > 0 ? (accountIdx / prevYearAccountIdx - 1) * 100 : 0,
+    kospi: prevYearKospiIdx > 0 ? (kospiIdx / prevYearKospiIdx - 1) * 100 : 0,
+    sp500: prevYearSp500DollarIdx > 0 ? (sp500DollarIdx / prevYearSp500DollarIdx - 1) * 100 : 0,
+    nasdaq: prevYearNasdaqDollarIdx > 0 ? (nasdaqDollarIdx / prevYearNasdaqDollarIdx - 1) * 100 : 0,
+  }
 
   // 현재 월 추출
-  const dateCell = String(currentRow[COL_DATE] || '').trim();
-  const monthMatch = dateCell.match(/\.(\d{2})$/);
-  const displayMonth = monthMatch ? `${Number.parseInt(monthMatch[1] || '0', 10)}월` : `${now.getMonth() + 1}월`;
+  const dateCell = String(currentRow[COL_DATE] || '').trim()
+  const monthMatch = dateCell.match(/\.(\d{2})$/)
+  const displayMonth = monthMatch
+    ? `${Number.parseInt(monthMatch[1] || '0', 10)}월`
+    : `${now.getMonth() + 1}월`
 
-  const round = (n: number) => Math.round(n * 10) / 10;
+  const round = (n: number) => Math.round(n * 10) / 10
 
   const result: MonthlyYieldComparisonDollarAppliedData = {
     currentMonthYield: {
@@ -2873,11 +3016,11 @@ export function parseMonthlyYieldComparisonDollarApplied(rows: any[]): MonthlyYi
       nasdaq: round(thisYearYield.nasdaq),
     },
     currentMonth: displayMonth,
-  };
+  }
 
-  console.log('[parseMonthlyYieldComparisonDollarApplied] Result:', JSON.stringify(result));
+  console.log('[parseMonthlyYieldComparisonDollarApplied] Result:', JSON.stringify(result))
 
-  return result;
+  return result
 }
 
 /**
@@ -2886,115 +3029,143 @@ export function parseMonthlyYieldComparisonDollarApplied(rows: any[]): MonthlyYi
  * G17:AQ78 범위 사용
  */
 export function parseMajorIndexYieldComparison(rows: any[]): MajorIndexYieldComparisonData | null {
-  if (!rows || rows.length === 0) return null;
+  if (!rows || rows.length === 0) return null
 
   const parseNumber = (val: any): number => {
-    if (!val || val === '#NUM!' || val === '#VALUE!' || val === '#DIV/0!' || val === '#REF!') return 0;
-    const str = String(val).replace(/[₩$,\s+]/g, '');
-    const num = Number.parseFloat(str);
-    return Number.isNaN(num) ? 0 : num;
-  };
+    if (!val || val === '#NUM!' || val === '#VALUE!' || val === '#DIV/0!' || val === '#REF!')
+      return 0
+    const str = String(val).replace(/[₩$,\s+]/g, '')
+    const num = Number.parseFloat(str)
+    return Number.isNaN(num) ? 0 : num
+  }
 
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth() + 1
 
   // G17:AQ78 범위 기준 컬럼 인덱스 (G=0)
-  const COL_DATE = 0; // G열 - 날짜 (YY.MM)
-  const COL_ACCOUNT_IDX = 8; // O열 - 계좌종합 지수
-  const COL_KOSPI_IDX = 9; // P열 - 코스피 지수
-  const COL_SP500_IDX = 10; // Q열 - S&P500 지수
-  const COL_NASDAQ_IDX = 11; // R열 - NASDAQ 지수
+  const COL_DATE = 0 // G열 - 날짜 (YY.MM)
+  const COL_ACCOUNT_IDX = 8 // O열 - 계좌종합 지수
+  const COL_KOSPI_IDX = 9 // P열 - 코스피 지수
+  const COL_SP500_IDX = 10 // Q열 - S&P500 지수
+  const COL_NASDAQ_IDX = 11 // R열 - NASDAQ 지수
   // 환율 적용 컬럼
-  const COL_DOLLAR_IDX = 33; // AN열 - 달러환율 지수
-  const COL_SP500_DOLLAR_IDX = 34; // AO열 - S&P500 달러환율 지수
-  const COL_NASDAQ_DOLLAR_IDX = 35; // AP열 - NASDAQ 달러환율 지수
+  const COL_DOLLAR_IDX = 33 // AN열 - 달러환율 지수
+  const COL_SP500_DOLLAR_IDX = 34 // AO열 - S&P500 달러환율 지수
+  const COL_NASDAQ_DOLLAR_IDX = 35 // AP열 - NASDAQ 달러환율 지수
 
   // 작년 12월 데이터 (기준점)
-  const prevYearDateStr = `${String(currentYear - 1).slice(2)}.12`;
+  const prevYearDateStr = `${String(currentYear - 1).slice(2)}.12`
 
   // 데이터 수집을 위한 맵
-  interface MonthData { account: number; kospi: number; sp500: number; nasdaq: number; dollarIdx: number; sp500Dollar: number; nasdaqDollar: number; }
-  const monthlyData: Map<string, MonthData> = new Map();
-  let baselineData: MonthData | null = null;
+  interface MonthData {
+    account: number
+    kospi: number
+    sp500: number
+    nasdaq: number
+    dollarIdx: number
+    sp500Dollar: number
+    nasdaqDollar: number
+  }
+  const monthlyData: Map<string, MonthData> = new Map()
+  let baselineData: MonthData | null = null
 
   for (const row of rows) {
-    if (!row || !Array.isArray(row) || row.length === 0) continue;
-    const dateCell = String(row[COL_DATE] || '').trim();
+    if (!row || !Array.isArray(row) || row.length === 0) continue
+    const dateCell = String(row[COL_DATE] || '').trim()
 
-    if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue;
+    if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue
 
-    const accountIdx = parseNumber(row[COL_ACCOUNT_IDX]);
-    const kospiIdx = parseNumber(row[COL_KOSPI_IDX]);
-    const sp500Idx = parseNumber(row[COL_SP500_IDX]);
-    const nasdaqIdx = parseNumber(row[COL_NASDAQ_IDX]);
-    const dollarIdx = parseNumber(row[COL_DOLLAR_IDX]);
-    const sp500DollarIdx = parseNumber(row[COL_SP500_DOLLAR_IDX]);
-    const nasdaqDollarIdx = parseNumber(row[COL_NASDAQ_DOLLAR_IDX]);
+    const accountIdx = parseNumber(row[COL_ACCOUNT_IDX])
+    const kospiIdx = parseNumber(row[COL_KOSPI_IDX])
+    const sp500Idx = parseNumber(row[COL_SP500_IDX])
+    const nasdaqIdx = parseNumber(row[COL_NASDAQ_IDX])
+    const dollarIdx = parseNumber(row[COL_DOLLAR_IDX])
+    const sp500DollarIdx = parseNumber(row[COL_SP500_DOLLAR_IDX])
+    const nasdaqDollarIdx = parseNumber(row[COL_NASDAQ_DOLLAR_IDX])
 
     const rowData: MonthData = {
-      account: accountIdx, kospi: kospiIdx, sp500: sp500Idx, nasdaq: nasdaqIdx,
-      dollarIdx, sp500Dollar: sp500DollarIdx, nasdaqDollar: nasdaqDollarIdx,
-    };
+      account: accountIdx,
+      kospi: kospiIdx,
+      sp500: sp500Idx,
+      nasdaq: nasdaqIdx,
+      dollarIdx,
+      sp500Dollar: sp500DollarIdx,
+      nasdaqDollar: nasdaqDollarIdx,
+    }
 
     // 작년 12월 = 기준점
     if (dateCell === prevYearDateStr) {
-      baselineData = rowData;
+      baselineData = rowData
     }
 
     // 올해 데이터만 수집
-    const [yy, mm] = dateCell.split('.').map(Number);
-    const fullYear = 2000 + (yy || 0);
+    const [yy, mm] = dateCell.split('.').map(Number)
+    const fullYear = 2000 + (yy || 0)
     if (fullYear === currentYear && mm && mm >= 1 && mm <= currentMonth) {
-      monthlyData.set(dateCell, rowData);
+      monthlyData.set(dateCell, rowData)
     }
   }
 
   if (!baselineData) {
-    console.log('[parseMajorIndexYieldComparison] No baseline data found for', prevYearDateStr);
-    return null;
+    console.log('[parseMajorIndexYieldComparison] No baseline data found for', prevYearDateStr)
+    return null
   }
 
   // 결과 배열 초기화
-  const months: string[] = ['시작'];
-  const sp500: number[] = [0];
-  const nasdaq: number[] = [0];
-  const kospi: number[] = [0];
-  const account: (number | null)[] = [0];
-  const sp500Dollar: number[] = [0];
-  const nasdaqDollar: number[] = [0];
-  const dollar: number[] = [0];
+  const months: string[] = ['시작']
+  const sp500: number[] = [0]
+  const nasdaq: number[] = [0]
+  const kospi: number[] = [0]
+  const account: (number | null)[] = [0]
+  const sp500Dollar: number[] = [0]
+  const nasdaqDollar: number[] = [0]
+  const dollar: number[] = [0]
 
-  const round = (n: number) => Math.round(n * 10) / 10;
+  const round = (n: number) => Math.round(n * 10) / 10
 
   // 환율 데이터 유무 확인
-  const hasDollarData = baselineData.sp500Dollar > 0 || baselineData.nasdaqDollar > 0 || baselineData.dollarIdx > 0;
+  const hasDollarData =
+    baselineData.sp500Dollar > 0 || baselineData.nasdaqDollar > 0 || baselineData.dollarIdx > 0
 
   // 1월부터 현재 월까지 데이터 추가
   for (let m = 1; m <= currentMonth; m++) {
-    const dateStr = `${String(currentYear).slice(2)}.${String(m).padStart(2, '0')}`;
-    const data = monthlyData.get(dateStr);
+    const dateStr = `${String(currentYear).slice(2)}.${String(m).padStart(2, '0')}`
+    const data = monthlyData.get(dateStr)
 
-    months.push(`${m}월`);
+    months.push(`${m}월`)
 
     if (data) {
-      sp500.push(baselineData.sp500 > 0 ? round((data.sp500 / baselineData.sp500 - 1) * 100) : 0);
-      nasdaq.push(baselineData.nasdaq > 0 ? round((data.nasdaq / baselineData.nasdaq - 1) * 100) : 0);
-      kospi.push(baselineData.kospi > 0 ? round((data.kospi / baselineData.kospi - 1) * 100) : 0);
-      const accountYield = baselineData.account > 0 ? round((data.account / baselineData.account - 1) * 100) : null;
-      account.push(data.account > 0 ? accountYield : null);
+      sp500.push(baselineData.sp500 > 0 ? round((data.sp500 / baselineData.sp500 - 1) * 100) : 0)
+      nasdaq.push(
+        baselineData.nasdaq > 0 ? round((data.nasdaq / baselineData.nasdaq - 1) * 100) : 0,
+      )
+      kospi.push(baselineData.kospi > 0 ? round((data.kospi / baselineData.kospi - 1) * 100) : 0)
+      const accountYield =
+        baselineData.account > 0 ? round((data.account / baselineData.account - 1) * 100) : null
+      account.push(data.account > 0 ? accountYield : null)
       // 환율 적용
-      sp500Dollar.push(baselineData.sp500Dollar > 0 ? round((data.sp500Dollar / baselineData.sp500Dollar - 1) * 100) : 0);
-      nasdaqDollar.push(baselineData.nasdaqDollar > 0 ? round((data.nasdaqDollar / baselineData.nasdaqDollar - 1) * 100) : 0);
-      dollar.push(baselineData.dollarIdx > 0 ? round((data.dollarIdx / baselineData.dollarIdx - 1) * 100) : 0);
+      sp500Dollar.push(
+        baselineData.sp500Dollar > 0
+          ? round((data.sp500Dollar / baselineData.sp500Dollar - 1) * 100)
+          : 0,
+      )
+      nasdaqDollar.push(
+        baselineData.nasdaqDollar > 0
+          ? round((data.nasdaqDollar / baselineData.nasdaqDollar - 1) * 100)
+          : 0,
+      )
+      dollar.push(
+        baselineData.dollarIdx > 0 ? round((data.dollarIdx / baselineData.dollarIdx - 1) * 100) : 0,
+      )
     } else {
-      sp500.push(sp500[sp500.length - 1] || 0);
-      nasdaq.push(nasdaq[nasdaq.length - 1] || 0);
-      kospi.push(kospi[kospi.length - 1] || 0);
-      account.push(null);
-      sp500Dollar.push(sp500Dollar[sp500Dollar.length - 1] || 0);
-      nasdaqDollar.push(nasdaqDollar[nasdaqDollar.length - 1] || 0);
-      dollar.push(dollar[dollar.length - 1] || 0);
+      sp500.push(sp500[sp500.length - 1] || 0)
+      nasdaq.push(nasdaq[nasdaq.length - 1] || 0)
+      kospi.push(kospi[kospi.length - 1] || 0)
+      account.push(null)
+      sp500Dollar.push(sp500Dollar[sp500Dollar.length - 1] || 0)
+      nasdaqDollar.push(nasdaqDollar[nasdaqDollar.length - 1] || 0)
+      dollar.push(dollar[dollar.length - 1] || 0)
     }
   }
 
@@ -3005,9 +3176,9 @@ export function parseMajorIndexYieldComparison(rows: any[]): MajorIndexYieldComp
     kospi,
     account,
     ...(hasDollarData ? { sp500Dollar, nasdaqDollar, dollar } : {}),
-  };
+  }
 
-  console.log('[parseMajorIndexYieldComparison] Result:', JSON.stringify(result));
+  console.log('[parseMajorIndexYieldComparison] Result:', JSON.stringify(result))
 
-  return result;
+  return result
 }

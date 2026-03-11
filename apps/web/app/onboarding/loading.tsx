@@ -1,4 +1,4 @@
-import { Skeleton } from "@repo/design-system/components/skeleton";
+import { Skeleton } from '@repo/design-system/components/skeleton'
 
 export default function OnboardingLoading() {
   return (
@@ -42,6 +42,5 @@ export default function OnboardingLoading() {
         </div>
       </div>
     </div>
-  );
+  )
 }
-

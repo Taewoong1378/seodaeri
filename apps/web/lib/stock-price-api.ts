@@ -9,71 +9,71 @@
  * - 장외시간: 1시간 캐시
  */
 
-import { createServiceClient } from '@repo/database/server';
-import { getKISToken, KIS_BASE_URL } from './kis-token';
+import { createServiceClient } from '@repo/database/server'
+import { KIS_BASE_URL, getKISToken } from './kis-token'
 
 export interface StockPrice {
-  ticker: string;
-  price: number;
-  currency: 'KRW' | 'USD';
-  change?: number; // 전일 대비
-  changePercent?: number; // 등락률 (%)
-  timestamp: number;
-  source: string;
+  ticker: string
+  price: number
+  currency: 'KRW' | 'USD'
+  change?: number // 전일 대비
+  changePercent?: number // 등락률 (%)
+  timestamp: number
+  source: string
 }
 
 interface PriceCache {
-  price: number;
-  change?: number;
-  changePercent?: number;
-  timestamp: number;
-  source: string;
+  price: number
+  change?: number
+  changePercent?: number
+  timestamp: number
+  source: string
 }
 
 // 메모리 캐시
-const priceCache = new Map<string, PriceCache>();
+const priceCache = new Map<string, PriceCache>()
 
 // 캐시 유효 시간
-const MARKET_HOURS_CACHE_MS = 5 * 60 * 1000; // 5분
-const OFF_HOURS_CACHE_MS = 60 * 60 * 1000; // 1시간
+const MARKET_HOURS_CACHE_MS = 5 * 60 * 1000 // 5분
+const OFF_HOURS_CACHE_MS = 60 * 60 * 1000 // 1시간
 
 // ============================================
 // 한국투자증권 OpenAPI (KIS)
 // ============================================
 
 interface KISPriceResponse {
-  rt_cd: string; // 성공시 "0"
-  msg_cd: string;
-  msg1: string;
+  rt_cd: string // 성공시 "0"
+  msg_cd: string
+  msg1: string
   output: {
-    stck_prpr: string; // 현재가
-    prdy_vrss: string; // 전일 대비
-    prdy_ctrt: string; // 등락률
-    stck_oprc: string; // 시가
-    stck_hgpr: string; // 고가
-    stck_lwpr: string; // 저가
-    acml_vol: string; // 거래량
-    acml_tr_pbmn: string; // 거래대금
-  };
+    stck_prpr: string // 현재가
+    prdy_vrss: string // 전일 대비
+    prdy_ctrt: string // 등락률
+    stck_oprc: string // 시가
+    stck_hgpr: string // 고가
+    stck_lwpr: string // 저가
+    acml_vol: string // 거래량
+    acml_tr_pbmn: string // 거래대금
+  }
 }
 
 /**
  * KIS API로 한국 주식 현재가 조회
  */
 async function fetchKISPrice(ticker: string): Promise<StockPrice | null> {
-  const token = await getKISToken();
-  if (!token) return null;
+  const token = await getKISToken()
+  if (!token) return null
 
-  const appKey = process.env.KIS_APP_KEY;
-  const appSecret = process.env.KIS_APP_SECRET;
+  const appKey = process.env.KIS_APP_KEY
+  const appSecret = process.env.KIS_APP_SECRET
 
-  if (!appKey || !appSecret) return null;
+  if (!appKey || !appSecret) return null
 
   try {
     // 종목코드 정리 (6자리로) — ISIN 형식(KR7XXXXXX00X)도 처리
     const code = /^KR\d{10}$/.test(ticker)
       ? ticker.slice(3, 9)
-      : ticker.replace(/^KR/, '').padStart(6, '0');
+      : ticker.replace(/^KR/, '').padStart(6, '0')
 
     const response = await fetch(
       `${KIS_BASE_URL}/uapi/domestic-stock/v1/quotations/inquire-price?FID_COND_MRKT_DIV_CODE=J&FID_INPUT_ISCD=${code}`,
@@ -87,29 +87,29 @@ async function fetchKISPrice(ticker: string): Promise<StockPrice | null> {
           tr_id: 'FHKST01010100', // 주식현재가 시세 조회
           custtype: 'P', // P: 개인, B: 법인
         },
-      }
-    );
+      },
+    )
 
     if (!response.ok) {
-      console.error('[KIS] Price request failed:', response.status);
-      return null;
+      console.error('[KIS] Price request failed:', response.status)
+      return null
     }
 
-    const data: KISPriceResponse = await response.json();
+    const data: KISPriceResponse = await response.json()
 
     if (data.rt_cd !== '0') {
-      console.error('[KIS] API error:', data.msg1);
-      return null;
+      console.error('[KIS] API error:', data.msg1)
+      return null
     }
 
-    const price = parseFloat(data.output.stck_prpr) || 0;
-    const change = parseFloat(data.output.prdy_vrss) || 0;
-    const changePercent = parseFloat(data.output.prdy_ctrt) || 0;
+    const price = Number.parseFloat(data.output.stck_prpr) || 0
+    const change = Number.parseFloat(data.output.prdy_vrss) || 0
+    const changePercent = Number.parseFloat(data.output.prdy_ctrt) || 0
 
     // 가격이 0이면 실패로 처리 (거래정지, 상폐 등)
     if (price === 0) {
-      console.warn('[KIS] Zero price for domestic stock', ticker);
-      return null;
+      console.warn('[KIS] Zero price for domestic stock', ticker)
+      return null
     }
 
     return {
@@ -120,10 +120,10 @@ async function fetchKISPrice(ticker: string): Promise<StockPrice | null> {
       changePercent,
       timestamp: Date.now(),
       source: 'kis',
-    };
+    }
   } catch (error) {
-    console.error('[KIS] Fetch error:', error);
-    return null;
+    console.error('[KIS] Fetch error:', error)
+    return null
   }
 }
 
@@ -132,22 +132,22 @@ async function fetchKISPrice(ticker: string): Promise<StockPrice | null> {
 // ============================================
 
 interface KISOverseasPriceResponse {
-  rt_cd: string; // 성공시 "0"
-  msg_cd: string;
-  msg1: string;
+  rt_cd: string // 성공시 "0"
+  msg_cd: string
+  msg1: string
   output: {
-    rsym: string; // 실시간조회종목코드
-    zdiv: string; // 소수점자리수
-    base: string; // 전일종가
-    pvol: string; // 전일거래량
-    last: string; // 현재가
-    sign: string; // 대비기호 (1:상한, 2:상승, 3:보합, 4:하한, 5:하락)
-    diff: string; // 전일대비
-    rate: string; // 등락률
-    tvol: string; // 거래량
-    tamt: string; // 거래대금
-    ordy: string; // 매수가능여부
-  };
+    rsym: string // 실시간조회종목코드
+    zdiv: string // 소수점자리수
+    base: string // 전일종가
+    pvol: string // 전일거래량
+    last: string // 현재가
+    sign: string // 대비기호 (1:상한, 2:상승, 3:보합, 4:하한, 5:하락)
+    diff: string // 전일대비
+    rate: string // 등락률
+    tvol: string // 거래량
+    tamt: string // 거래대금
+    ordy: string // 매수가능여부
+  }
 }
 
 /**
@@ -158,35 +158,109 @@ interface KISOverseasPriceResponse {
  */
 function getUSExchangeCode(ticker: string): string {
   // 대표적인 ETF들은 AMEX
-  const amexTickers = ['SPY', 'QQQ', 'IVV', 'VOO', 'VTI', 'DIA', 'IWM', 'EEM', 'VEA', 'VWO', 'GLD', 'SLV', 'USO', 'TLT', 'HYG', 'LQD', 'XLF', 'XLK', 'XLE', 'XLV', 'XLI', 'XLY', 'XLP', 'XLB', 'XLU', 'XLRE', 'QLD', 'TQQQ', 'SQQQ', 'UPRO', 'SPXU', 'SOXL', 'SOXS', 'LABU', 'LABD', 'UVXY', 'SVXY', 'ARKK', 'ARKG', 'ARKW', 'ARKF', 'SCHD', 'JEPI', 'JEPQ', 'VIG', 'VYM', 'DGRO'];
+  const amexTickers = [
+    'SPY',
+    'QQQ',
+    'IVV',
+    'VOO',
+    'VTI',
+    'DIA',
+    'IWM',
+    'EEM',
+    'VEA',
+    'VWO',
+    'GLD',
+    'SLV',
+    'USO',
+    'TLT',
+    'HYG',
+    'LQD',
+    'XLF',
+    'XLK',
+    'XLE',
+    'XLV',
+    'XLI',
+    'XLY',
+    'XLP',
+    'XLB',
+    'XLU',
+    'XLRE',
+    'QLD',
+    'TQQQ',
+    'SQQQ',
+    'UPRO',
+    'SPXU',
+    'SOXL',
+    'SOXS',
+    'LABU',
+    'LABD',
+    'UVXY',
+    'SVXY',
+    'ARKK',
+    'ARKG',
+    'ARKW',
+    'ARKF',
+    'SCHD',
+    'JEPI',
+    'JEPQ',
+    'VIG',
+    'VYM',
+    'DGRO',
+  ]
   if (amexTickers.includes(ticker.toUpperCase())) {
-    return 'AMS';
+    return 'AMS'
   }
 
   // 대표적인 NYSE 종목들
-  const nyseTickers = ['BRK.A', 'BRK.B', 'JPM', 'JNJ', 'V', 'PG', 'UNH', 'HD', 'MA', 'DIS', 'BAC', 'VZ', 'KO', 'PFE', 'MRK', 'WMT', 'ABBV', 'CVX', 'XOM', 'T', 'IBM', 'GS', 'CAT', 'BA', 'MMM'];
+  const nyseTickers = [
+    'BRK.A',
+    'BRK.B',
+    'JPM',
+    'JNJ',
+    'V',
+    'PG',
+    'UNH',
+    'HD',
+    'MA',
+    'DIS',
+    'BAC',
+    'VZ',
+    'KO',
+    'PFE',
+    'MRK',
+    'WMT',
+    'ABBV',
+    'CVX',
+    'XOM',
+    'T',
+    'IBM',
+    'GS',
+    'CAT',
+    'BA',
+    'MMM',
+  ]
   if (nyseTickers.includes(ticker.toUpperCase())) {
-    return 'NYS';
+    return 'NYS'
   }
 
   // 기본값: NASDAQ (대부분의 기술주)
-  return 'NAS';
+  return 'NAS'
 }
 
 /**
  * KIS API로 미국 주식 현재가 조회
  */
 async function fetchKISOverseasPrice(ticker: string): Promise<StockPrice | null> {
-  const token = await getKISToken();
-  if (!token) return null;
+  const token = await getKISToken()
+  if (!token) return null
 
-  const appKey = process.env.KIS_APP_KEY;
-  const appSecret = process.env.KIS_APP_SECRET;
+  const appKey = process.env.KIS_APP_KEY
+  const appSecret = process.env.KIS_APP_SECRET
 
-  if (!appKey || !appSecret) return null;
+  if (!appKey || !appSecret) return null
 
   try {
-    const exchangeCode = getUSExchangeCode(ticker);
+    const exchangeCode = getUSExchangeCode(ticker)
 
     const response = await fetch(
       `${KIS_BASE_URL}/uapi/overseas-price/v1/quotations/price?AUTH=&EXCD=${exchangeCode}&SYMB=${ticker}`,
@@ -200,39 +274,51 @@ async function fetchKISOverseasPrice(ticker: string): Promise<StockPrice | null>
           tr_id: 'HHDFS00000300', // 해외주식 현재가 조회
           custtype: 'P',
         },
-      }
-    );
+      },
+    )
 
     if (!response.ok) {
-      console.error('[KIS-Overseas] Price request failed:', response.status);
-      return null;
+      console.error('[KIS-Overseas] Price request failed:', response.status)
+      return null
     }
 
-    const data: KISOverseasPriceResponse = await response.json();
+    const data: KISOverseasPriceResponse = await response.json()
 
     if (data.rt_cd !== '0') {
-      console.error('[KIS-Overseas] API error:', data.msg1);
-      return null;
+      console.error('[KIS-Overseas] API error:', data.msg1)
+      return null
     }
 
-    const price = parseFloat(data.output.last) || 0;
-    const change = parseFloat(data.output.diff) || 0;
-    const changePercent = parseFloat(data.output.rate) || 0;
+    const price = Number.parseFloat(data.output.last) || 0
+    const change = Number.parseFloat(data.output.diff) || 0
+    const changePercent = Number.parseFloat(data.output.rate) || 0
 
     // 빈 응답 체크: 모든 거래소 순회
     if (price === 0) {
-      console.warn('[KIS-Overseas] Empty response for', ticker, `(${exchangeCode}) - trying other exchanges`);
-      const allExchanges = ['NAS', 'AMS', 'NYS'];
-      const remaining = allExchanges.filter(e => e !== exchangeCode);
+      console.warn(
+        '[KIS-Overseas] Empty response for',
+        ticker,
+        `(${exchangeCode}) - trying other exchanges`,
+      )
+      const allExchanges = ['NAS', 'AMS', 'NYS']
+      const remaining = allExchanges.filter((e) => e !== exchangeCode)
       for (const fallbackExchange of remaining) {
-        const fallbackResult = await fetchKISOverseasPriceWithExchange(ticker, fallbackExchange, token, appKey, appSecret);
+        const fallbackResult = await fetchKISOverseasPriceWithExchange(
+          ticker,
+          fallbackExchange,
+          token,
+          appKey,
+          appSecret,
+        )
         if (fallbackResult && fallbackResult.price > 0) {
-          console.log(`[KIS-Overseas] Found price for ${ticker} on ${fallbackExchange}: ${fallbackResult.price}`);
-          return fallbackResult;
+          console.log(
+            `[KIS-Overseas] Found price for ${ticker} on ${fallbackExchange}: ${fallbackResult.price}`,
+          )
+          return fallbackResult
         }
       }
-      console.warn(`[KIS-Overseas] No price found for ${ticker} on any exchange`);
-      return null;
+      console.warn(`[KIS-Overseas] No price found for ${ticker} on any exchange`)
+      return null
     }
 
     return {
@@ -243,10 +329,10 @@ async function fetchKISOverseasPrice(ticker: string): Promise<StockPrice | null>
       changePercent,
       timestamp: Date.now(),
       source: 'kis-overseas',
-    };
+    }
   } catch (error) {
-    console.error('[KIS-Overseas] Fetch error:', error);
-    return null;
+    console.error('[KIS-Overseas] Fetch error:', error)
+    return null
   }
 }
 
@@ -258,7 +344,7 @@ async function fetchKISOverseasPriceWithExchange(
   exchangeCode: string,
   token: string,
   appKey: string,
-  appSecret: string
+  appSecret: string,
 ): Promise<StockPrice | null> {
   try {
     const response = await fetch(
@@ -273,20 +359,20 @@ async function fetchKISOverseasPriceWithExchange(
           tr_id: 'HHDFS00000300',
           custtype: 'P',
         },
-      }
-    );
+      },
+    )
 
-    if (!response.ok) return null;
+    if (!response.ok) return null
 
-    const data: KISOverseasPriceResponse = await response.json();
+    const data: KISOverseasPriceResponse = await response.json()
 
-    if (data.rt_cd !== '0') return null;
+    if (data.rt_cd !== '0') return null
 
-    const price = parseFloat(data.output.last) || 0;
-    if (price === 0) return null;
+    const price = Number.parseFloat(data.output.last) || 0
+    if (price === 0) return null
 
-    const change = parseFloat(data.output.diff) || 0;
-    const changePercent = parseFloat(data.output.rate) || 0;
+    const change = Number.parseFloat(data.output.diff) || 0
+    const changePercent = Number.parseFloat(data.output.rate) || 0
 
     return {
       ticker,
@@ -296,9 +382,9 @@ async function fetchKISOverseasPriceWithExchange(
       changePercent,
       timestamp: Date.now(),
       source: 'kis-overseas',
-    };
+    }
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -310,46 +396,45 @@ async function fetchKISOverseasPriceWithExchange(
  * 시장 운영 시간인지 확인
  */
 function isMarketHours(market: 'KR' | 'US'): boolean {
-  const now = new Date();
-  const hours = now.getHours();
-  const minutes = now.getMinutes();
-  const day = now.getDay();
+  const now = new Date()
+  const hours = now.getHours()
+  const minutes = now.getMinutes()
+  const day = now.getDay()
 
   // 주말은 장 마감
-  if (day === 0 || day === 6) return false;
+  if (day === 0 || day === 6) return false
 
   if (market === 'KR') {
     // 한국 시장: 09:00 ~ 15:30 (KST)
-    const time = hours * 100 + minutes;
-    return time >= 900 && time <= 1530;
-  } else {
-    // 미국 시장: 22:30 ~ 05:00 (KST, 다음날)
-    // 섬머타임 고려하지 않음 (대략적인 판단)
-    const time = hours * 100 + minutes;
-    return time >= 2230 || time <= 500;
+    const time = hours * 100 + minutes
+    return time >= 900 && time <= 1530
   }
+  // 미국 시장: 22:30 ~ 05:00 (KST, 다음날)
+  // 섬머타임 고려하지 않음 (대략적인 판단)
+  const time = hours * 100 + minutes
+  return time >= 2230 || time <= 500
 }
 
 /**
  * 캐시 유효 시간 결정
  */
 function getCacheDuration(market: 'KR' | 'US'): number {
-  return isMarketHours(market) ? MARKET_HOURS_CACHE_MS : OFF_HOURS_CACHE_MS;
+  return isMarketHours(market) ? MARKET_HOURS_CACHE_MS : OFF_HOURS_CACHE_MS
 }
 
 /**
  * 캐시에서 가격 조회
  */
 function getFromCache(ticker: string): StockPrice | null {
-  const cached = priceCache.get(ticker);
-  if (!cached) return null;
+  const cached = priceCache.get(ticker)
+  if (!cached) return null
 
   // 시장 판단
-  const market = isKoreanStock(ticker) ? 'KR' : 'US';
-  const cacheDuration = getCacheDuration(market);
+  const market = isKoreanStock(ticker) ? 'KR' : 'US'
+  const cacheDuration = getCacheDuration(market)
 
   if (Date.now() - cached.timestamp > cacheDuration) {
-    return null; // 캐시 만료
+    return null // 캐시 만료
   }
 
   return {
@@ -360,7 +445,7 @@ function getFromCache(ticker: string): StockPrice | null {
     changePercent: cached.changePercent,
     timestamp: cached.timestamp,
     source: cached.source,
-  };
+  }
 }
 
 /**
@@ -373,7 +458,7 @@ function saveToCache(data: StockPrice): void {
     changePercent: data.changePercent,
     timestamp: data.timestamp,
     source: data.source,
-  });
+  })
 }
 
 /**
@@ -381,9 +466,9 @@ function saveToCache(data: StockPrice): void {
  */
 export function isKoreanStock(ticker: string): boolean {
   // 6자리 숫자이거나 KR ISIN 형식(12자리)이면 한국 주식
-  if (/^\d{6}$/.test(ticker)) return true;
-  if (/^KR\d{10}$/.test(ticker)) return true;
-  return false;
+  if (/^\d{6}$/.test(ticker)) return true
+  if (/^KR\d{10}$/.test(ticker)) return true
+  return false
 }
 
 /**
@@ -391,115 +476,113 @@ export function isKoreanStock(ticker: string): boolean {
  */
 export async function getStockPrice(ticker: string, retryCount = 1): Promise<StockPrice | null> {
   // 1. 캐시 확인
-  const cached = getFromCache(ticker);
+  const cached = getFromCache(ticker)
   if (cached) {
-    console.log(`[StockPrice] Cache hit: ${ticker} = ${cached.price}`);
-    return cached;
+    console.log(`[StockPrice] Cache hit: ${ticker} = ${cached.price}`)
+    return cached
   }
 
   // 2. API 호출 (실패 시 재시도)
   for (let attempt = 0; attempt <= retryCount; attempt++) {
     if (attempt > 0) {
-      console.log(`[StockPrice] Retry ${attempt}/${retryCount} for ${ticker}...`);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log(`[StockPrice] Retry ${attempt}/${retryCount} for ${ticker}...`)
+      await new Promise((resolve) => setTimeout(resolve, 1000))
     }
 
-    let result: StockPrice | null = null;
+    let result: StockPrice | null = null
 
     if (isKoreanStock(ticker)) {
-      result = await fetchKISPrice(ticker);
+      result = await fetchKISPrice(ticker)
     } else {
-      result = await fetchKISOverseasPrice(ticker);
+      result = await fetchKISOverseasPrice(ticker)
     }
 
     // 3. 캐시 저장
     if (result) {
-      saveToCache(result);
-      console.log(`[StockPrice] Fetched: ${ticker} = ${result.price} (${result.source}, attempt ${attempt + 1})`);
-      return result;
+      saveToCache(result)
+      console.log(
+        `[StockPrice] Fetched: ${ticker} = ${result.price} (${result.source}, attempt ${attempt + 1})`,
+      )
+      return result
     }
   }
 
-  console.warn(`[StockPrice] All attempts failed for ${ticker}`);
-  return null;
+  console.warn(`[StockPrice] All attempts failed for ${ticker}`)
+  return null
 }
 
 /**
  * 여러 종목 현재가 조회 (병렬 처리)
  */
-export async function getStockPrices(
-  tickers: string[]
-): Promise<Map<string, StockPrice>> {
-  const results = new Map<string, StockPrice>();
+export async function getStockPrices(tickers: string[]): Promise<Map<string, StockPrice>> {
+  const results = new Map<string, StockPrice>()
 
   // 캐시 확인 및 API 호출 필요한 종목 분류
-  const needFetch: string[] = [];
+  const needFetch: string[] = []
 
   for (const ticker of tickers) {
-    const cached = getFromCache(ticker);
+    const cached = getFromCache(ticker)
     if (cached) {
-      results.set(ticker, cached);
+      results.set(ticker, cached)
     } else {
-      needFetch.push(ticker);
+      needFetch.push(ticker)
     }
   }
 
   if (needFetch.length === 0) {
-    return results;
+    return results
   }
 
-  console.log(`[StockPrice] Fetching ${needFetch.length} prices...`);
+  console.log(`[StockPrice] Fetching ${needFetch.length} prices...`)
 
   // 병렬로 조회 (Rate limit 고려하여 청크 단위로)
-  const CHUNK_SIZE = 10;
+  const CHUNK_SIZE = 10
   for (let i = 0; i < needFetch.length; i += CHUNK_SIZE) {
-    const chunk = needFetch.slice(i, i + CHUNK_SIZE);
-    const promises = chunk.map((ticker) => getStockPrice(ticker));
-    const chunkResults = await Promise.allSettled(promises);
+    const chunk = needFetch.slice(i, i + CHUNK_SIZE)
+    const promises = chunk.map((ticker) => getStockPrice(ticker))
+    const chunkResults = await Promise.allSettled(promises)
 
     for (let j = 0; j < chunkResults.length; j++) {
-      const result = chunkResults[j];
-      const ticker = chunk[j];
+      const result = chunkResults[j]
+      const ticker = chunk[j]
       if (result && ticker && result.status === 'fulfilled' && result.value) {
-        results.set(ticker, result.value);
+        results.set(ticker, result.value)
       }
     }
 
     // Rate limit 방지를 위한 딜레이 (청크 사이)
     if (i + CHUNK_SIZE < needFetch.length) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200))
     }
   }
 
-  return results;
+  return results
 }
 
 /**
  * DB의 portfolio_cache 테이블에 현재가 업데이트
  */
-export async function updatePortfolioCachePrices(
-  userId: string
-): Promise<void> {
-  const supabase = createServiceClient();
+export async function updatePortfolioCachePrices(userId: string): Promise<void> {
+  const supabase = createServiceClient()
 
   // 사용자의 보유종목 조회
   const { data: holdings } = await supabase
     .from('holdings')
     .select('ticker, currency')
-    .eq('user_id', userId);
+    .eq('user_id', userId)
 
   if (!holdings || holdings.length === 0) {
-    console.log('[StockPrice] No holdings to update');
-    return;
+    console.log('[StockPrice] No holdings to update')
+    return
   }
 
-  const tickers = holdings.map((h) => h.ticker);
-  const prices = await getStockPrices(tickers);
+  const tickers = holdings.map((h) => h.ticker)
+  const prices = await getStockPrices(tickers)
 
   // portfolio_cache 업데이트
-  const updates = [];
+  const updates = []
   for (const holding of holdings) {
-    const price = prices.get(holding.ticker);
+    const price = prices.get(holding.ticker)
     if (price) {
       updates.push({
         user_id: userId,
@@ -507,16 +590,14 @@ export async function updatePortfolioCachePrices(
         current_price: price.price,
         currency: price.currency,
         updated_at: new Date().toISOString(),
-      });
+      })
     }
   }
 
   if (updates.length > 0) {
-    await supabase
-      .from('portfolio_cache')
-      .upsert(updates, { onConflict: 'user_id,ticker' });
+    await supabase.from('portfolio_cache').upsert(updates, { onConflict: 'user_id,ticker' })
 
-    console.log(`[StockPrice] Updated ${updates.length} prices in cache`);
+    console.log(`[StockPrice] Updated ${updates.length} prices in cache`)
   }
 }
 
@@ -524,26 +605,26 @@ export async function updatePortfolioCachePrices(
  * 캐시 초기화
  */
 export function clearPriceCache(): void {
-  priceCache.clear();
-  console.log('[StockPrice] Cache cleared');
+  priceCache.clear()
+  console.log('[StockPrice] Cache cleared')
 }
 
 /**
  * 캐시 상태 조회
  */
 export function getPriceCacheStats(): {
-  size: number;
-  entries: Array<{ ticker: string; price: number; age: number }>;
+  size: number
+  entries: Array<{ ticker: string; price: number; age: number }>
 } {
-  const now = Date.now();
+  const now = Date.now()
   const entries = Array.from(priceCache.entries()).map(([ticker, cache]) => ({
     ticker,
     price: cache.price,
     age: Math.round((now - cache.timestamp) / 1000), // 초 단위
-  }));
+  }))
 
   return {
     size: priceCache.size,
     entries,
-  };
+  }
 }

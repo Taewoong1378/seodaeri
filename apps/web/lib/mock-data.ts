@@ -9,4 +9,4 @@ export const mockDashboard = {
     { month: '5월', amount: 55000 },
     { month: '6월', amount: 75000 },
   ],
-};
+}

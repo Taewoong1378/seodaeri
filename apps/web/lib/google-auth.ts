@@ -5,10 +5,10 @@
 export async function revokeGoogleToken(token: string): Promise<void> {
   try {
     await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    });
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
   } catch (error) {
-    console.error("[Logout] Google token revocation failed:", error);
+    console.error('[Logout] Google token revocation failed:', error)
   }
 }

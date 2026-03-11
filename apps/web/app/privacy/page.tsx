@@ -1,14 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: "개인정보처리방침",
+  title: '개인정보처리방침',
   description:
-    "굴림(Gulim) 애플리케이션의 개인정보처리방침입니다. Google API 서비스 이용 및 데이터 처리 방침을 안내합니다.",
+    '굴림(Gulim) 애플리케이션의 개인정보처리방침입니다. Google API 서비스 이용 및 데이터 처리 방침을 안내합니다.',
   robots: {
     index: true,
     follow: true,
   },
-};
+}
 
 export default function PrivacyPolicyPage() {
   return (
@@ -22,10 +22,9 @@ export default function PrivacyPolicyPage() {
               1. 개인정보의 수집 및 이용 목적
             </h2>
             <p>
-              굴림(Gulim)(이하 &quot;서비스&quot;)는 다음의 목적을 위하여
-              개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의
-              용도로는 이용되지 않으며, 이용 목적이 변경되는 경우에는 별도의
-              동의를 받는 등 필요한 조치를 이행할 예정입니다.
+              굴림(Gulim)(이하 &quot;서비스&quot;)는 다음의 목적을 위하여 개인정보를 처리합니다.
+              처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며, 이용 목적이
+              변경되는 경우에는 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.
             </p>
             <ul className="list-disc list-inside mt-3 space-y-1 text-slate-400">
               <li>회원 가입 및 관리</li>
@@ -35,9 +34,7 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">
-              2. 수집하는 개인정보 항목
-            </h2>
+            <h2 className="text-lg font-semibold text-white mb-3">2. 수집하는 개인정보 항목</h2>
             <p>서비스는 Google 로그인을 통해 다음의 정보를 수집합니다:</p>
             <ul className="list-disc list-inside mt-3 space-y-1 text-slate-400">
               <li>이메일 주소</li>
@@ -47,13 +44,10 @@ export default function PrivacyPolicyPage() {
               <li>연동된 Google 스프레드시트 ID</li>
             </ul>
             <p className="mt-4">
-              또한, 서비스 이용 과정에서 다음의 투자 관련 데이터가 수집 및
-              저장됩니다:
+              또한, 서비스 이용 과정에서 다음의 투자 관련 데이터가 수집 및 저장됩니다:
             </p>
             <ul className="list-disc list-inside mt-3 space-y-1 text-slate-400">
-              <li>
-                매매 거래 내역 (종목코드, 종목명, 매수/매도, 가격, 수량, 날짜)
-              </li>
+              <li>매매 거래 내역 (종목코드, 종목명, 매수/매도, 가격, 수량, 날짜)</li>
               <li>배당 내역 (종목, 배당금, 날짜)</li>
               <li>입출금 내역 (금액, 날짜, 계좌 정보)</li>
               <li>보유 종목 현황</li>
@@ -67,9 +61,8 @@ export default function PrivacyPolicyPage() {
               3. 개인정보의 보유 및 이용 기간
             </h2>
             <p>
-              서비스는 법령에 따른 개인정보 보유·이용기간 또는 정보주체로부터
-              개인정보를 수집 시에 동의받은 개인정보 보유·이용기간 내에서
-              개인정보를 처리·보유합니다.
+              서비스는 법령에 따른 개인정보 보유·이용기간 또는 정보주체로부터 개인정보를 수집 시에
+              동의받은 개인정보 보유·이용기간 내에서 개인정보를 처리·보유합니다.
             </p>
             <ul className="list-disc list-inside mt-3 space-y-1 text-slate-400">
               <li>회원 탈퇴 시까지</li>
@@ -78,26 +71,22 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">
-              4. 개인정보의 제3자 제공
-            </h2>
+            <h2 className="text-lg font-semibold text-white mb-3">4. 개인정보의 제3자 제공</h2>
             <p>
-              서비스는 원칙적으로 이용자의 개인정보를 제3자에게 제공하지
-              않습니다. 다만, 아래의 경우에는 예외로 합니다:
+              서비스는 원칙적으로 이용자의 개인정보를 제3자에게 제공하지 않습니다. 다만, 아래의
+              경우에는 예외로 합니다:
             </p>
             <ul className="list-disc list-inside mt-3 space-y-1 text-slate-400">
               <li>이용자가 사전에 동의한 경우</li>
               <li>
-                법령의 규정에 의거하거나, 수사 목적으로 법령에 정해진 절차와
-                방법에 따라 수사기관의 요구가 있는 경우
+                법령의 규정에 의거하거나, 수사 목적으로 법령에 정해진 절차와 방법에 따라 수사기관의
+                요구가 있는 경우
               </li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">
-              5. Google API 서비스 이용
-            </h2>
+            <h2 className="text-lg font-semibold text-white mb-3">5. Google API 서비스 이용</h2>
             <p>
               서비스는 Google API 서비스를 사용하며, Google API 서비스 이용 시
               <a
@@ -118,61 +107,52 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">
-              6. 데이터 보호 및 보안 조치
-            </h2>
+            <h2 className="text-lg font-semibold text-white mb-3">6. 데이터 보호 및 보안 조치</h2>
             <p>
-              서비스는 사용자의 개인정보 및 민감한 데이터를 보호하기 위해 다음과
-              같은 기술적·관리적 보안 조치를 취하고 있습니다:
+              서비스는 사용자의 개인정보 및 민감한 데이터를 보호하기 위해 다음과 같은 기술적·관리적
+              보안 조치를 취하고 있습니다:
             </p>
             <ul className="list-disc list-inside mt-3 space-y-2 text-slate-400">
               <li>
-                <strong className="text-slate-300">전송 암호화:</strong> 모든
-                데이터는 HTTPS/TLS를 통해 암호화되어 전송됩니다.
+                <strong className="text-slate-300">전송 암호화:</strong> 모든 데이터는 HTTPS/TLS를
+                통해 암호화되어 전송됩니다.
               </li>
               <li>
-                <strong className="text-slate-300">데이터 저장:</strong> 투자
-                기록 데이터는 사용자 본인의 Google Sheets와 서비스
-                서버(Supabase)에 이중으로 저장됩니다. 이는 앱의 빠른 로딩,
-                오프라인 지원, 데이터 분석 기능을 위한 것이며, 저장된 데이터는
-                해당 사용자 본인만 접근할 수 있습니다.
+                <strong className="text-slate-300">데이터 저장:</strong> 투자 기록 데이터는 사용자
+                본인의 Google Sheets와 서비스 서버(Supabase)에 이중으로 저장됩니다. 이는 앱의 빠른
+                로딩, 오프라인 지원, 데이터 분석 기능을 위한 것이며, 저장된 데이터는 해당 사용자
+                본인만 접근할 수 있습니다.
               </li>
               <li>
-                <strong className="text-slate-300">접근 제어:</strong> Google
-                OAuth 2.0을 통한 인증으로 본인만 자신의 데이터에 접근할 수
-                있습니다.
+                <strong className="text-slate-300">접근 제어:</strong> Google OAuth 2.0을 통한
+                인증으로 본인만 자신의 데이터에 접근할 수 있습니다.
               </li>
               <li>
-                <strong className="text-slate-300">최소 권한 원칙:</strong>{" "}
-                서비스는 사용자가 명시적으로 선택한 스프레드시트 파일에만
-                접근하며, 다른 Google Drive 파일에는 접근하지 않습니다.
+                <strong className="text-slate-300">최소 권한 원칙:</strong> 서비스는 사용자가
+                명시적으로 선택한 스프레드시트 파일에만 접근하며, 다른 Google Drive 파일에는
+                접근하지 않습니다.
               </li>
               <li>
-                <strong className="text-slate-300">세션 보안:</strong> 인증
-                토큰은 안전하게 관리되며, 로그아웃 시 즉시 만료됩니다.
+                <strong className="text-slate-300">세션 보안:</strong> 인증 토큰은 안전하게
+                관리되며, 로그아웃 시 즉시 만료됩니다.
               </li>
               <li>
-                <strong className="text-slate-300">제3자 공유 금지:</strong>{" "}
-                사용자 데이터는 어떠한 제3자에게도 판매, 공유, 전송되지
-                않습니다.
+                <strong className="text-slate-300">제3자 공유 금지:</strong> 사용자 데이터는 어떠한
+                제3자에게도 판매, 공유, 전송되지 않습니다.
               </li>
             </ul>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">
-              7. 개인정보의 파기
-            </h2>
+            <h2 className="text-lg font-semibold text-white mb-3">7. 개인정보의 파기</h2>
             <p>
-              서비스는 개인정보 보유기간의 경과, 처리목적 달성 등 개인정보가
-              불필요하게 되었을 때에는 지체없이 해당 개인정보를 파기합니다.
+              서비스는 개인정보 보유기간의 경과, 처리목적 달성 등 개인정보가 불필요하게 되었을
+              때에는 지체없이 해당 개인정보를 파기합니다.
             </p>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">
-              8. 이용자의 권리
-            </h2>
+            <h2 className="text-lg font-semibold text-white mb-3">8. 이용자의 권리</h2>
             <p>이용자는 언제든지 다음의 권리를 행사할 수 있습니다:</p>
             <ul className="list-disc list-inside mt-3 space-y-1 text-slate-400">
               <li>개인정보 열람 요구</li>
@@ -184,24 +164,20 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section id="data-deletion">
-            <h2 className="text-lg font-semibold text-white mb-3">
-              9. 데이터 삭제 요청
-            </h2>
+            <h2 className="text-lg font-semibold text-white mb-3">9. 데이터 삭제 요청</h2>
             <p>
-              사용자는 계정을 삭제하지 않고도 본인의 데이터 일부 또는 전체의 삭제를
-              요청할 수 있습니다.
+              사용자는 계정을 삭제하지 않고도 본인의 데이터 일부 또는 전체의 삭제를 요청할 수
+              있습니다.
             </p>
             <div className="mt-4 p-4 bg-white/5 rounded-lg space-y-3">
               <p className="text-white font-medium">데이터 삭제 요청 방법:</p>
               <ol className="list-decimal list-inside space-y-2 text-slate-400">
-                <li>
-                  아래 이메일로 &quot;데이터 삭제 요청&quot; 제목으로 연락
-                </li>
+                <li>아래 이메일로 &quot;데이터 삭제 요청&quot; 제목으로 연락</li>
                 <li>가입 시 사용한 이메일 주소 기재</li>
                 <li>삭제를 원하는 데이터 유형 명시 (전체 또는 일부)</li>
               </ol>
               <p className="text-slate-400 mt-3">
-                <strong className="text-slate-300">연락처:</strong>{" "}
+                <strong className="text-slate-300">연락처:</strong>{' '}
                 <a
                   href="mailto:ktw2378@naver.com?subject=데이터 삭제 요청"
                   className="text-blue-400 hover:underline"
@@ -221,24 +197,22 @@ export default function PrivacyPolicyPage() {
                 <li>배당금, 매매내역, 입출금 내역</li>
               </ul>
               <p className="mt-3">
-                <strong className="text-slate-300">처리 기간:</strong> 요청일로부터
-                영업일 기준 7일 이내에 처리되며, 완료 시 이메일로 통보됩니다.
+                <strong className="text-slate-300">처리 기간:</strong> 요청일로부터 영업일 기준 7일
+                이내에 처리되며, 완료 시 이메일로 통보됩니다.
               </p>
               <p className="mt-2 text-sm text-slate-500">
-                * Google Sheets에 저장된 데이터는 사용자 본인이 직접 관리하며,
-                서비스에서는 연동 해제만 진행됩니다.
+                * Google Sheets에 저장된 데이터는 사용자 본인이 직접 관리하며, 서비스에서는 연동
+                해제만 진행됩니다.
               </p>
             </div>
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">
-              10. 개인정보 보호책임자
-            </h2>
+            <h2 className="text-lg font-semibold text-white mb-3">10. 개인정보 보호책임자</h2>
             <p>
-              서비스는 개인정보 처리에 관한 업무를 총괄해서 책임지고, 개인정보
-              처리와 관련한 이용자의 불만처리 및 피해구제 등을 위하여 아래와
-              같이 개인정보 보호책임자를 지정하고 있습니다.
+              서비스는 개인정보 처리에 관한 업무를 총괄해서 책임지고, 개인정보 처리와 관련한
+              이용자의 불만처리 및 피해구제 등을 위하여 아래와 같이 개인정보 보호책임자를 지정하고
+              있습니다.
             </p>
             <div className="mt-3 p-4 bg-white/5 rounded-lg">
               <p className="text-slate-400">이메일: xodndxnxn@gmail.com</p>
@@ -246,13 +220,11 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-white mb-3">
-              11. 개인정보처리방침 변경
-            </h2>
+            <h2 className="text-lg font-semibold text-white mb-3">11. 개인정보처리방침 변경</h2>
             <p>
-              이 개인정보처리방침은 2024년 1월 1일부터 적용됩니다. 법령 및
-              방침에 따른 변경내용의 추가, 삭제 및 정정이 있는 경우에는
-              변경사항의 시행 7일 전부터 공지사항을 통하여 고지할 것입니다.
+              이 개인정보처리방침은 2024년 1월 1일부터 적용됩니다. 법령 및 방침에 따른 변경내용의
+              추가, 삭제 및 정정이 있는 경우에는 변경사항의 시행 7일 전부터 공지사항을 통하여 고지할
+              것입니다.
             </p>
           </section>
         </div>
@@ -262,5 +234,5 @@ export default function PrivacyPolicyPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

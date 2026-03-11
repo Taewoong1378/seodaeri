@@ -20,7 +20,7 @@
  * - index 35 (AP): nasdaq_idx * dollar_idx / 100
  */
 
-import type { HistoricalMarketData } from './historical-exchange-rate';
+import type { HistoricalMarketData } from './historical-exchange-rate'
 
 /**
  * 기본 지수 행 데이터에 달러환율 적용 값을 계산하여 주입
@@ -33,89 +33,89 @@ import type { HistoricalMarketData } from './historical-exchange-rate';
 export function enrichRowsWithExchangeRates(
   rows: any[],
   exchangeRates: Map<string, number>,
-  currentRate: number
+  currentRate: number,
 ): any[] {
   // If exchange rates map is empty, return original rows (graceful degradation)
   if (!exchangeRates || exchangeRates.size === 0) {
-    return rows;
+    return rows
   }
 
   // Find baseRate: the exchange rate of the first valid date row (investment start month)
-  let baseRate = 0;
+  let baseRate = 0
   for (const row of rows) {
-    if (!row || !Array.isArray(row) || row.length === 0) continue;
-    const dateCell = String(row[0] || '').trim();
-    if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue;
+    if (!row || !Array.isArray(row) || row.length === 0) continue
+    const dateCell = String(row[0] || '').trim()
+    if (!/^\d{2}\.\d{2}$/.test(dateCell)) continue
 
-    const rate = exchangeRates.get(dateCell);
+    const rate = exchangeRates.get(dateCell)
     if (rate && rate > 0) {
-      baseRate = rate;
-      break;
+      baseRate = rate
+      break
     }
   }
 
   // If no base rate found, try the earliest available rate in the map
   if (baseRate === 0) {
-    const sortedKeys = Array.from(exchangeRates.keys()).sort();
+    const sortedKeys = Array.from(exchangeRates.keys()).sort()
     for (const key of sortedKeys) {
-      const rate = exchangeRates.get(key);
+      const rate = exchangeRates.get(key)
       if (rate && rate > 0) {
-        baseRate = rate;
-        break;
+        baseRate = rate
+        break
       }
     }
   }
 
   // If still no base rate, return original rows
   if (baseRate === 0) {
-    return rows;
+    return rows
   }
 
   // Enrich each row
-  return rows.map(row => {
-    if (!row || !Array.isArray(row)) return row;
+  return rows.map((row) => {
+    if (!row || !Array.isArray(row)) return row
 
-    const dateCell = String(row[0] || '').trim();
-    if (!/^\d{2}\.\d{2}$/.test(dateCell)) return row;
+    const dateCell = String(row[0] || '').trim()
+    if (!/^\d{2}\.\d{2}$/.test(dateCell)) return row
 
     // Get exchange rate for this month
-    const rate = exchangeRates.get(dateCell) || currentRate;
-    if (!rate || rate <= 0) return row;
+    const rate = exchangeRates.get(dateCell) || currentRate
+    if (!rate || rate <= 0) return row
 
     // Parse existing index values
     const parseNum = (val: any): number => {
-      if (!val) return 0;
-      const str = String(val).replace(/[₩$,\s]/g, '');
-      const num = parseFloat(str);
-      return isNaN(num) ? 0 : num;
-    };
+      if (!val) return 0
+      const str = String(val).replace(/[₩$,\s]/g, '')
+      const num = Number.parseFloat(str)
+      return Number.isNaN(num) ? 0 : num
+    }
 
-    const sp500Idx = parseNum(row[10]); // Q열: S&P500 index (100 base)
-    const nasdaqIdx = parseNum(row[11]); // R열: NASDAQ index (100 base)
+    const sp500Idx = parseNum(row[10]) // Q열: S&P500 index (100 base)
+    const nasdaqIdx = parseNum(row[11]) // R열: NASDAQ index (100 base)
 
     // Calculate dollar index (100 base)
-    const dollarIdx = (rate / baseRate) * 100;
+    const dollarIdx = (rate / baseRate) * 100
 
     // Calculate dollar-applied indices
-    const sp500DollarIdx = sp500Idx * dollarIdx / 100;
-    const nasdaqDollarIdx = nasdaqIdx * dollarIdx / 100;
+    const sp500DollarIdx = (sp500Idx * dollarIdx) / 100
+    const nasdaqDollarIdx = (nasdaqIdx * dollarIdx) / 100
 
     // Create extended row (ensure array is long enough)
-    const enrichedRow = [...row];
+    const enrichedRow = [...row]
     while (enrichedRow.length <= 35) {
-      enrichedRow.push(undefined);
+      enrichedRow.push(undefined)
     }
 
     // Inject values
-    enrichedRow[23] = rate;                    // AD: raw exchange rate
-    enrichedRow[28] = sp500DollarIdx;          // AI: S&P500 dollar-applied
-    enrichedRow[29] = nasdaqDollarIdx;         // AJ: NASDAQ dollar-applied
-    enrichedRow[33] = dollarIdx;               // AN: dollar index (100 base)
-    enrichedRow[34] = sp500DollarIdx;          // AO: S&P500 dollar index
-    enrichedRow[35] = nasdaqDollarIdx;         // AP: NASDAQ dollar index
+    enrichedRow[23] = rate // AD: raw exchange rate
+    enrichedRow[28] = sp500DollarIdx // AI: S&P500 dollar-applied
+    enrichedRow[29] = nasdaqDollarIdx // AJ: NASDAQ dollar-applied
+    enrichedRow[33] = dollarIdx // AN: dollar index (100 base)
+    enrichedRow[34] = sp500DollarIdx // AO: S&P500 dollar index
+    enrichedRow[35] = nasdaqDollarIdx // AP: NASDAQ dollar index
 
-    return enrichedRow;
-  });
+    return enrichedRow
+  })
 }
 
 /**
@@ -130,97 +130,104 @@ export function enrichRowsWithExchangeRates(
 export function calculateMarketYields(
   months: string[],
   marketData: HistoricalMarketData,
-  currentYear: number
+  currentYear: number,
 ): {
-  gold: number[]; bitcoin: number[]; realEstate: number[]; dollar: number[];
-  kospi: number[]; sp500: number[]; nasdaq: number[];
-  sp500Dollar: number[]; nasdaqDollar: number[];
-  goldDollar: number[]; bitcoinDollar: number[];
+  gold: number[]
+  bitcoin: number[]
+  realEstate: number[]
+  dollar: number[]
+  kospi: number[]
+  sp500: number[]
+  nasdaq: number[]
+  sp500Dollar: number[]
+  nasdaqDollar: number[]
+  goldDollar: number[]
+  bitcoinDollar: number[]
 } {
-  const yearStr = String(currentYear).slice(-2); // "26"
-  const prevYearStr = String(currentYear - 1).slice(-2); // "25"
-  const baselineKey = `${prevYearStr}.12`; // 작년 12월
+  const yearStr = String(currentYear).slice(-2) // "26"
+  const prevYearStr = String(currentYear - 1).slice(-2) // "25"
+  const baselineKey = `${prevYearStr}.12` // 작년 12월
 
   // 각 시리즈의 baseline 값
-  const goldBaseline = marketData.gold.get(baselineKey);
-  const btcBaseline = marketData.bitcoin.get(baselineKey);
-  const reBaseline = marketData.realEstate.get(baselineKey);
-  const dollarBaseline = marketData.exchangeRates.get(baselineKey);
-  const kospiBaseline = marketData.kospi?.get(baselineKey);
-  const sp500Baseline = marketData.sp500?.get(baselineKey);
-  const nasdaqBaseline = marketData.nasdaq?.get(baselineKey);
-  const sp500KrwBaseline = marketData.sp500Krw?.get(baselineKey);
-  const nasdaqKrwBaseline = marketData.nasdaqKrw?.get(baselineKey);
-  const goldUsdBaseline = marketData.goldUsd?.get(baselineKey);
-  const btcUsdBaseline = marketData.bitcoinUsd?.get(baselineKey);
+  const goldBaseline = marketData.gold.get(baselineKey)
+  const btcBaseline = marketData.bitcoin.get(baselineKey)
+  const reBaseline = marketData.realEstate.get(baselineKey)
+  const dollarBaseline = marketData.exchangeRates.get(baselineKey)
+  const kospiBaseline = marketData.kospi?.get(baselineKey)
+  const sp500Baseline = marketData.sp500?.get(baselineKey)
+  const nasdaqBaseline = marketData.nasdaq?.get(baselineKey)
+  const sp500KrwBaseline = marketData.sp500Krw?.get(baselineKey)
+  const nasdaqKrwBaseline = marketData.nasdaqKrw?.get(baselineKey)
+  const goldUsdBaseline = marketData.goldUsd?.get(baselineKey)
+  const btcUsdBaseline = marketData.bitcoinUsd?.get(baselineKey)
 
-  const goldYields: number[] = [0]; // 시작점 0%
-  const btcYields: number[] = [0];
-  const reYields: number[] = [0];
-  const dollarYields: number[] = [0];
-  const kospiYields: number[] = [0];
-  const sp500Yields: number[] = [0];
-  const nasdaqYields: number[] = [0];
-  const sp500DollarYields: number[] = [0];
-  const nasdaqDollarYields: number[] = [0];
-  const goldDollarYields: number[] = [0];
-  const bitcoinDollarYields: number[] = [0];
+  const goldYields: number[] = [0] // 시작점 0%
+  const btcYields: number[] = [0]
+  const reYields: number[] = [0]
+  const dollarYields: number[] = [0]
+  const kospiYields: number[] = [0]
+  const sp500Yields: number[] = [0]
+  const nasdaqYields: number[] = [0]
+  const sp500DollarYields: number[] = [0]
+  const nasdaqDollarYields: number[] = [0]
+  const goldDollarYields: number[] = [0]
+  const bitcoinDollarYields: number[] = [0]
 
   const yieldCalc = (val: number | undefined, baseline: number | undefined): number | null => {
     if (baseline && baseline > 0 && val && val > 0) {
-      const raw = (val / baseline - 1) * 100;
-      return Math.round(raw * 10) / 10;
+      const raw = (val / baseline - 1) * 100
+      return Math.round(raw * 10) / 10
     }
-    return null;
-  };
+    return null
+  }
 
   // months[0] = "시작", months[1] = "1월", ...
   for (let i = 1; i < months.length; i++) {
-    const monthKey = `${yearStr}.${String(i).padStart(2, '0')}`;
+    const monthKey = `${yearStr}.${String(i).padStart(2, '0')}`
 
     // 금 (USD - 기본)
-    const goldY = yieldCalc(marketData.goldUsd?.get(monthKey), goldUsdBaseline);
-    goldYields.push(goldY ?? (goldYields[goldYields.length - 1] ?? 0));
+    const goldY = yieldCalc(marketData.goldUsd?.get(monthKey), goldUsdBaseline)
+    goldYields.push(goldY ?? goldYields[goldYields.length - 1] ?? 0)
 
     // 금 (KRW - 환율 적용)
-    const goldDY = yieldCalc(marketData.gold.get(monthKey), goldBaseline);
-    goldDollarYields.push(goldDY ?? (goldDollarYields[goldDollarYields.length - 1] ?? 0));
+    const goldDY = yieldCalc(marketData.gold.get(monthKey), goldBaseline)
+    goldDollarYields.push(goldDY ?? goldDollarYields[goldDollarYields.length - 1] ?? 0)
 
     // 비트코인 (USD - 기본)
-    const btcY = yieldCalc(marketData.bitcoinUsd?.get(monthKey), btcUsdBaseline);
-    btcYields.push(btcY ?? (btcYields[btcYields.length - 1] ?? 0));
+    const btcY = yieldCalc(marketData.bitcoinUsd?.get(monthKey), btcUsdBaseline)
+    btcYields.push(btcY ?? btcYields[btcYields.length - 1] ?? 0)
 
     // 비트코인 (KRW - 환율 적용)
-    const btcDY = yieldCalc(marketData.bitcoin.get(monthKey), btcBaseline);
-    bitcoinDollarYields.push(btcDY ?? (bitcoinDollarYields[bitcoinDollarYields.length - 1] ?? 0));
+    const btcDY = yieldCalc(marketData.bitcoin.get(monthKey), btcBaseline)
+    bitcoinDollarYields.push(btcDY ?? bitcoinDollarYields[bitcoinDollarYields.length - 1] ?? 0)
 
     // 부동산
-    const reY = yieldCalc(marketData.realEstate.get(monthKey), reBaseline);
-    reYields.push(reY ?? (reYields[reYields.length - 1] ?? 0));
+    const reY = yieldCalc(marketData.realEstate.get(monthKey), reBaseline)
+    reYields.push(reY ?? reYields[reYields.length - 1] ?? 0)
 
     // 달러
-    const dollarY = yieldCalc(marketData.exchangeRates.get(monthKey), dollarBaseline);
-    dollarYields.push(dollarY ?? (dollarYields[dollarYields.length - 1] ?? 0));
+    const dollarY = yieldCalc(marketData.exchangeRates.get(monthKey), dollarBaseline)
+    dollarYields.push(dollarY ?? dollarYields[dollarYields.length - 1] ?? 0)
 
     // KOSPI
-    const kospiY = yieldCalc(marketData.kospi?.get(monthKey), kospiBaseline);
-    kospiYields.push(kospiY ?? (kospiYields[kospiYields.length - 1] ?? 0));
+    const kospiY = yieldCalc(marketData.kospi?.get(monthKey), kospiBaseline)
+    kospiYields.push(kospiY ?? kospiYields[kospiYields.length - 1] ?? 0)
 
     // S&P500 (USD)
-    const sp500Y = yieldCalc(marketData.sp500?.get(monthKey), sp500Baseline);
-    sp500Yields.push(sp500Y ?? (sp500Yields[sp500Yields.length - 1] ?? 0));
+    const sp500Y = yieldCalc(marketData.sp500?.get(monthKey), sp500Baseline)
+    sp500Yields.push(sp500Y ?? sp500Yields[sp500Yields.length - 1] ?? 0)
 
     // NASDAQ (USD)
-    const nasdaqY = yieldCalc(marketData.nasdaq?.get(monthKey), nasdaqBaseline);
-    nasdaqYields.push(nasdaqY ?? (nasdaqYields[nasdaqYields.length - 1] ?? 0));
+    const nasdaqY = yieldCalc(marketData.nasdaq?.get(monthKey), nasdaqBaseline)
+    nasdaqYields.push(nasdaqY ?? nasdaqYields[nasdaqYields.length - 1] ?? 0)
 
     // S&P500 달러환율 적용 (KRW-converted)
-    const sp500DY = yieldCalc(marketData.sp500Krw?.get(monthKey), sp500KrwBaseline);
-    sp500DollarYields.push(sp500DY ?? (sp500DollarYields[sp500DollarYields.length - 1] ?? 0));
+    const sp500DY = yieldCalc(marketData.sp500Krw?.get(monthKey), sp500KrwBaseline)
+    sp500DollarYields.push(sp500DY ?? sp500DollarYields[sp500DollarYields.length - 1] ?? 0)
 
     // NASDAQ 달러환율 적용 (KRW-converted)
-    const nasdaqDY = yieldCalc(marketData.nasdaqKrw?.get(monthKey), nasdaqKrwBaseline);
-    nasdaqDollarYields.push(nasdaqDY ?? (nasdaqDollarYields[nasdaqDollarYields.length - 1] ?? 0));
+    const nasdaqDY = yieldCalc(marketData.nasdaqKrw?.get(monthKey), nasdaqKrwBaseline)
+    nasdaqDollarYields.push(nasdaqDY ?? nasdaqDollarYields[nasdaqDollarYields.length - 1] ?? 0)
   }
 
   return {
@@ -235,5 +242,5 @@ export function calculateMarketYields(
     nasdaqDollar: nasdaqDollarYields,
     goldDollar: goldDollarYields,
     bitcoinDollar: bitcoinDollarYields,
-  };
+  }
 }
