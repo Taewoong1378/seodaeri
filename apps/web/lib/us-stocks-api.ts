@@ -135,6 +135,7 @@ export async function fetchUSStocks(): Promise<USStock[]> {
     { code: "NAIL", name: "Direxion Daily Homebuilders & Supplies Bull 3X Shares", market: "US_ETF" },
     { code: "DFEN", name: "Direxion Daily Aerospace & Defense Bull 3X Shares", market: "US_ETF" },
     { code: "WEBL", name: "Direxion Daily Dow Jones Internet Bull 3X Shares", market: "US_ETF" },
+    { code: "FNGD", name: "MicroSectors FANG+ Index 3X Inverse Leveraged ETN", market: "US_ETF" },
   ];
 
   for (const etf of missingPopularETFs) {
