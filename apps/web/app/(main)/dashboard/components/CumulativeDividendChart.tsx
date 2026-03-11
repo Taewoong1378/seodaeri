@@ -104,7 +104,7 @@ export function CumulativeDividendChart({ data }: CumulativeDividendChartProps):
           color: '#1e293b',
         }}
         labelStyle={{ color: '#64748b', fontSize: 12, marginBottom: 8 }}
-        formatter={(value: number) => [formatCurrency(value), '누적 배당금']}
+        formatter={((value: number) => [formatCurrency(value), '누적 배당금']) as any}
         labelFormatter={(label) => `${label}`}
         {...(isModal ? {} : {})}
       />

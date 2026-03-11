@@ -112,10 +112,12 @@ export function DividendByYearChart({ data, variant = 'default' }: DividendByYea
           color: '#1e293b',
         }}
         labelStyle={{ color: '#64748b', fontSize: 12, marginBottom: 8 }}
-        formatter={(value: number, name: string) => [
-          `₩${new Intl.NumberFormat('ko-KR').format(value)}`,
-          `${name}년`,
-        ]}
+        formatter={
+          ((value: number, name: string) => [
+            `₩${new Intl.NumberFormat('ko-KR').format(value)}`,
+            `${name}년`,
+          ]) as any
+        }
       />
       {data.years.map((year) => (
         <Bar

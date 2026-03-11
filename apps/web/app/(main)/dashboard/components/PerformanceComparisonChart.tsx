@@ -349,14 +349,16 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                       }}
                       labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
                       itemStyle={{ fontSize: 13, padding: '2px 0' }}
-                      formatter={(value: number, name: string) => {
-                        const lineConfig = LINES.find((l) => l.dataKey === name)
-                        let label = lineConfig?.name || name
-                        if (rateMode === 'dollar' && (name === 'sp500' || name === 'nasdaq')) {
-                          label += '(환율)'
-                        }
-                        return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label]
-                      }}
+                      formatter={
+                        ((value: number, name: string) => {
+                          const lineConfig = LINES.find((l) => l.dataKey === name)
+                          let label = lineConfig?.name || name
+                          if (rateMode === 'dollar' && (name === 'sp500' || name === 'nasdaq')) {
+                            label += '(환율)'
+                          }
+                          return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label]
+                        }) as any
+                      }
                       labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
                     />
                     {LINES.map((line) => (
@@ -427,14 +429,16 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
               }}
               labelStyle={{ color: '#64748b', fontSize: 11, marginBottom: 8 }}
               itemStyle={{ fontSize: 12, padding: '2px 0' }}
-              formatter={(value: number, name: string) => {
-                const lineConfig = LINES.find((l) => l.dataKey === name)
-                let label = lineConfig?.name || name
-                if (rateMode === 'dollar' && (name === 'sp500' || name === 'nasdaq')) {
-                  label += '(환율)'
-                }
-                return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label]
-              }}
+              formatter={
+                ((value: number, name: string) => {
+                  const lineConfig = LINES.find((l) => l.dataKey === name)
+                  let label = lineConfig?.name || name
+                  if (rateMode === 'dollar' && (name === 'sp500' || name === 'nasdaq')) {
+                    label += '(환율)'
+                  }
+                  return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label]
+                }) as any
+              }
               labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
             />
             {visibleLines.map((line) => (
@@ -561,14 +565,16 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
                 }}
                 labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
                 itemStyle={{ fontSize: 13, padding: '2px 0' }}
-                formatter={(value: number, name: string) => {
-                  const lineConfig = LINES.find((l) => l.dataKey === name)
-                  let label = lineConfig?.name || name
-                  if (rateMode === 'dollar' && (name === 'sp500' || name === 'nasdaq')) {
-                    label += '(환율)'
-                  }
-                  return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label]
-                }}
+                formatter={
+                  ((value: number, name: string) => {
+                    const lineConfig = LINES.find((l) => l.dataKey === name)
+                    let label = lineConfig?.name || name
+                    if (rateMode === 'dollar' && (name === 'sp500' || name === 'nasdaq')) {
+                      label += '(환율)'
+                    }
+                    return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label]
+                  }) as any
+                }
                 labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
               />
             </LineChart>

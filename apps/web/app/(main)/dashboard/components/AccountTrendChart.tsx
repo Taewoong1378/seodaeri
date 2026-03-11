@@ -248,10 +248,12 @@ export function AccountTrendChart({
                       color: '#1e293b',
                     }}
                     labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
-                    formatter={(value: number, name: string) => {
-                      const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액'
-                      return [`₩${value.toLocaleString()}`, label]
-                    }}
+                    formatter={
+                      ((value: number, name: string) => {
+                        const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액'
+                        return [`₩${value.toLocaleString()}`, label]
+                      }) as any
+                    }
                     labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
                   />
                   <Area
@@ -325,10 +327,12 @@ export function AccountTrendChart({
                 color: '#1e293b',
               }}
               labelStyle={{ color: '#64748b', fontSize: 11, marginBottom: 8 }}
-              formatter={(value: number, name: string) => {
-                const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액'
-                return [`₩${value.toLocaleString()}`, label]
-              }}
+              formatter={
+                ((value: number, name: string) => {
+                  const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액'
+                  return [`₩${value.toLocaleString()}`, label]
+                }) as any
+              }
               labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
             />
             <Area
@@ -453,10 +457,12 @@ export function AccountTrendChart({
                   color: '#1e293b',
                 }}
                 labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
-                formatter={(value: number, name: string) => {
-                  const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액'
-                  return [`₩${value.toLocaleString()}`, label]
-                }}
+                formatter={
+                  ((value: number, name: string) => {
+                    const label = name === 'cumulativeDeposit' ? '누적입금액' : '계좌총액'
+                    return [`₩${value.toLocaleString()}`, label]
+                  }) as any
+                }
                 labelFormatter={(label) => `20${label.replace('.', '년 ')}월`}
               />
               <Area

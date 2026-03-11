@@ -33,10 +33,10 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "jsdom": "^28.1.0",
-    "turbo": "^2.5.4",
+    "turbo": "^2.8.16",
     "vitest": "^4.0.18"
   },
   "dependencies": {
-    "@google/genai": "^1.38.0"
+    "@google/genai": "^1.44.0"
   }
 }

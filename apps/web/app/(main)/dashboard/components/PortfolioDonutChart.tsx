@@ -108,7 +108,7 @@ export function PortfolioDonutChart({ data, totalAsset }: PortfolioDonutChartPro
                           color: '#1e293b',
                         }}
                         itemStyle={{ color: '#1e293b' }}
-                        formatter={(value: number) => formatCurrency(value)}
+                        formatter={((value: number) => formatCurrency(value)) as any}
                       />
                     </PieChart>
                   </ResponsiveContainer>

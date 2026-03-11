@@ -174,7 +174,7 @@ export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparis
       : `${activeSeriesArray.length}개 지표`
 
   // Tooltip formatter
-  const tooltipFormatter = (value: number, name: string) => {
+  const tooltipFormatter = ((value: number, name: string) => {
     const option = SERIES_OPTIONS.find((o) => o.key === name)
     const label = name === 'account' ? '내 투자' : option?.label || name
     if (
@@ -184,7 +184,7 @@ export function MajorIndexYieldComparisonChart({ data }: MajorIndexYieldComparis
       // 환율 모드에서도 라벨 그대로 사용 (간결하게)
     }
     return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label]
-  }
+  }) as any
 
   // 활성 시리즈 라인 렌더
   const renderActiveLines = (isDot: boolean, strokeWidth = 2) => (

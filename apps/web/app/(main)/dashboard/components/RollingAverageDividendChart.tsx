@@ -104,7 +104,7 @@ export function RollingAverageDividendChart({ data }: RollingAverageDividendChar
           color: '#1e293b',
         }}
         labelStyle={{ color: '#64748b', fontSize: 12, marginBottom: 8 }}
-        formatter={(value: number) => [formatCurrency(value), '12개월 평균']}
+        formatter={((value: number) => [formatCurrency(value), '12개월 평균']) as any}
         labelFormatter={(label) => `${label}`}
         {...(isModal ? {} : {})}
       />

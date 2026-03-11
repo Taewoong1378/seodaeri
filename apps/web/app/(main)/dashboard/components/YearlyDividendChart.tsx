@@ -69,7 +69,7 @@ export function YearlyDividendChart({ data }: YearlyDividendChartProps) {
           color: '#1e293b',
         }}
         labelStyle={{ color: '#64748b', fontSize: 12, marginBottom: 8 }}
-        formatter={(value: number) => [formatCurrency(value), '배당금']}
+        formatter={((value: number) => [formatCurrency(value), '배당금']) as any}
       />
       <Bar dataKey="amount" fill={BAR_COLOR} radius={[4, 4, 0, 0]} maxBarSize={isModal ? 80 : 50}>
         <LabelList

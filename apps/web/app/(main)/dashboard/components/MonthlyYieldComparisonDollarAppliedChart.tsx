@@ -129,11 +129,15 @@ export function MonthlyYieldComparisonDollarAppliedChart({
                           color: '#1e293b',
                         }}
                         labelStyle={{ color: '#64748b', fontSize: 13, marginBottom: 8 }}
-                        formatter={(value: number, name: string) => {
-                          const label =
-                            name === 'currentMonth' ? `${data.currentMonth} 수익률` : '올해 수익률'
-                          return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label]
-                        }}
+                        formatter={
+                          ((value: number, name: string) => {
+                            const label =
+                              name === 'currentMonth'
+                                ? `${data.currentMonth} 수익률`
+                                : '올해 수익률'
+                            return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label]
+                          }) as any
+                        }
                       />
                       <Bar dataKey="currentMonth" fill={COLORS.currentMonth} radius={[4, 4, 0, 0]}>
                         {chartData.map((entry) => (
@@ -201,11 +205,13 @@ export function MonthlyYieldComparisonDollarAppliedChart({
                 color: '#1e293b',
               }}
               labelStyle={{ color: '#64748b', fontSize: 11, marginBottom: 8 }}
-              formatter={(value: number, name: string) => {
-                const label =
-                  name === 'currentMonth' ? `${data.currentMonth} 수익률` : '올해 수익률'
-                return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label]
-              }}
+              formatter={
+                ((value: number, name: string) => {
+                  const label =
+                    name === 'currentMonth' ? `${data.currentMonth} 수익률` : '올해 수익률'
+                  return [`${value >= 0 ? '+' : ''}${value.toFixed(1)}%`, label]
+                }) as any
+              }
             />
             <Bar dataKey="currentMonth" fill={COLORS.currentMonth} radius={[4, 4, 0, 0]}>
               {chartData.map((entry) => (
