@@ -867,13 +867,18 @@ export function parseDividendData(rows: any[]): DividendRecord[] {
       nameCol = i
     } else if (header.includes('원화') || header.includes('krw') || header.includes('배당금')) {
       if (amountKRWCol === -1) amountKRWCol = i
-    } else if (header.includes('달러') || header.includes('usd') || header.includes('$')) {
+    } else if (
+      header.includes('달러') ||
+      header.includes('usd') ||
+      header.includes('$') ||
+      header.includes('외화')
+    ) {
       amountUSDCol = i
     }
   }
 
   // 헤더를 찾지 못한 경우 기본값 사용
-  // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산
+  // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산, K=계좌
   if (dateCol === -1) dateCol = 1 // B열 (날짜)
   if (tickerCol === -1) tickerCol = 5 // F열 (종목코드)
   if (nameCol === -1) nameCol = 6 // G열 (종목명)
@@ -906,13 +911,27 @@ export function parseDividendData(rows: any[]): DividendRecord[] {
 
     if (!date) continue // 유효한 날짜 없으면 skip
 
-    // 배당금 찾기 - 숫자 값이 있는 컬럼 탐색
-    let amountKRW = parseNumber(row[amountKRWCol])
-    let amountUSD = parseNumber(row[amountUSDCol])
+    // 행별 포맷 자동 감지: A열이 비어있으면 old format, 날짜가 있으면 new format (버그 기간 데이터)
+    // old format: A=빈칸, B=날짜, C=연도... (offset=0, 기본 인덱스 사용)
+    // new format: A=날짜, B=연도, C=월... (offset=-1, 인덱스를 1씩 줄임)
+    const isNewFormat = parseDate(row[0]) !== null && String(row[0] || '').trim() !== ''
+    const offset = isNewFormat ? -1 : 0
+
+    const rowTickerCol = tickerCol + offset
+    const rowNameCol = nameCol + offset
+    const rowAmountKRWCol = amountKRWCol + offset
+    const rowAmountUSDCol = amountUSDCol + offset
+    const rowTotalKRWCol = totalKRWCol + offset
+    const rowAccountCol = (isNewFormat ? 9 : 10)
+
+    // 배당금 찾기
+    let amountKRW = parseNumber(row[rowAmountKRWCol])
+    let amountUSD = parseNumber(row[rowAmountUSDCol])
 
     // 배당금이 0이면 다른 컬럼에서 찾기
     if (amountKRW === 0 && amountUSD === 0) {
-      for (let col = 5; col < row.length; col++) {
+      const searchStart = isNewFormat ? 4 : 5
+      for (let col = searchStart; col < row.length; col++) {
         const val = parseNumber(row[col])
         if (val > 0) {
           // USD인지 KRW인지 추정 (금액 크기로)
@@ -926,18 +945,18 @@ export function parseDividendData(rows: any[]): DividendRecord[] {
       }
     }
 
-    // J열 원화환산 값 파싱 (시트 수식으로 계산된 값)
-    const totalKRWRaw = parseNumber(row[totalKRWCol])
+    // 원화환산 값 파싱 (시트 수식으로 계산된 값)
+    const totalKRWRaw = parseNumber(row[rowTotalKRWCol])
 
     // 배당금이 하나라도 있으면 기록
     if (amountKRW > 0 || amountUSD > 0 || totalKRWRaw > 0) {
       // 소수점 반올림하여 정수로 저장
       const totalKRW = totalKRWRaw > 0 ? Math.round(totalKRWRaw) : Math.round(amountKRW)
-      const accountVal = String(row[10] || '').trim() // K열 (index 10) 계좌 유형
+      const accountVal = String(row[rowAccountCol] || '').trim()
       results.push({
         date,
-        ticker: String(row[tickerCol] || ''),
-        name: String(row[nameCol] || ''),
+        ticker: String(row[rowTickerCol] || ''),
+        name: String(row[rowNameCol] || ''),
         amountKRW: Math.round(amountKRW),
         amountUSD,
         totalKRW,

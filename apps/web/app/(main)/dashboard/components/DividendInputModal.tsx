@@ -282,6 +282,8 @@ export function DividendInputModal() {
   // 원화 배당금 포맷된 문자열 상태
   const [formattedAmountKRW, setFormattedAmountKRW] = useState<string>('')
 
+  const isKoreanStock = (ticker: string) => /^\d{6}$/.test(ticker)
+
   const handleAmountKRWChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatNumberWithComma(e.target.value)
     setFormattedAmountKRW(formatted)
@@ -419,7 +421,12 @@ export function DividendInputModal() {
                   selectedCode={isSearchSelected ? singleForm.ticker : ''}
                   selectedName={isSearchSelected ? singleForm.name : ''}
                   onSelect={(code, name) => {
-                    setSingleForm((prev) => ({ ...prev, ticker: code, name }))
+                    setSingleForm((prev) => ({
+                      ...prev,
+                      ticker: code,
+                      name,
+                      amountUSD: isKoreanStock(code) ? 0 : prev.amountUSD,
+                    }))
                     setIsSearchSelected(true)
                   }}
                   onClear={() => {
@@ -477,7 +484,9 @@ export function DividendInputModal() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div
+                  className={`grid ${isKoreanStock(singleForm.ticker) ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}
+                >
                   <div className="space-y-2">
                     <Label htmlFor="amountKRW" className="text-sm font-medium text-foreground">
                       원화 배당금
@@ -498,25 +507,27 @@ export function DividendInputModal() {
                       </span>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="amountUSD" className="text-sm font-medium text-foreground">
-                      외화 배당금 ($)
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        id="amountUSD"
-                        type="number"
-                        step="0.01"
-                        value={singleForm.amountUSD || ''}
-                        onChange={(e) => updateSingleField('amountUSD', Number(e.target.value))}
-                        placeholder="0.00"
-                        className="h-12 text-right pr-8 font-medium"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        $
-                      </span>
+                  {!isKoreanStock(singleForm.ticker) && (
+                    <div className="space-y-2">
+                      <Label htmlFor="amountUSD" className="text-sm font-medium text-foreground">
+                        외화 배당금 ($)
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="amountUSD"
+                          type="number"
+                          step="0.01"
+                          value={singleForm.amountUSD || ''}
+                          onChange={(e) => updateSingleField('amountUSD', Number(e.target.value))}
+                          placeholder="0.00"
+                          className="h-12 text-right pr-8 font-medium"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                          $
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="pt-4 flex gap-3">

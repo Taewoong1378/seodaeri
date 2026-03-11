@@ -88,18 +88,17 @@ export async function saveDividend(input: DividendInput): Promise<SaveDividendRe
     const day = dateParts[2] || ''
 
     // 시트에 추가할 데이터
-    // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산(수식)
-    // 날짜 형식: YYYY/MM/DD (기존 시트 양식과 일치)
+    // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산(수식), K=계좌
+    // append API는 테이블 경계를 B:K로 감지하므로 (A열이 항상 비어있음) B:K 범위로 쓰기
     const formattedDate = input.date.replace(/-/g, '/')
     const rowData = [
-      '', // A: 빈 칸
       formattedDate, // B: 일자 (YYYY/MM/DD 형식)
       year, // C: 연도
       `${Number(month)}월`, // D: 월 (2월 형식, 02월 아님)
       `${Number(day)}일`, // E: 일 (3일 형식, 03일 아님)
       input.ticker, // F: 종목코드
       input.name || input.ticker, // G: 종목명
-      input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : '', // H: 원화 배당금
+      input.amountKRW > 0 ? input.amountKRW : '', // H: 원화 배당금
       input.amountUSD > 0 ? input.amountUSD : '', // I: 외화 배당금 (숫자만)
       '=INDIRECT("H"&ROW())+INDIRECT("I"&ROW())*GOOGLEFINANCE("usdkrw")', // J: 원화환산 (수식)
       input.account || '', // K: 계좌 유형
@@ -108,7 +107,7 @@ export async function saveDividend(input: DividendInput): Promise<SaveDividendRe
     // 기존 데이터 마지막 행 다음에 추가 (append API가 자동으로 마지막 행 감지)
     console.log('[saveDividend] Appending row:', rowData)
 
-    await appendSheetData(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!A:K", [rowData])
+    await appendSheetData(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!B:K", [rowData])
 
     console.log('[saveDividend] Success!')
 
@@ -203,25 +202,24 @@ export async function saveDividends(inputs: DividendInput[]): Promise<SaveDivide
     }
 
     // 모든 배당내역을 행 데이터로 변환
-    // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산(수식)
+    // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산(수식), K=계좌
+    // append API는 테이블 경계를 B:K로 감지하므로 (A열이 항상 비어있음) B:K 범위로 쓰기
     const rows = inputs.map((input) => {
       const dateParts = input.date.split('-')
       const year = dateParts[0] || ''
       const month = dateParts[1] || ''
       const day = dateParts[2] || ''
 
-      // 날짜 형식: YYYY/MM/DD (기존 시트 양식과 일치)
       const formattedDate = input.date.replace(/-/g, '/')
 
       return [
-        '', // A: 빈 칸
         formattedDate, // B: 일자 (YYYY/MM/DD 형식)
         year, // C: 연도
         `${Number(month)}월`, // D: 월 (2월 형식, 02월 아님)
         `${Number(day)}일`, // E: 일 (3일 형식, 03일 아님)
         input.ticker, // F: 종목코드
         input.name || input.ticker, // G: 종목명
-        input.amountKRW > 0 ? `₩${input.amountKRW.toLocaleString()}` : '', // H: 원화 배당금
+        input.amountKRW > 0 ? input.amountKRW : '', // H: 원화 배당금
         input.amountUSD > 0 ? input.amountUSD : '', // I: 외화 배당금 (숫자만)
         '=INDIRECT("H"&ROW())+INDIRECT("I"&ROW())*GOOGLEFINANCE("usdkrw")', // J: 원화환산 (수식)
         input.account || '', // K: 계좌 유형
@@ -229,7 +227,7 @@ export async function saveDividends(inputs: DividendInput[]): Promise<SaveDivide
     })
 
     // 한번에 여러 행 추가
-    await appendSheetData(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!A:K", rows)
+    await appendSheetData(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!B:K", rows)
 
     revalidatePath('/dashboard')
     revalidatePath('/transactions')
@@ -436,7 +434,7 @@ export async function deleteDividend(input: DeleteDividendInput): Promise<SaveDi
       }
 
       // 헤더를 찾지 못한 경우 기본값 사용
-      // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산
+      // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산, K=계좌
       if (dateCol === -1) dateCol = 1 // B열 (날짜)
       if (tickerCol === -1) tickerCol = 5 // F열 (종목코드)
       if (amountKRWCol === -1) amountKRWCol = 7 // H열 (원화 배당금)
@@ -469,9 +467,13 @@ export async function deleteDividend(input: DeleteDividendInput): Promise<SaveDi
 
         if (!rowDate) continue // 유효한 날짜 없으면 skip
 
-        const rowTicker = String(row[tickerCol] || '').trim()
-        const rowAmountKRW = parseSheetNumber(row[amountKRWCol])
-        const rowAmountUSD = parseSheetNumber(row[amountUSDCol])
+        // 행별 포맷 자동 감지: A열이 비어있으면 old format, 날짜가 있으면 new format
+        const isNewFormat = parseSheetDate(row[0]) !== null && String(row[0] || '').trim() !== ''
+        const offset = isNewFormat ? -1 : 0
+
+        const rowTicker = String(row[tickerCol + offset] || '').trim()
+        const rowAmountKRW = parseSheetNumber(row[amountKRWCol + offset])
+        const rowAmountUSD = parseSheetNumber(row[amountUSDCol + offset])
 
         // 처음 몇 개 행만 상세 로깅
         if (i <= 5) {
@@ -549,11 +551,10 @@ export async function updateDividend(input: UpdateDividendInput): Promise<SaveDi
     )
 
     if (rows && rows.length > 1) {
-      // 컬럼 인덱스 (기본값)
-      // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산, K=계좌유형
-      const tickerCol = 5 // F열 (종목코드)
-      const amountKRWCol = 7 // H열 (원화 배당금)
-      const amountUSDCol = 8 // I열 (외화 배당금)
+      // 컬럼 인덱스 (기본값 - old format: A=빈칸, B=날짜...)
+      const tickerColDefault = 5 // F열 (종목코드)
+      const amountKRWColDefault = 7 // H열 (원화 배당금)
+      const amountUSDColDefault = 8 // I열 (외화 배당금)
 
       // 매칭되는 행 찾기
       for (let i = 1; i < rows.length; i++) {
@@ -569,9 +570,13 @@ export async function updateDividend(input: UpdateDividendInput): Promise<SaveDi
 
         if (!rowDate) continue
 
-        const rowTicker = String(row[tickerCol] || '').trim()
-        const rowAmountKRW = parseSheetNumber(row[amountKRWCol])
-        const rowAmountUSD = parseSheetNumber(row[amountUSDCol])
+        // 행별 포맷 자동 감지: A열이 비어있으면 old format, 날짜가 있으면 new format
+        const isNewFormat = parseSheetDate(row[0]) !== null && String(row[0] || '').trim() !== ''
+        const offset = isNewFormat ? -1 : 0
+
+        const rowTicker = String(row[tickerColDefault + offset] || '').trim()
+        const rowAmountKRW = parseSheetNumber(row[amountKRWColDefault + offset])
+        const rowAmountUSD = parseSheetNumber(row[amountUSDColDefault + offset])
 
         if (
           rowDate === input.originalDate &&
@@ -588,18 +593,18 @@ export async function updateDividend(input: UpdateDividendInput): Promise<SaveDi
           const day = dateParts[2] || ''
 
           // 시트 업데이트
-          // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산(수식)
+          // 시트 구조: A=빈칸, B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화, I=외화, J=원화환산(수식), K=계좌
           // 날짜 형식: YYYY/MM/DD (기존 시트 양식과 일치)
           const formattedNewDate = input.newDate.replace(/-/g, '/')
           const newRowData = [
-            '', // A: 빈 칸
+            '', // A: 빈칸 (시트 템플릿 구조)
             formattedNewDate, // B: 날짜 (YYYY/MM/DD 형식)
             year, // C: 연도
             `${Number(month)}월`, // D: 월 (2월 형식, 02월 아님)
             `${Number(day)}일`, // E: 일 (3일 형식, 03일 아님)
             input.newTicker, // F: 종목코드
             input.newName || input.newTicker, // G: 종목명
-            input.newAmountKRW > 0 ? `₩${input.newAmountKRW.toLocaleString()}` : '', // H: 원화 배당금
+            input.newAmountKRW > 0 ? input.newAmountKRW : '', // H: 원화 배당금
             input.newAmountUSD > 0 ? input.newAmountUSD : '', // I: 외화 배당금 (숫자만)
             '=INDIRECT("H"&ROW())+INDIRECT("I"&ROW())*GOOGLEFINANCE("usdkrw")', // J: 원화환산 (수식)
             input.newAccount || '', // K: 계좌 유형
