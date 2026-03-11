@@ -9,7 +9,10 @@
     "start": "next start",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@repo/auth": "workspace:*",
@@ -34,11 +37,15 @@
     "@csstools/postcss-cascade-layers": "^5.0.2",
     "@repo/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4.1.17",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^22.15.21",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "autoprefixer": "^10.4.21",
+    "jsdom": "^28.1.0",
     "tailwindcss": "^4.1.17",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.0.18"
   }
 }

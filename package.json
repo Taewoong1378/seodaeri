@@ -24,11 +24,17 @@
     "check-types": "turbo run check-types",
     "clean": "turbo run clean && rm -rf node_modules",
     "db:generate": "pnpm --filter @repo/database generate",
-    "db:push": "pnpm --filter @repo/database push"
+    "db:push": "pnpm --filter @repo/database push",
+    "test": "turbo test",
+    "test:run": "turbo test:run"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
-    "turbo": "^2.5.4"
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "jsdom": "^28.1.0",
+    "turbo": "^2.5.4",
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "@google/genai": "^1.38.0"
