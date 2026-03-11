@@ -24,7 +24,7 @@ export default async function AdminDashboard() {
 }
 
 async function DashboardContent() {
-  const { users, holdings, transactions, snapshots, dividends, deposits } = await getDashboardData()
+  const { users, holdings, transactions, snapshots, stocks, dividends, deposits } = await getDashboardData()
 
   return (
     <div className="space-y-8">
@@ -72,7 +72,7 @@ async function DashboardContent() {
 
       {/* Section 8: 데이터 내보내기 */}
       <section>
-        <DataExport />
+        <DataExport holdings={holdings} stocks={stocks} />
       </section>
     </div>
   )
