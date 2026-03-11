@@ -310,21 +310,44 @@ export async function saveTransaction(transaction: OCRResult): Promise<SaveTrans
       if (transaction.type === 'DIVIDEND') {
         try {
           // 배당내역 탭에 추가
-          // "7. 배당내역" 탭: A=입금날짜, B=계좌구분, C=종목명, D=종목코드, E=통화, F=세전배당, G=세금, H=세후배당(원), I=세후배당($), J=비고
+          // "7. 배당내역" 실제 시트 구조: B=날짜, C=연도, D=월, E=일, F=종목코드, G=종목명, H=원화배당, I=외화배당, J=원화환산, K=계좌
           const isKorean = /^\d{6}$/.test(transaction.ticker)
-          await appendSheetData(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!A:J", [
-            [
-              transaction.date,
-              '일반 계좌', // 기본값
-              transaction.name || transaction.ticker,
-              transaction.ticker,
-              isKorean ? 'KRW' : 'USD',
-              '', // 세전배당 (알 수 없음)
-              '', // 세금 (알 수 없음)
-              isKorean ? transaction.price : '', // 세후배당(원)
-              isKorean ? '' : (transaction.price / 1400).toFixed(2), // 세후배당($) - KRW로 입력받았으므로 역산
-              'App에서 추가',
-            ],
+          const [year, month, day] = transaction.date.split('-')
+          const formattedDate = `${year}/${month}/${day}`
+
+          const rowData = [
+            formattedDate, // B: 날짜
+            year, // C: 연도
+            `${Number(month)}월`, // D: 월
+            `${Number(day)}일`, // E: 일
+            transaction.ticker, // F: 종목코드
+            transaction.name || transaction.ticker, // G: 종목명
+            isKorean ? transaction.price : '', // H: 원화 배당금 (숫자만)
+            isKorean ? '' : (transaction.price / 1400).toFixed(2), // I: 외화 배당금
+            '=INDIRECT("H"&ROW())+INDIRECT("I"&ROW())*GOOGLEFINANCE("usdkrw")', // J: 원화환산
+            '일반 계좌', // K: 계좌
+          ]
+
+          // findLastDividendDataRow와 동일 로직 (B열 기준 마지막 데이터 행 찾기)
+          const bRows = await fetchSheetData(
+            session.accessToken,
+            user.spreadsheet_id,
+            "'7. 배당내역'!B:B",
+          )
+          let lastRow = 4
+          if (bRows && bRows.length > 0) {
+            for (let i = bRows.length - 1; i >= 0; i--) {
+              const val = bRows[i]?.[0]
+              if (val !== undefined && val !== null && String(val).trim() !== '') {
+                lastRow = i + 1
+                break
+              }
+            }
+          }
+          const nextRow = lastRow + 1
+
+          await batchUpdateSheet(session.accessToken, user.spreadsheet_id, [
+            { range: `'7. 배당내역'!B${nextRow}:K${nextRow}`, values: [rowData] },
           ])
 
           sheetSynced = true

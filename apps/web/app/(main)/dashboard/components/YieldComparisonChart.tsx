@@ -121,15 +121,22 @@ function SingleBarChart({
   }
 
   const makeLabelRenderer = () => (props: any) => {
-    const { x, y, width, height, value, index } = props
+    const { x, y, width, height: barHeight, value, index } = props
     if (value === undefined || value === null) return null
     const entry = chartData[index]
     const color = getBarColor(entry?.name || '', value)
     const isNegative = value < 0
+    // 음수 바가 짧으면 (X축 레이블과 겹칠 수 있음) 바 위쪽에 표시
+    const labelY =
+      isNegative && Math.abs(barHeight) < 30
+        ? y - 5 // 바 위에 (0선 위)
+        : isNegative
+          ? y + Math.abs(barHeight) + labelFontSize + 2 // 바 아래
+          : y - 5 // 양수: 바 위
     return (
       <text
         x={x + width / 2}
-        y={isNegative ? y + Math.abs(height) + labelFontSize + 2 : y - 5}
+        y={labelY}
         fill={color}
         textAnchor="middle"
         fontSize={labelFontSize}
