@@ -1,8 +1,8 @@
-'use client';
+'use client'
 
-import type { JSX } from 'react';
-import { DividendByYearChart } from '../dashboard/components/DividendByYearChart';
-import { MonthlyProfitLossChart } from '../dashboard/components/MonthlyProfitLossChart';
+import type { JSX } from 'react'
+import { DividendByYearChart } from '../(main)/dashboard/components/DividendByYearChart'
+import { MonthlyProfitLossChart } from '../(main)/dashboard/components/MonthlyProfitLossChart'
 
 // Mock Data for Dividend Growth (고정값 - Hydration 오류 방지)
 const dividendData = {
@@ -21,7 +21,7 @@ const dividendData = {
     { month: '11', '2021': 62000, '2022': 108000, '2023': 178000, '2024': 272000 },
     { month: '12', '2021': 68000, '2022': 115000, '2023': 190000, '2024': 290000 },
   ],
-};
+}
 
 // Mock Data for Profit/Loss (고정값 - Hydration 오류 방지)
 const profitLossData = [
@@ -37,12 +37,10 @@ const profitLossData = [
   { month: '10월', profit: 2280000, loss: 140000 },
   { month: '11월', profit: 1780000, loss: 220000 },
   { month: '12월', profit: 2450000, loss: 160000 },
-];
+]
 
 export function LandingDividendChart(): JSX.Element {
-  return (
-    <DividendByYearChart data={dividendData} variant="landing" />
-  );
+  return <DividendByYearChart data={dividendData} variant="landing" />
 }
 
 export function LandingProfitLossChart(): JSX.Element {
@@ -50,5 +48,5 @@ export function LandingProfitLossChart(): JSX.Element {
     <div className="w-full bg-white rounded-xl p-4 shadow-sm">
       <MonthlyProfitLossChart data={profitLossData} variant="landing" />
     </div>
-  );
+  )
 }

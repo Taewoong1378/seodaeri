@@ -1,33 +1,33 @@
-import { auth, signOut } from '@repo/auth/server';
-import { Button } from '@repo/design-system/components/button';
-import { LogOut } from 'lucide-react';
-import Image from 'next/image';
-import { redirect } from 'next/navigation';
-import { checkSheetConnection } from '../actions/onboarding';
-import { BottomNav } from '../dashboard/components/BottomNav';
-import { OnboardingClient } from './OnboardingClient';
+import { auth, signOut } from '@repo/auth/server'
+import { Button } from '@repo/design-system/components/button'
+import { LogOut } from 'lucide-react'
+import Image from 'next/image'
+import { redirect } from 'next/navigation'
+import { BottomNav } from '../(main)/dashboard/components/BottomNav'
+import { checkSheetConnection } from '../actions/onboarding'
+import { OnboardingClient } from './OnboardingClient'
 
 export default async function OnboardingPage() {
-  const session = await auth();
+  const session = await auth()
 
   if (!session?.user) {
-    redirect('/login');
+    redirect('/login')
   }
 
   // 토큰 갱신 실패 시 재로그인 유도
-  if (session.error === "RefreshAccessTokenError") {
-    redirect("/login?error=token_expired");
+  if (session.error === 'RefreshAccessTokenError') {
+    redirect('/login?error=token_expired')
   }
 
   // 데모 계정은 온보딩 스킵하고 바로 대시보드로 (Play Store 심사용)
   if (session.isDemo) {
-    redirect('/dashboard');
+    redirect('/dashboard')
   }
 
   // 이미 시트가 연동되어 있거나 standalone 모드면 대시보드로
-  const { connected, isStandalone } = await checkSheetConnection();
+  const { connected, isStandalone } = await checkSheetConnection()
   if (connected || isStandalone) {
-    redirect('/dashboard');
+    redirect('/dashboard')
   }
 
   return (
@@ -38,11 +38,15 @@ export default async function OnboardingPage() {
         <div className="flex items-center gap-3">
           <form
             action={async () => {
-              'use server';
-              await signOut({ redirectTo: '/login' });
+              'use server'
+              await signOut({ redirectTo: '/login' })
             }}
           >
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
+            >
               <LogOut size={16} />
             </Button>
           </form>
@@ -66,9 +70,7 @@ export default async function OnboardingPage() {
             <h1 className="text-2xl font-bold text-foreground">
               환영합니다, {session.user.name?.split(' ')[0]}님!
             </h1>
-            <p className="text-muted-foreground">
-              굴림과 함께 투자기록을 시작해볼까요?
-            </p>
+            <p className="text-muted-foreground">굴림과 함께 투자기록을 시작해볼까요?</p>
           </div>
 
           <OnboardingClient
@@ -80,5 +82,5 @@ export default async function OnboardingPage() {
 
       <BottomNav />
     </div>
-  );
+  )
 }
