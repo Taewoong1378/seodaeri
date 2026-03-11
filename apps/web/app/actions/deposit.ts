@@ -194,7 +194,7 @@ export async function getAccountList(): Promise<string[]> {
   const supabase = createServiceClient()
 
   try {
-    const { user } = await resolveUser(session, 'spreadsheet_id')
+    const { user } = await resolveUser(session)
     if (!user?.spreadsheet_id) {
       return getDefaultAccounts()
     }
