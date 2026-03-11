@@ -4,7 +4,34 @@ import { auth } from '@repo/auth/server'
 import { createServiceClient } from '@repo/database/server'
 import { revalidatePath } from 'next/cache'
 import { getUSDKRWRate } from '../../lib/exchange-rate-api'
-import { appendSheetData, deleteSheetRow, fetchSheetData } from '../../lib/google-sheets'
+import {
+  batchUpdateSheet,
+  deleteSheetRow,
+  fetchSheetData,
+} from '../../lib/google-sheets'
+
+/**
+ * 배당내역 시트에서 마지막 데이터 행 번호를 찾습니다.
+ * J열의 ₩0 수식 등 빈 행을 무시하고, B열(날짜)에 실제 데이터가 있는 마지막 행을 반환합니다.
+ */
+async function findLastDividendDataRow(
+  accessToken: string,
+  spreadsheetId: string,
+): Promise<number> {
+  const rows = await fetchSheetData(accessToken, spreadsheetId, "'7. 배당내역'!B:B")
+  if (!rows || rows.length === 0) return 4 // 헤더가 row 4이므로 기본값
+
+  // B열에서 마지막으로 데이터가 있는 행 찾기 (빈 행 무시)
+  let lastRow = 4
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const val = rows[i]?.[0]
+    if (val !== undefined && val !== null && String(val).trim() !== '') {
+      lastRow = i + 1 // 1-based row number
+      break
+    }
+  }
+  return lastRow
+}
 import { resolveUser } from './utils/resolve-user'
 
 export interface DividendInput {
@@ -104,10 +131,14 @@ export async function saveDividend(input: DividendInput): Promise<SaveDividendRe
       input.account || '', // K: 계좌 유형
     ]
 
-    // 기존 데이터 마지막 행 다음에 추가 (append API가 자동으로 마지막 행 감지)
-    console.log('[saveDividend] Appending row:', rowData)
+    // 마지막 데이터 행을 찾아서 그 다음 행에 직접 쓰기 (₩0 수식 행 무시)
+    const lastRow = await findLastDividendDataRow(session.accessToken, user.spreadsheet_id)
+    const nextRow = lastRow + 1
+    console.log('[saveDividend] Writing to row:', nextRow, 'data:', rowData)
 
-    await appendSheetData(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!B:K", [rowData])
+    await batchUpdateSheet(session.accessToken, user.spreadsheet_id, [
+      { range: `'7. 배당내역'!B${nextRow}:K${nextRow}`, values: [rowData] },
+    ])
 
     console.log('[saveDividend] Success!')
 
@@ -226,8 +257,13 @@ export async function saveDividends(inputs: DividendInput[]): Promise<SaveDivide
       ]
     })
 
-    // 한번에 여러 행 추가
-    await appendSheetData(session.accessToken, user.spreadsheet_id, "'7. 배당내역'!B:K", rows)
+    // 마지막 데이터 행을 찾아서 그 다음 행부터 직접 쓰기 (₩0 수식 행 무시)
+    const lastRow = await findLastDividendDataRow(session.accessToken, user.spreadsheet_id)
+    const data = rows.map((row, idx) => ({
+      range: `'7. 배당내역'!B${lastRow + 1 + idx}:K${lastRow + 1 + idx}`,
+      values: [row],
+    }))
+    await batchUpdateSheet(session.accessToken, user.spreadsheet_id, data)
 
     revalidatePath('/dashboard')
     revalidatePath('/transactions')
