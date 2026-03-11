@@ -15,6 +15,8 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@googleapis/drive": "^20.1.0",
+    "@googleapis/sheets": "^13.0.1",
     "@repo/auth": "workspace:*",
     "@repo/database": "workspace:*",
     "@repo/design-system": "workspace:*",
@@ -23,7 +25,7 @@
     "@tanstack/react-query-devtools": "^5.91.1",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
-    "googleapis": "^144.0.0",
+    "google-auth-library": "^10.6.1",
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.475.0",
     "next": "^16.0.7",

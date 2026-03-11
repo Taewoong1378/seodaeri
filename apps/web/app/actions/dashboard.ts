@@ -107,7 +107,7 @@ export interface DashboardData {
   performanceComparison: PerformanceComparisonData[]
   // 계좌 추세 (5. 계좌내역(누적) 탭에서 - 누적입금액 vs 계좌총액)
   accountTrend: AccountTrendData[]
-  // 월별 손익 (5. 계좌내역(누적) 탭 원본 데이터 E:J열)
+  // 월별 손익 (5. 계좌내역(누적) 탭 원본 데이터 E:Y열)
   monthlyProfitLoss: MonthlyProfitLoss[]
   // 수익률 비교 바 차트 (5. 계좌내역(누적) 탭에서)
   yieldComparison: YieldComparisonData | null
@@ -203,13 +203,13 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       dividendRows,
       portfolioRows,
       performanceRows,
-      profitLossRows,
       depositDateRows,
       accountHistoryRows,
       historicalRates,
       marketData,
       yieldCell,
       currentRate,
+      altPricesResult,
     ] = await Promise.all([
       fetchSheetDataCached(
         session.accessToken,
@@ -226,17 +226,10 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         "'5. 계좌내역(누적)'!G17:AB200",
         user.id,
       ),
-      // 월별 손익 데이터는 "5. 계좌내역(누적)" 시트 원본 입력 데이터 (E:J열)
-      fetchSheetDataCached(
-        session.accessToken,
-        user.spreadsheet_id,
-        "'5. 계좌내역(누적)'!E:J",
-        user.id,
-      ),
       // 투자 일수 계산용 - 6. 입금내역의 B열 (날짜)
       fetchSheetDataCached(session.accessToken, user.spreadsheet_id, "'6. 입금내역'!B:B", user.id),
       // 총자산/원금/수익률 계산용 - 5. 계좌내역(누적)의 E:Y열
-      // E=연도, F=월, H=계좌총액, I=입금액, K=월수익률, Y=누적수익률
+      // E=연도, F=월, H=계좌총액, I=입금액, K=월수익률, J=월수익, Y=누적수익률
       fetchSheetDataCached(
         session.accessToken,
         user.spreadsheet_id,
@@ -256,6 +249,11 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       ),
       // 현재 환율 (시트 데이터와 병렬 조회)
       getUSDKRWRate(),
+      // 기타자산(암호화폐/금) 현재가 (시트 데이터와 병렬 조회)
+      getAlternativeAssetPrices().catch((error) => {
+        console.error('[Dashboard] Alternative asset price fetch failed:', error)
+        return []
+      }),
     ])
     const enrichedRows = performanceRows
       ? enrichRowsWithExchangeRates(performanceRows, historicalRates, currentRate)
@@ -315,21 +313,16 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     // 기타자산(암호화폐/금) 현재가 오버라이드
     // 시트의 수식이 BTC 등의 현재가를 알 수 없으므로 스프레드시트 API로 대체
     const altItems = portfolio.filter((item) => ALTERNATIVE_ASSET_CODES.has(item.ticker))
-    if (altItems.length > 0) {
-      try {
-        const altPrices = await getAlternativeAssetPrices()
-        for (const item of altItems) {
-          const altPrice = altPrices.find((a) => a.code === item.ticker)
-          if (altPrice && altPrice.price > 0) {
-            item.currentPrice = altPrice.price
-            item.totalValue = altPrice.price * item.quantity
-            const invested = item.avgPrice * item.quantity
-            item.profit = item.totalValue - invested
-            item.yieldPercent = invested > 0 ? (item.profit / invested) * 100 : 0
-          }
+    if (altItems.length > 0 && altPricesResult.length > 0) {
+      for (const item of altItems) {
+        const altPrice = altPricesResult.find((a) => a.code === item.ticker)
+        if (altPrice && altPrice.price > 0) {
+          item.currentPrice = altPrice.price
+          item.totalValue = altPrice.price * item.quantity
+          const invested = item.avgPrice * item.quantity
+          item.profit = item.totalValue - invested
+          item.yieldPercent = invested > 0 ? (item.profit / invested) * 100 : 0
         }
-      } catch (error) {
-        console.error('[Dashboard] Alternative asset price override failed:', error)
       }
     }
 
@@ -655,9 +648,9 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     // 계좌 추세 (위에서 미리 파싱한 결과 재사용)
     const accountTrend = parsedAccountTrend
 
-    // 월별 손익 파싱
-    const monthlyProfitLoss: MonthlyProfitLoss[] = profitLossRows
-      ? parseMonthlyProfitLoss(profitLossRows)
+    // 월별 손익 파싱 (accountHistoryRows는 E:Y 범위로 E:J의 상위집합; 인덱스 0,1,5 동일)
+    const monthlyProfitLoss: MonthlyProfitLoss[] = accountHistoryRows
+      ? parseMonthlyProfitLoss(accountHistoryRows)
       : []
 
     // 수익률 비교 바 차트 데이터 파싱 (같은 performanceRows에서)

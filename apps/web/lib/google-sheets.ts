@@ -1,4 +1,6 @@
-import { google } from 'googleapis'
+import { drive } from '@googleapis/drive'
+import { sheets } from '@googleapis/sheets'
+import { OAuth2Client } from 'google-auth-library'
 
 // 서대리 투자기록시트 필수 탭 목록
 const REQUIRED_SHEET_TABS = [
@@ -25,14 +27,14 @@ export async function validateSheetFormat(
 ): Promise<SheetValidationResult> {
   console.log('[validateSheetFormat] Validating spreadsheet:', spreadsheetId)
 
-  const auth = new google.auth.OAuth2()
+  const auth = new OAuth2Client()
   auth.setCredentials({ access_token: accessToken })
 
-  const sheets = google.sheets({ version: 'v4', auth })
+  const sheetsClient = sheets({ version: 'v4', auth })
 
   try {
     // 스프레드시트의 모든 시트 목록 가져오기
-    const spreadsheet = await sheets.spreadsheets.get({
+    const spreadsheet = await sheetsClient.spreadsheets.get({
       spreadsheetId,
       fields: 'sheets(properties(title))',
     })
@@ -119,14 +121,14 @@ export async function findSeodaeriSheet(
 ): Promise<{ id: string; name: string } | null> {
   console.log('[findSeodaeriSheet] Searching for 서대리 sheet...')
 
-  const auth = new google.auth.OAuth2()
+  const auth = new OAuth2Client()
   auth.setCredentials({ access_token: accessToken })
 
-  const drive = google.drive({ version: 'v3', auth })
+  const driveClient = drive({ version: 'v3', auth })
 
   try {
     // "서대리" 이름이 포함된 스프레드시트 검색
-    const response = await drive.files.list({
+    const response = await driveClient.files.list({
       q: "mimeType='application/vnd.google-apps.spreadsheet' and name contains '서대리' and trashed=false",
       fields: 'files(id, name)',
       orderBy: 'modifiedTime desc',
@@ -169,10 +171,10 @@ export async function copyMasterTemplate(
     userName,
   })
 
-  const auth = new google.auth.OAuth2()
+  const auth = new OAuth2Client()
   auth.setCredentials({ access_token: accessToken })
 
-  const drive = google.drive({ version: 'v3', auth })
+  const driveClient = drive({ version: 'v3', auth })
 
   if (!MASTER_TEMPLATE_ID) {
     throw new Error(
@@ -183,7 +185,7 @@ export async function copyMasterTemplate(
   try {
     const newName = `서대리 투자기록 - ${userName || '내 포트폴리오'}`
 
-    const response = await drive.files.copy({
+    const response = await driveClient.files.copy({
       fileId: MASTER_TEMPLATE_ID,
       requestBody: {
         name: newName,
@@ -214,13 +216,13 @@ export async function copyMasterTemplate(
 export async function fetchSheetData(accessToken: string, spreadsheetId: string, range: string) {
   console.log('[fetchSheetData] Request:', { spreadsheetId, range, hasToken: !!accessToken })
 
-  const auth = new google.auth.OAuth2()
+  const auth = new OAuth2Client()
   auth.setCredentials({ access_token: accessToken })
 
-  const sheets = google.sheets({ version: 'v4', auth })
+  const sheetsClient = sheets({ version: 'v4', auth })
 
   try {
-    const response = await sheets.spreadsheets.values.get({
+    const response = await sheetsClient.spreadsheets.values.get({
       spreadsheetId,
       range,
       valueRenderOption: 'UNFORMATTED_VALUE', // 소수점 등 원본 값 그대로 반환
@@ -257,13 +259,13 @@ export async function appendSheetData(
 ) {
   console.log('[appendSheetData] Appending to:', { spreadsheetId, range, rowCount: values.length })
 
-  const auth = new google.auth.OAuth2()
+  const auth = new OAuth2Client()
   auth.setCredentials({ access_token: accessToken })
 
-  const sheets = google.sheets({ version: 'v4', auth })
+  const sheetsClient = sheets({ version: 'v4', auth })
 
   try {
-    const response = await sheets.spreadsheets.values.append({
+    const response = await sheetsClient.spreadsheets.values.append({
       spreadsheetId,
       range,
       valueInputOption: 'USER_ENTERED',
@@ -295,13 +297,13 @@ export async function updateSheetCell(
 ) {
   console.log('[updateSheetCell] Request:', { spreadsheetId, range, value })
 
-  const auth = new google.auth.OAuth2()
+  const auth = new OAuth2Client()
   auth.setCredentials({ access_token: accessToken })
 
-  const sheets = google.sheets({ version: 'v4', auth })
+  const sheetsClient = sheets({ version: 'v4', auth })
 
   try {
-    const response = await sheets.spreadsheets.values.update({
+    const response = await sheetsClient.spreadsheets.values.update({
       spreadsheetId,
       range,
       valueInputOption: 'USER_ENTERED',
@@ -335,13 +337,13 @@ export async function batchUpdateSheet(
 ) {
   console.log('[batchUpdateSheet] Request:', { spreadsheetId, dataCount: data.length })
 
-  const auth = new google.auth.OAuth2()
+  const auth = new OAuth2Client()
   auth.setCredentials({ access_token: accessToken })
 
-  const sheets = google.sheets({ version: 'v4', auth })
+  const sheetsClient = sheets({ version: 'v4', auth })
 
   try {
-    const response = await sheets.spreadsheets.values.batchUpdate({
+    const response = await sheetsClient.spreadsheets.values.batchUpdate({
       spreadsheetId,
       requestBody: {
         valueInputOption: 'USER_ENTERED',
@@ -385,10 +387,10 @@ export async function insertRowInDateOrder(
 ): Promise<boolean> {
   console.log('[insertRowInDateOrder] Starting:', { sheetName, newDate })
 
-  const auth = new google.auth.OAuth2()
+  const auth = new OAuth2Client()
   auth.setCredentials({ access_token: accessToken })
 
-  const sheets = google.sheets({ version: 'v4', auth })
+  const sheetsClient = sheets({ version: 'v4', auth })
 
   try {
     // 1. 기존 데이터 읽기
@@ -426,7 +428,7 @@ export async function insertRowInDateOrder(
     const startCol = rangeMatch[2]
     const endCol = rangeMatch[3]
 
-    await sheets.spreadsheets.values.update({
+    await sheetsClient.spreadsheets.values.update({
       spreadsheetId,
       range: `'${sheetName}'!${startCol}${targetRow}:${endCol}${targetRow}`,
       valueInputOption: 'USER_ENTERED',
@@ -456,14 +458,14 @@ export async function insertSheetRow(
 ) {
   console.log('[insertSheetRow] Inserting row at:', { spreadsheetId, sheetName, rowIndex })
 
-  const auth = new google.auth.OAuth2()
+  const auth = new OAuth2Client()
   auth.setCredentials({ access_token: accessToken })
 
-  const sheets = google.sheets({ version: 'v4', auth })
+  const sheetsClient = sheets({ version: 'v4', auth })
 
   try {
     // 먼저 시트 ID를 가져와야 함 (시트 이름 → 시트 ID)
-    const spreadsheet = await sheets.spreadsheets.get({
+    const spreadsheet = await sheetsClient.spreadsheets.get({
       spreadsheetId,
       fields: 'sheets(properties(sheetId,title))',
     })
@@ -488,7 +490,7 @@ export async function insertSheetRow(
     }
 
     // 행 삽입 요청
-    const response = await sheets.spreadsheets.batchUpdate({
+    const response = await sheetsClient.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {
         requests: [
@@ -528,14 +530,14 @@ export async function deleteSheetRow(
 ) {
   console.log('[deleteSheetRow] Deleting row:', { spreadsheetId, sheetName, rowIndex })
 
-  const auth = new google.auth.OAuth2()
+  const auth = new OAuth2Client()
   auth.setCredentials({ access_token: accessToken })
 
-  const sheets = google.sheets({ version: 'v4', auth })
+  const sheetsClient = sheets({ version: 'v4', auth })
 
   try {
     // 먼저 시트 ID를 가져와야 함 (시트 이름 → 시트 ID)
-    const spreadsheet = await sheets.spreadsheets.get({
+    const spreadsheet = await sheetsClient.spreadsheets.get({
       spreadsheetId,
       fields: 'sheets(properties(sheetId,title))',
     })
@@ -586,7 +588,7 @@ export async function deleteSheetRow(
 
     // 행 삭제 요청
     console.log('[deleteSheetRow] Sending batchUpdate request to delete row', rowIndex)
-    const response = await sheets.spreadsheets.batchUpdate({
+    const response = await sheetsClient.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {
         requests: [

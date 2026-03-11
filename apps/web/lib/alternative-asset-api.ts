@@ -9,6 +9,8 @@
  * - Row 9: 금(1g)
  */
 
+import { parseCSVLine } from './utils/parse-csv'
+
 const SPREADSHEET_ID = '1mhRnA1oB2OizL-jRtbBV-b2evYVJooMaVGyWIgQeBMM'
 const SHEET_GID = '475830661'
 
@@ -39,32 +41,6 @@ const ASSET_DEFINITIONS: Array<{
   { code: 'SOL_CRYPTO', name: '솔라나', keywords: ['솔라나', 'solana', 'sol'] },
   { code: 'GOLD', name: '금(1g)', keywords: ['금', 'gold'] },
 ]
-
-/**
- * CSV 행을 따옴표를 고려하여 필드로 분리
- * "1,069.02" 같은 따옴표 안의 쉼표를 필드 구분자로 처리하지 않음
- */
-function parseCSVLine(line: string): string[] {
-  const fields: string[] = []
-  let current = ''
-  let inQuotes = false
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i]
-
-    if (char === '"') {
-      inQuotes = !inQuotes
-    } else if (char === ',' && !inQuotes) {
-      fields.push(current.trim())
-      current = ''
-    } else {
-      current += char
-    }
-  }
-  fields.push(current.trim())
-
-  return fields
-}
 
 /**
  * column B의 이름 문자열로 자산 정의를 찾기
