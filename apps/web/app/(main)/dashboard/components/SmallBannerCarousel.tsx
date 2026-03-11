@@ -20,6 +20,7 @@ function SmallBannerSlide({ title, image, link }: SmallBannerItem) {
             src={image}
             alt={title}
             fill
+            sizes="(max-width: 500px) 100vw, 500px"
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         </div>

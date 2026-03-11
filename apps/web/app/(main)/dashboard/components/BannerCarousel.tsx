@@ -55,6 +55,7 @@ export function BannerCarousel(): ReactElement | null {
                       src={banner.image}
                       alt={banner.title}
                       fill
+                      sizes="(max-width: 500px) 100vw, 500px"
                       className="object-cover"
                       priority={banner.id === 1}
                     />
@@ -66,6 +67,7 @@ export function BannerCarousel(): ReactElement | null {
                     src={banner.image}
                     alt={banner.title}
                     fill
+                    sizes="(max-width: 500px) 100vw, 500px"
                     className="object-cover"
                     priority={banner.id === 1}
                   />

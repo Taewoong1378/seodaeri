@@ -32,7 +32,13 @@ export function BenefitBanner() {
           <div
             className={`relative w-14 h-14 rounded-xl overflow-hidden ring-2 ${bannerData.highlightColor.replace('text-', 'ring-')}/40 shadow-lg shrink-0`}
           >
-            <Image src={bannerData.image} alt={bannerData.title} fill className="object-cover" />
+            <Image
+              src={bannerData.image}
+              alt={bannerData.title}
+              fill
+              sizes="56px"
+              className="object-cover"
+            />
           </div>
 
           {/* 텍스트 */}
