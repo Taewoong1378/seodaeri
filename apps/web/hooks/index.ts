@@ -1,7 +1,6 @@
 // Dashboard hooks
 export {
   useDashboard,
-  useSuspenseDashboard,
   useSyncPortfolio,
   useInvalidateDashboard,
   defaultDashboardData,

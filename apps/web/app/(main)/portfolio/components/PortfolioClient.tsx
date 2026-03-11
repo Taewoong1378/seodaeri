@@ -14,13 +14,23 @@ import {
   TrendingDown,
   TrendingUp,
 } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import { useState } from 'react'
 import { queryKeys } from '../../../../lib/query-client'
 import type { DashboardData } from '../../../actions/dashboard'
 import { deleteHolding } from '../../../actions/holding'
 import { ConfirmDialog } from '../../transactions/components/ConfirmDialog'
 import { type HoldingEditData, HoldingInputModal } from './HoldingInputModal'
-import { PortfolioTreemap } from './PortfolioTreemap'
+
+const PortfolioTreemap = dynamic(
+  () => import('./PortfolioTreemap').then((mod) => mod.PortfolioTreemap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="animate-pulse rounded-lg bg-gray-100" style={{ height: '200px' }} />
+    ),
+  },
+)
 
 interface PortfolioItem {
   ticker: string

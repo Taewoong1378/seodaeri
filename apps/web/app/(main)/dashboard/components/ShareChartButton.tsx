@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from '@repo/design-system/components/dialog'
 import { bridge } from '@repo/shared-utils/bridge'
-import { toPng } from 'html-to-image'
 import { Monitor, Share2, Smartphone } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { type RefObject, useEffect, useState } from 'react'
@@ -30,6 +29,7 @@ const CAPTURE_STYLE = {
 
 /** 차트를 PNG로 캡처 */
 async function captureChart(element: HTMLDivElement, forNative: boolean): Promise<string> {
+  const { toPng } = await import('html-to-image')
   return toPng(element, {
     backgroundColor: '#ffffff',
     pixelRatio: forNative ? 1.5 : 2,

@@ -3,33 +3,95 @@
 import { Card, CardContent } from '@repo/design-system/components/card'
 import { BarChart3, Coins } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useDashboard, useGoalSettings } from '../../../../hooks'
 import { getCarouselBannersAsSmall, getSmallBanners } from '../../../../lib/banner-data'
-import { AccountTrendChart } from './AccountTrendChart'
-import { CumulativeDividendChart } from './CumulativeDividendChart'
 import { DashboardSkeleton } from './DashboardSkeleton'
 import { DashboardTabs } from './DashboardTabs'
-import { DividendByYearChart } from './DividendByYearChart'
-import { DividendChart } from './DividendChart'
-import { GoalSettingModal } from './GoalSettingModal'
 import { HeroCard } from './HeroCard'
-import { MajorIndexYieldComparisonChart } from './MajorIndexYieldComparisonChart'
-import { MonthlyProfitLossChart } from './MonthlyProfitLossChart'
-import { MonthlyYieldComparisonChart } from './MonthlyYieldComparisonChart'
-import { MonthlyYieldComparisonDollarAppliedChart } from './MonthlyYieldComparisonDollarAppliedChart'
-import { PerformanceComparisonChart } from './PerformanceComparisonChart'
-import { PortfolioDonutChart } from './PortfolioDonutChart'
-import { PortfolioHoldingsChart } from './PortfolioHoldingsChart'
-import { RollingAverageDividendChart } from './RollingAverageDividendChart'
 import { SmallBanner } from './SmallBanner'
-import { SmallBannerCarousel } from './SmallBannerCarousel'
-import { YearlyDividendChart } from './YearlyDividendChart'
-import {
-  AnnualizedYieldComparisonChart,
-  CumulativeYieldComparisonChart,
-} from './YieldComparisonChart'
+
+function ChartSkeleton({ height = 200 }: { height?: number }) {
+  return <div className="animate-pulse rounded-lg bg-gray-100" style={{ height: `${height}px` }} />
+}
+
+const chartLoading = { loading: () => <ChartSkeleton /> }
+const tallChartLoading = { loading: () => <ChartSkeleton height={300} /> }
+
+const AccountTrendChart = dynamic(
+  () => import('./AccountTrendChart').then((mod) => mod.AccountTrendChart),
+  { ssr: false, ...chartLoading },
+)
+const CumulativeDividendChart = dynamic(
+  () => import('./CumulativeDividendChart').then((mod) => mod.CumulativeDividendChart),
+  { ssr: false, ...chartLoading },
+)
+const DividendByYearChart = dynamic(
+  () => import('./DividendByYearChart').then((mod) => mod.DividendByYearChart),
+  { ssr: false, ...chartLoading },
+)
+const DividendChart = dynamic(() => import('./DividendChart').then((mod) => mod.DividendChart), {
+  ssr: false,
+  ...chartLoading,
+})
+const GoalSettingModal = dynamic(
+  () => import('./GoalSettingModal').then((mod) => mod.GoalSettingModal),
+  { ssr: false, ...chartLoading },
+)
+const MajorIndexYieldComparisonChart = dynamic(
+  () =>
+    import('./MajorIndexYieldComparisonChart').then((mod) => mod.MajorIndexYieldComparisonChart),
+  { ssr: false, ...chartLoading },
+)
+const MonthlyProfitLossChart = dynamic(
+  () => import('./MonthlyProfitLossChart').then((mod) => mod.MonthlyProfitLossChart),
+  { ssr: false, ...chartLoading },
+)
+const MonthlyYieldComparisonChart = dynamic(
+  () => import('./MonthlyYieldComparisonChart').then((mod) => mod.MonthlyYieldComparisonChart),
+  { ssr: false, ...chartLoading },
+)
+const MonthlyYieldComparisonDollarAppliedChart = dynamic(
+  () =>
+    import('./MonthlyYieldComparisonDollarAppliedChart').then(
+      (mod) => mod.MonthlyYieldComparisonDollarAppliedChart,
+    ),
+  { ssr: false, ...chartLoading },
+)
+const PerformanceComparisonChart = dynamic(
+  () => import('./PerformanceComparisonChart').then((mod) => mod.PerformanceComparisonChart),
+  { ssr: false, ...chartLoading },
+)
+const PortfolioDonutChart = dynamic(
+  () => import('./PortfolioDonutChart').then((mod) => mod.PortfolioDonutChart),
+  { ssr: false, ...chartLoading },
+)
+const PortfolioHoldingsChart = dynamic(
+  () => import('./PortfolioHoldingsChart').then((mod) => mod.PortfolioHoldingsChart),
+  { ssr: false, ...chartLoading },
+)
+const RollingAverageDividendChart = dynamic(
+  () => import('./RollingAverageDividendChart').then((mod) => mod.RollingAverageDividendChart),
+  { ssr: false, ...chartLoading },
+)
+const SmallBannerCarousel = dynamic(
+  () => import('./SmallBannerCarousel').then((mod) => mod.SmallBannerCarousel),
+  { ssr: false, ...chartLoading },
+)
+const YearlyDividendChart = dynamic(
+  () => import('./YearlyDividendChart').then((mod) => mod.YearlyDividendChart),
+  { ssr: false, ...chartLoading },
+)
+const CumulativeYieldComparisonChart = dynamic(
+  () => import('./YieldComparisonChart').then((mod) => mod.CumulativeYieldComparisonChart),
+  { ssr: false, ...chartLoading },
+)
+const AnnualizedYieldComparisonChart = dynamic(
+  () => import('./YieldComparisonChart').then((mod) => mod.AnnualizedYieldComparisonChart),
+  { ssr: false, ...chartLoading },
+)
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('ko-KR').format(Math.round(amount))
