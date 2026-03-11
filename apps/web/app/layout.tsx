@@ -1,9 +1,18 @@
 import { SessionProvider } from '@repo/auth/providers'
 import { Toaster } from '@repo/design-system'
 import type { Metadata, Viewport } from 'next'
+import { Noto_Sans_KR } from 'next/font/google'
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '../lib/constants'
 import { QueryProvider } from '../lib/query-client'
 import './globals.css'
+
+const notoSansKR = Noto_Sans_KR({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  preload: true,
+  variable: '--font-noto-sans-kr',
+})
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -98,8 +107,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ko">
-      <body className="overscroll-none bg-[#F5F5F5]" style={{ backgroundColor: '#F5F5F5' }}>
+    <html lang="ko" className={notoSansKR.variable}>
+      <body
+        className={`overscroll-none bg-[#F5F5F5] ${notoSansKR.className}`}
+        style={{ backgroundColor: '#F5F5F5' }}
+      >
         <SessionProvider>
           <QueryProvider>
             {children}
