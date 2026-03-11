@@ -45,12 +45,29 @@ export async function getPortfolioSnapshots(userIds: string[]) {
 
 export async function getStocks() {
   const supabase = createServiceClient()
-  const { data, error } = await supabase
-    .from('stocks')
-    .select('*')
-    .eq('is_active', true)
-  if (error) throw error
-  return data ?? []
+  // stocks 테이블은 수만 행 가능 — code만 가져오고 페이지네이션
+  const allStocks: { code: string }[] = []
+  const pageSize = 1000
+  let offset = 0
+  let hasMore = true
+
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from('stocks')
+      .select('code')
+      .eq('is_active', true)
+      .range(offset, offset + pageSize - 1)
+    if (error) throw error
+    if (data && data.length > 0) {
+      allStocks.push(...data)
+      offset += pageSize
+      hasMore = data.length === pageSize
+    } else {
+      hasMore = false
+    }
+  }
+
+  return allStocks
 }
 
 export async function getDividends(userIds: string[]) {

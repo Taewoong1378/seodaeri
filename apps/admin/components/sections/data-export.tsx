@@ -3,11 +3,10 @@ import { CsvDownloadButton } from '@/components/csv-download-button'
 import type { Database } from '@repo/database'
 
 type Holding = Database['public']['Tables']['holdings']['Row']
-type Stock = Database['public']['Tables']['stocks']['Row']
 
 interface DataExportProps {
   holdings: Holding[]
-  stocks: Stock[]
+  stocks: { code: string }[]
 }
 
 // 대안 자산 / 사용자 커스텀 입력 (stocks 테이블에 없는 게 정상)
