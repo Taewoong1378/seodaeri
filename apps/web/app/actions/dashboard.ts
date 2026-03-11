@@ -1307,6 +1307,34 @@ async function getStandaloneDashboardData(
       rowIndex: index + 9, // standalone에서는 가상 rowIndex
     }));
 
+    // 1-b. Standalone 포트폴리오 스냅샷 저장
+    if (portfolio.length > 0) {
+      let totalAsset = 0;
+      let totalInvested = 0;
+      for (const item of portfolio) {
+        totalAsset += item.totalValue;
+        totalInvested += item.avgPrice * item.quantity;
+      }
+      const totalProfit = totalAsset - totalInvested;
+      const yieldPercent =
+        totalInvested > 0
+          ? ((totalAsset - totalInvested) / totalInvested) * 100
+          : 0;
+      const today = new Date().toISOString().split("T")[0] as string;
+
+      await supabase.from("portfolio_snapshots").upsert(
+        {
+          user_id: userId,
+          snapshot_date: today,
+          total_asset: Math.round(totalAsset),
+          total_invested: Math.round(totalInvested),
+          total_profit: Math.round(totalProfit),
+          yield_percent: Number(yieldPercent.toFixed(2)),
+        },
+        { onConflict: "user_id,snapshot_date" },
+      );
+    }
+
     // 2. 대시보드 요약 조회
     const summary = await provider.getDashboardSummary(userId);
 

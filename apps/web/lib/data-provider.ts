@@ -388,6 +388,26 @@ export class StandaloneDataProvider implements DataProvider {
       }
     }
 
+    // 최종 재시도: 여전히 가격 없는 종목에 대해 개별 KIS API 재호출 (2회 재시도)
+    const finalMissing = allTickers.filter(
+      (t) => !prices.has(t) && !ALTERNATIVE_ASSET_CODES.has(t),
+    );
+    if (finalMissing.length > 0) {
+      console.log(
+        `[StandaloneProvider] Final retry for ${finalMissing.length} tickers: ${finalMissing.join(", ")}`,
+      );
+      for (const ticker of finalMissing) {
+        const result = await getStockPrices([ticker]);
+        const price = result.get(ticker);
+        if (price && price.price > 0) {
+          prices.set(ticker, price);
+          console.log(
+            `[StandaloneProvider] Final retry success: ${ticker} = ${price.price}`,
+          );
+        }
+      }
+    }
+
     // 환율 조회
     const exchangeRate = await getUSDKRWRate();
 
@@ -424,14 +444,15 @@ export class StandaloneDataProvider implements DataProvider {
       }
 
       const priceData = prices.get(holding.ticker);
-      // 기타자산(암호화폐/금)은 avg_price를 현재가 폴백으로 사용하지 않음
-      // avg_price가 오래되거나 잘못된 값일 경우 현재가로 노출되는 버그 방지
       const isAltAsset = ALTERNATIVE_ASSET_CODES.has(holding.ticker);
+      // 가격을 못 가져온 경우: 주식은 avg_price 폴백 (표시용), 기타자산은 0
+      // 주의: avg_price 폴백 시 수익률은 0%로 표시됨 (가격 미조회 상태)
       const currentPrice =
         priceData?.price || (isAltAsset ? 0 : holding.avg_price || 0);
-      if (!priceData?.price && !isAltAsset && holding.avg_price) {
+      const priceIsStale = !priceData?.price && !isAltAsset;
+      if (priceIsStale) {
         console.warn(
-          `[Portfolio] No live price for ${holding.ticker}, falling back to avgPrice=${holding.avg_price}`,
+          `[Portfolio] No live price for ${holding.ticker}, falling back to avgPrice=${holding.avg_price} (yield will be 0%)`,
         );
       }
       const currency =

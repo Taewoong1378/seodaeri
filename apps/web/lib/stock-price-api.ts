@@ -389,7 +389,7 @@ export function isKoreanStock(ticker: string): boolean {
 /**
  * 단일 종목 현재가 조회
  */
-export async function getStockPrice(ticker: string): Promise<StockPrice | null> {
+export async function getStockPrice(ticker: string, retryCount = 1): Promise<StockPrice | null> {
   // 1. 캐시 확인
   const cached = getFromCache(ticker);
   if (cached) {
@@ -397,22 +397,31 @@ export async function getStockPrice(ticker: string): Promise<StockPrice | null> 
     return cached;
   }
 
-  // 2. API 호출
-  let result: StockPrice | null = null;
+  // 2. API 호출 (실패 시 재시도)
+  for (let attempt = 0; attempt <= retryCount; attempt++) {
+    if (attempt > 0) {
+      console.log(`[StockPrice] Retry ${attempt}/${retryCount} for ${ticker}...`);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
 
-  if (isKoreanStock(ticker)) {
-    result = await fetchKISPrice(ticker);
-  } else {
-    result = await fetchKISOverseasPrice(ticker);
+    let result: StockPrice | null = null;
+
+    if (isKoreanStock(ticker)) {
+      result = await fetchKISPrice(ticker);
+    } else {
+      result = await fetchKISOverseasPrice(ticker);
+    }
+
+    // 3. 캐시 저장
+    if (result) {
+      saveToCache(result);
+      console.log(`[StockPrice] Fetched: ${ticker} = ${result.price} (${result.source}, attempt ${attempt + 1})`);
+      return result;
+    }
   }
 
-  // 3. 캐시 저장
-  if (result) {
-    saveToCache(result);
-    console.log(`[StockPrice] Fetched: ${ticker} = ${result.price} (${result.source})`);
-  }
-
-  return result;
+  console.warn(`[StockPrice] All attempts failed for ${ticker}`);
+  return null;
 }
 
 /**
