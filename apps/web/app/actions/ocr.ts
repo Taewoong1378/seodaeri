@@ -86,7 +86,7 @@ For Korean stocks, ticker should be the 6-digit code.`
   try {
     console.log('[analyzeTradeImage] Sending request to OpenAI...')
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
@@ -182,7 +182,7 @@ Return a JSON object with a "dividends" array containing all extracted entries:
   try {
     console.log('[analyzeDividendImage] Sending request to OpenAI...')
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
