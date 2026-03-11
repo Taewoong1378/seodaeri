@@ -33,7 +33,7 @@ export function CurrencyDistributionDonut({ data }: CurrencyDistributionDonutPro
           </Pie>
           <Tooltip
             contentStyle={{ fontSize: '12px', borderRadius: '8px' }}
-            formatter={(value: number) => [value.toLocaleString('ko-KR'), '금액']}
+            formatter={(value) => [Number(value).toLocaleString('ko-KR'), '금액']}
           />
           <Legend />
         </PieChart>

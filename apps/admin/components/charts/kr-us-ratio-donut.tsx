@@ -33,7 +33,7 @@ export function KrUsRatioDonut({ data }: KrUsRatioDonutProps) {
           </Pie>
           <Tooltip
             contentStyle={{ fontSize: '12px', borderRadius: '8px' }}
-            formatter={(value: number) => [`${value}개`, '종목 수']}
+            formatter={(value) => [`${Number(value)}개`, '종목 수']}
           />
           <Legend />
         </PieChart>

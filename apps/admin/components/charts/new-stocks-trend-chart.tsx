@@ -16,7 +16,7 @@ export function NewStocksTrendChart({ data }: NewStocksTrendChartProps) {
           <YAxis fontSize={12} />
           <Tooltip
             contentStyle={{ fontSize: '12px', borderRadius: '8px' }}
-            formatter={(value: number) => [`${value}개`, '신규 종목']}
+            formatter={(value) => [`${Number(value)}개`, '신규 종목']}
           />
           <Bar dataKey="count" fill="#06b6d4" radius={[4, 4, 0, 0]} />
         </BarChart>

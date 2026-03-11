@@ -16,7 +16,7 @@ export function YieldDistributionChart({ data }: YieldDistributionChartProps) {
           <YAxis fontSize={12} />
           <Tooltip
             contentStyle={{ fontSize: '12px', borderRadius: '8px' }}
-            formatter={(value: number) => [`${value}명`, '유저 수']}
+            formatter={(value) => [`${Number(value)}명`, '유저 수']}
           />
           <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
         </BarChart>

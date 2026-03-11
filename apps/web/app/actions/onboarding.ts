@@ -10,8 +10,6 @@ import {
   validateSheetFormat,
 } from '../../lib/google-sheets'
 
-// Re-export for client usage
-export type { SheetValidationResult }
 
 /**
  * 스프레드시트가 서대리 투자기록 시트 형식인지 검증

@@ -22,8 +22,8 @@ export function PopularStocksBarChart({ data }: PopularStocksBarChartProps) {
           />
           <Tooltip
             contentStyle={{ fontSize: '12px', borderRadius: '8px' }}
-            formatter={(value: number) => [`${value}명`, '보유자 수']}
-            labelFormatter={(label: string) => label}
+            formatter={(value) => [`${Number(value)}명`, '보유자 수']}
+            labelFormatter={(label) => String(label)}
           />
           <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
         </BarChart>

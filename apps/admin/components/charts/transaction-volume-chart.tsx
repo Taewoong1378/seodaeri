@@ -22,9 +22,9 @@ export function TransactionVolumeChart({ data }: TransactionVolumeChartProps) {
           <YAxis fontSize={12} />
           <Tooltip
             contentStyle={{ fontSize: '12px', borderRadius: '8px' }}
-            formatter={(value: number, name: string) => {
+            formatter={(value, name) => {
               const labels: Record<string, string> = { BUY: '매수', SELL: '매도', DIVIDEND: '배당' }
-              return [`${value}건`, labels[name] ?? name]
+              return [`${Number(value)}건`, labels[String(name)] ?? name]
             }}
           />
           <Legend

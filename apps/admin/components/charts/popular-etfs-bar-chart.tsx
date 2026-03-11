@@ -22,7 +22,7 @@ export function PopularEtfsBarChart({ data }: PopularEtfsBarChartProps) {
           />
           <Tooltip
             contentStyle={{ fontSize: '12px', borderRadius: '8px' }}
-            formatter={(value: number) => [`${value}명`, '보유자 수']}
+            formatter={(value) => [`${Number(value)}명`, '보유자 수']}
           />
           <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
         </BarChart>

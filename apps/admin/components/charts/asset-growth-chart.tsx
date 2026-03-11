@@ -17,8 +17,8 @@ export function AssetGrowthChart({ data }: AssetGrowthChartProps) {
           <YAxis yAxisId="right" orientation="right" fontSize={12} />
           <Tooltip
             contentStyle={{ fontSize: '12px', borderRadius: '8px' }}
-            formatter={(value: number, name: string) => [
-              `${value.toLocaleString('ko-KR')}원`,
+            formatter={(value, name) => [
+              `${Number(value).toLocaleString('ko-KR')}원`,
               name === 'totalAsset' ? '중앙값 총자산' : '중앙값 수익',
             ]}
           />

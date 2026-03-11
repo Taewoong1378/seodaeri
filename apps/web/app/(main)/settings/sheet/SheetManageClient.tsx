@@ -24,8 +24,8 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+import type { SheetValidationResult } from '../../../../lib/google-sheets'
 import {
-  type SheetValidationResult,
   type StandaloneDataInfo,
   checkStandaloneData,
   connectSheetById,

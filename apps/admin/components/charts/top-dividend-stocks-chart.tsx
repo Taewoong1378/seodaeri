@@ -22,8 +22,8 @@ export function TopDividendStocksChart({ data }: TopDividendStocksChartProps) {
           />
           <Tooltip
             contentStyle={{ fontSize: '12px', borderRadius: '8px' }}
-            formatter={(value: number) => [`${value.toLocaleString('ko-KR')}원`, '배당금 총액']}
-            labelFormatter={(label: string) => label}
+            formatter={(value) => [`${Number(value).toLocaleString('ko-KR')}원`, '배당금 총액']}
+            labelFormatter={(label) => String(label)}
           />
           <Bar dataKey="amount" fill="#f59e0b" radius={[0, 4, 4, 0]} />
         </BarChart>

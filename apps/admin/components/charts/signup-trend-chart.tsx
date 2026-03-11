@@ -17,8 +17,8 @@ export function SignupTrendChart({ data }: SignupTrendChartProps) {
           <YAxis yAxisId="right" orientation="right" fontSize={12} />
           <Tooltip
             contentStyle={{ fontSize: '12px', borderRadius: '8px' }}
-            formatter={(value: number, name: string) => [
-              `${value}명`,
+            formatter={(value, name) => [
+              `${Number(value)}명`,
               name === 'daily' ? '일별 가입' : '누적 가입',
             ]}
           />

@@ -33,7 +33,7 @@ export function BrokerDistributionDonut({ data }: BrokerDistributionDonutProps) 
           </Pie>
           <Tooltip
             contentStyle={{ fontSize: '12px', borderRadius: '8px' }}
-            formatter={(value: number) => [value.toLocaleString('ko-KR') + '개', '보유종목']}
+            formatter={(value) => [Number(value).toLocaleString('ko-KR') + '개', '보유종목']}
           />
           <Legend />
         </PieChart>

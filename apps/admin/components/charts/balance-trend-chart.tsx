@@ -16,7 +16,7 @@ export function BalanceTrendChart({ data }: BalanceTrendChartProps) {
           <YAxis fontSize={12} />
           <Tooltip
             contentStyle={{ fontSize: '12px', borderRadius: '8px' }}
-            formatter={(value: number) => [`${value.toLocaleString('ko-KR')}원`, '총 잔고']}
+            formatter={(value) => [`${Number(value).toLocaleString('ko-KR')}원`, '총 잔고']}
           />
           <Area
             type="monotone"

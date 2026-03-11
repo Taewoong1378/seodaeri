@@ -16,8 +16,8 @@ export function DepositWithdrawalChart({ data }: DepositWithdrawalChartProps) {
           <YAxis fontSize={12} />
           <Tooltip
             contentStyle={{ fontSize: '12px', borderRadius: '8px' }}
-            formatter={(value: number, name: string) => [
-              `${value.toLocaleString('ko-KR')}원`,
+            formatter={(value, name) => [
+              `${Number(value).toLocaleString('ko-KR')}원`,
               name === 'deposit' ? '입금' : '출금',
             ]}
           />

@@ -11,9 +11,9 @@ import {
 import { AlertTriangle, FileSpreadsheet, FolderOpen, Loader2, Rocket, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
+import type { SheetValidationResult } from '../../lib/google-sheets'
 import {
   type OnboardingResult,
-  type SheetValidationResult,
   connectSheetById,
   startWithoutSheet,
   validateSheet,
