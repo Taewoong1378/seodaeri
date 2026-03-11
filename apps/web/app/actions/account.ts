@@ -2,6 +2,7 @@
 
 import { auth, signOut } from '@repo/auth/server'
 import { createServiceClient } from '@repo/database/server'
+import { resolveUser } from './utils/resolve-user'
 
 export interface DeleteAccountResult {
   success: boolean
@@ -25,26 +26,9 @@ export async function deleteAccount(): Promise<DeleteAccountResult> {
 
   try {
     // 사용자 조회
-    let { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session, 'id')
     if (!user) {
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     const userId = user.id as string

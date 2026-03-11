@@ -288,20 +288,16 @@ export async function getStocksCountByMarket(): Promise<{
   const supabase = createServiceClient()
 
   try {
-    // 한국 종목 - 타입 추론 깊이 문제 회피를 위해 as any 사용
-    const krResult = await (
-      supabase.from('stocks').select('*', { count: 'exact', head: true }) as any
-    )
-      .eq('is_active', true)
-      .eq('country', 'KR')
+    // 한국 종목 + 미국 종목 병렬 조회 - 타입 추론 깊이 문제 회피를 위해 as any 사용
+    const [krResult, usResult] = await Promise.all([
+      (supabase.from('stocks').select('*', { count: 'exact', head: true }) as any)
+        .eq('is_active', true)
+        .eq('country', 'KR'),
+      (supabase.from('stocks').select('*', { count: 'exact', head: true }) as any)
+        .eq('is_active', true)
+        .eq('country', 'US'),
+    ])
     const krCount: number = krResult?.count || 0
-
-    // 미국 종목
-    const usResult = await (
-      supabase.from('stocks').select('*', { count: 'exact', head: true }) as any
-    )
-      .eq('is_active', true)
-      .eq('country', 'US')
     const usCount: number = usResult?.count || 0
 
     return {

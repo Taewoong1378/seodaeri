@@ -4,6 +4,7 @@ import { auth } from '@repo/auth/server'
 import { createServiceClient } from '@repo/database/server'
 import { revalidatePath } from 'next/cache'
 import { batchUpdateSheet, deleteSheetRow, fetchSheetData } from '../../lib/google-sheets'
+import { resolveUser } from './utils/resolve-user'
 
 export interface HoldingInput {
   country: string // 국가 (한국, 미국 등)
@@ -40,27 +41,10 @@ export async function saveHolding(input: HoldingInput): Promise<SaveHoldingResul
 
   try {
     // 사용자의 spreadsheet_id 조회
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session)
     if (!user?.id) {
       console.log('[saveHolding] No user found')
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     const dbUserId = user.id as string
@@ -323,26 +307,9 @@ export async function deleteHolding(ticker: string): Promise<SaveHoldingResult> 
   const supabase = createServiceClient()
 
   try {
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session)
     if (!user?.id) {
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     const dbUserId = user.id as string
@@ -482,24 +449,7 @@ export async function getHoldings(): Promise<HoldingRecord[]> {
   const supabase = createServiceClient()
 
   try {
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user } = await resolveUser(session)
     if (!user?.id) {
       return []
     }
@@ -510,7 +460,10 @@ export async function getHoldings(): Promise<HoldingRecord[]> {
     if (!user.spreadsheet_id) {
       console.log('[getHoldings] Standalone mode - fetching from DB')
 
-      const { data: holdings } = await supabase.from('holdings').select('*').eq('user_id', dbUserId)
+      const { data: holdings } = await supabase
+        .from('holdings')
+        .select('ticker, name, quantity, avg_price, currency')
+        .eq('user_id', dbUserId)
 
       if (!holdings || holdings.length === 0) {
         return []

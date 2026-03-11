@@ -52,6 +52,7 @@ import {
   getHistoricalExchangeRates,
   getHistoricalMarketData,
 } from '../../lib/historical-exchange-rate'
+import { resolveUser } from './utils/resolve-user'
 
 // 사용자별 캐시 태그 생성
 function getDashboardCacheTag(userId: string) {
@@ -153,23 +154,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
   // 사용자 정보 및 spreadsheet_id 조회
   // ID로 먼저 조회, 실패하면 이메일로 fallback
-  let { data: user } = await supabase
-    .from('users')
-    .select('id, spreadsheet_id')
-    .eq('id', session.user.id)
-    .single()
-
-  if (!user && session.user.email) {
-    const { data: userByEmail } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('email', session.user.email)
-      .single()
-
-    if (userByEmail) {
-      user = userByEmail
-    }
-  }
+  const { user } = await resolveUser(session)
 
   if (!user?.id) {
     // 사용자 없음 - 기본값 반환
@@ -224,6 +209,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       historicalRates,
       marketData,
       yieldCell,
+      currentRate,
     ] = await Promise.all([
       fetchSheetDataCached(
         session.accessToken,
@@ -268,10 +254,9 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         "'1. 계좌현황(누적)'!U9",
         user.id,
       ),
+      // 현재 환율 (시트 데이터와 병렬 조회)
+      getUSDKRWRate(),
     ])
-
-    // 현재 환율 + performanceRows에 달러환율 적용 값 주입
-    const currentRate = await getUSDKRWRate()
     const enrichedRows = performanceRows
       ? enrichRowsWithExchangeRates(performanceRows, historicalRates, currentRate)
       : null
@@ -860,7 +845,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     // 에러 시 캐시된 포트폴리오 데이터 반환
     const { data: cachedPortfolio } = await supabase
       .from('portfolio_cache')
-      .select('*')
+      .select('currency, current_price, quantity, avg_price')
       .eq('user_id', session.user.id)
 
     let totalAsset = 0
@@ -922,23 +907,7 @@ export async function syncPortfolio() {
   const supabase = createServiceClient()
 
   // ID로 먼저 조회, 실패하면 이메일로 fallback
-  let { data: user } = await supabase
-    .from('users')
-    .select('id, spreadsheet_id')
-    .eq('id', session.user.id)
-    .single()
-
-  if (!user && session.user.email) {
-    const { data: userByEmail } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('email', session.user.email)
-      .single()
-
-    if (userByEmail) {
-      user = userByEmail
-    }
-  }
+  const { user } = await resolveUser(session)
 
   if (!user?.id || !user?.spreadsheet_id) {
     throw new Error('User or Spreadsheet ID not found')

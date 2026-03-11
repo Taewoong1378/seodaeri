@@ -5,6 +5,7 @@ import { createServiceClient } from '@repo/database/server'
 import { revalidatePath } from 'next/cache'
 import OpenAI from 'openai'
 import { deleteSheetRow, fetchSheetData } from '../../lib/google-sheets'
+import { resolveUser } from './utils/resolve-user'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -151,27 +152,10 @@ export async function saveTradeTransactions(trades: TradeInput[]): Promise<SaveT
 
   try {
     // 사용자 조회 (ID로 먼저, 실패시 이메일로)
-    let { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session, 'id')
     if (!user) {
       console.log('[saveTradeTransactions] User not found in DB')
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     const userId = user.id as string
@@ -250,27 +234,10 @@ export async function deleteTransaction(input: DeleteTransactionInput): Promise<
 
   try {
     // 사용자의 spreadsheet_id 조회
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session)
     if (!user) {
       console.log('[deleteTransaction] User not found')
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     console.log('[deleteTransaction] User found, spreadsheet_id:', user.spreadsheet_id)

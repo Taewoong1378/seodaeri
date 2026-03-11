@@ -4,6 +4,7 @@ import { auth } from '@repo/auth/server'
 import { createServiceClient } from '@repo/database/server'
 import { revalidatePath } from 'next/cache'
 import { batchUpdateSheet, fetchSheetData } from '../../lib/google-sheets'
+import { resolveUser } from './utils/resolve-user'
 
 export interface AccountBalanceInput {
   yearMonth: string // YYYY-MM 형식
@@ -36,30 +37,12 @@ export async function saveAccountBalance(
 
   try {
     // 사용자의 spreadsheet_id 조회
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    console.log('[saveAccountBalance] User by ID lookup:', user ? 'found' : 'not found')
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-        console.log('[saveAccountBalance] User by email lookup: found')
-      }
-    }
+    const { user, error: userError } = await resolveUser(session)
+    console.log('[saveAccountBalance] User lookup:', user ? 'found' : 'not found')
 
     if (!user?.id) {
       console.log('[saveAccountBalance] No user found')
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     // 실제 DB user ID 사용 (session.user.id와 다를 수 있음)
@@ -275,27 +258,10 @@ export async function deleteAccountBalance(
 
   try {
     // 사용자의 spreadsheet_id 조회
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session)
     if (!user?.id) {
       console.log('[deleteAccountBalance] No user found')
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     const userId = user.id as string
@@ -439,26 +405,9 @@ export async function updateAccountBalance(
 
   try {
     // 사용자의 spreadsheet_id 조회
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session)
     if (!user?.id) {
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     const userId = user.id as string
@@ -699,24 +648,7 @@ export async function getAccountBalances(): Promise<AccountBalanceRecord[]> {
 
   try {
     // 사용자 정보 조회 (ID와 spreadsheet_id)
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user } = await resolveUser(session)
     if (!user?.id) {
       return []
     }
@@ -726,7 +658,7 @@ export async function getAccountBalances(): Promise<AccountBalanceRecord[]> {
       console.log('[getAccountBalances] Standalone mode - reading from DB')
       const { data: dbBalances, error } = await (supabase as any)
         .from('account_balances')
-        .select('*')
+        .select('year_month, balance')
         .eq('user_id', user.id)
         .order('year_month', { ascending: false })
 

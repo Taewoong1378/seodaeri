@@ -208,7 +208,10 @@ export class StandaloneDataProvider implements DataProvider {
     const supabase = createServiceClient()
 
     // holdings 테이블에서 보유종목 조회
-    const { data: holdings } = await supabase.from('holdings').select('*').eq('user_id', userId)
+    const { data: holdings } = await supabase
+      .from('holdings')
+      .select('ticker, name, quantity, avg_price, currency')
+      .eq('user_id', userId)
 
     if (!holdings || holdings.length === 0) {
       return []
@@ -485,7 +488,7 @@ export class StandaloneDataProvider implements DataProvider {
 
     let query = supabase
       .from('dividends')
-      .select('*')
+      .select('id, ticker, name, amount_krw, amount_usd, dividend_date, account')
       .eq('user_id', userId)
       .order('dividend_date', { ascending: false })
 
@@ -552,7 +555,7 @@ export class StandaloneDataProvider implements DataProvider {
 
     const { data } = await supabase
       .from('deposits')
-      .select('*')
+      .select('id, type, amount, deposit_date, memo')
       .eq('user_id', userId)
       .order('deposit_date', { ascending: false })
 

@@ -9,6 +9,7 @@ import {
   parseDepositData,
   parseDividendData,
 } from '../../lib/google-sheets'
+import { resolveUser } from './utils/resolve-user'
 
 export interface Transaction {
   id: string
@@ -93,26 +94,9 @@ export async function getTransactions(): Promise<TransactionsResult> {
 
   try {
     // 1. 사용자 정보 조회 (ID 또는 이메일)
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session)
     if (!user) {
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     // Standalone 모드 여부 판별
@@ -149,12 +133,22 @@ export async function getTransactions(): Promise<TransactionsResult> {
     if (!user?.spreadsheet_id) {
       console.log('[Transactions] Standalone mode - fetching from DB')
 
-      // 배당내역 조회
-      const { data: dbDividends, error: dividendError } = await supabase
-        .from('dividends')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('dividend_date', { ascending: false })
+      // 배당내역 + 입출금내역 병렬 조회
+      const [
+        { data: dbDividends, error: dividendError },
+        { data: dbDeposits, error: depositError },
+      ] = await Promise.all([
+        supabase
+          .from('dividends')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('dividend_date', { ascending: false }),
+        supabase
+          .from('deposits')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('deposit_date', { ascending: false }),
+      ])
 
       if (dividendError) {
         console.error('[Transactions] Failed to fetch dividends from DB:', dividendError)
@@ -184,13 +178,6 @@ export async function getTransactions(): Promise<TransactionsResult> {
         })
         additionalTransactions.push(...dividendTransactions)
       }
-
-      // 입출금내역 조회
-      const { data: dbDeposits, error: depositError } = await supabase
-        .from('deposits')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('deposit_date', { ascending: false })
 
       if (depositError) {
         console.error('[Transactions] Failed to fetch deposits from DB:', depositError)

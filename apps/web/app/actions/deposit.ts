@@ -9,6 +9,7 @@ import {
   extractAccountsFromDeposits,
   fetchSheetData,
 } from '../../lib/google-sheets'
+import { resolveUser } from './utils/resolve-user'
 
 export interface DepositInput {
   date: string // YYYY-MM-DD
@@ -38,26 +39,9 @@ export async function saveDeposit(input: DepositInput): Promise<SaveDepositResul
 
   try {
     // 사용자의 spreadsheet_id 조회
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session)
     if (!user?.id) {
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     const userId = user.id as string
@@ -149,26 +133,9 @@ export async function saveAutoDepositSetting(
 
   try {
     // ID로 먼저 조회, 실패하면 이메일로 fallback
-    let { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session, 'id')
     if (!user) {
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     // auto_deposit_settings JSONB 컬럼에 저장
@@ -227,24 +194,7 @@ export async function getAccountList(): Promise<string[]> {
   const supabase = createServiceClient()
 
   try {
-    let { data: user } = await supabase
-      .from('users')
-      .select('spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user } = await resolveUser(session, 'spreadsheet_id')
     if (!user?.spreadsheet_id) {
       return getDefaultAccounts()
     }
@@ -347,27 +297,10 @@ export async function deleteDeposit(input: DeleteDepositInput): Promise<SaveDepo
 
   try {
     // 사용자의 spreadsheet_id 조회
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session)
     if (!user?.id) {
       console.log('[deleteDeposit] No user found')
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     const userId = user.id as string
@@ -541,26 +474,9 @@ export async function updateDeposit(input: UpdateDepositInput): Promise<SaveDepo
 
   try {
     // 사용자의 spreadsheet_id 조회
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session)
     if (!user?.id) {
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     const userId = user.id as string

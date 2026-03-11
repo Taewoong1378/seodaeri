@@ -5,6 +5,7 @@ import { createServiceClient } from '@repo/database/server'
 import { revalidatePath } from 'next/cache'
 import { getUSDKRWRate } from '../../lib/exchange-rate-api'
 import { appendSheetData, deleteSheetRow, fetchSheetData } from '../../lib/google-sheets'
+import { resolveUser } from './utils/resolve-user'
 
 export interface DividendInput {
   date: string // YYYY-MM-DD
@@ -38,27 +39,10 @@ export async function saveDividend(input: DividendInput): Promise<SaveDividendRe
 
   try {
     // 사용자의 spreadsheet_id 조회
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session)
     if (!user?.id) {
       console.log('[saveDividend] No user found')
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     const userId = user.id as string
@@ -180,29 +164,13 @@ export async function saveDividends(inputs: DividendInput[]): Promise<SaveDivide
 
   try {
     // 사용자의 spreadsheet_id 조회
-    let { data: user } = await supabase
-      .from('users')
-      .select('spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
+    const { user } = await resolveUser(session)
 
     // Standalone 모드: DB에만 저장
     if (!user?.spreadsheet_id) {
       console.log('[saveDividends] Standalone mode - saving to DB only')
 
-      const userId = (user as any)?.id || session.user.id
+      const userId = user?.id || session.user.id
       if (!userId) {
         return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
       }
@@ -372,27 +340,10 @@ export async function deleteDividend(input: DeleteDividendInput): Promise<SaveDi
 
   try {
     // 사용자의 spreadsheet_id 조회
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session)
     if (!user?.id) {
       console.log('[deleteDividend] No user found')
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     const userId = user.id as string
@@ -582,26 +533,9 @@ export async function updateDividend(input: UpdateDividendInput): Promise<SaveDi
 
   try {
     // 사용자의 spreadsheet_id 조회
-    let { data: user } = await supabase
-      .from('users')
-      .select('id, spreadsheet_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!user && session.user.email) {
-      const { data: userByEmail } = await supabase
-        .from('users')
-        .select('id, spreadsheet_id')
-        .eq('email', session.user.email)
-        .single()
-
-      if (userByEmail) {
-        user = userByEmail
-      }
-    }
-
+    const { user, error: userError } = await resolveUser(session)
     if (!user?.spreadsheet_id) {
-      return { success: false, error: '연동된 스프레드시트가 없습니다.' }
+      return { success: false, error: userError ?? '연동된 스프레드시트가 없습니다.' }
     }
 
     const userId = user.id as string

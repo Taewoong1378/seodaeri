@@ -2,6 +2,7 @@
 
 import { auth } from '@repo/auth/server'
 import { createServiceClient } from '@repo/database/server'
+import { resolveUser } from './utils/resolve-user'
 
 // V3 저장 구조: 최종 총자산 목표 / 연간 입금액 목표
 export interface GoalSettingsData {
@@ -20,25 +21,6 @@ export interface GoalSettings {
 export interface SaveGoalResult {
   success: boolean
   error?: string
-}
-
-async function findUser(supabase: any, sessionUserId: string, sessionEmail?: string | null) {
-  let { data: user } = (await supabase
-    .from('users')
-    .select('*')
-    .eq('id', sessionUserId)
-    .single()) as any
-
-  if (!user && sessionEmail) {
-    const { data: userByEmail } = (await supabase
-      .from('users')
-      .select('*')
-      .eq('email', sessionEmail)
-      .single()) as any
-    if (userByEmail) user = userByEmail
-  }
-
-  return user
 }
 
 // V1 → V3 마이그레이션: 기존 { yearlyGoal, monthlyGoal } → { finalAssetGoals, annualDepositGoals }
@@ -97,9 +79,9 @@ export async function saveGoal(
   const supabase = createServiceClient()
 
   try {
-    const user = await findUser(supabase, session.user.id, session.user.email)
+    const { user, error: userError } = await resolveUser(session, '*')
     if (!user) {
-      return { success: false, error: '사용자 정보를 찾을 수 없습니다.' }
+      return { success: false, error: userError ?? '사용자 정보를 찾을 수 없습니다.' }
     }
 
     const existing = migrateGoalSettings(user.goal_settings)
@@ -144,26 +126,8 @@ export async function getGoalSettings(): Promise<GoalSettings | null> {
     return null
   }
 
-  const supabase = createServiceClient()
-
   try {
-    let { data: user, error } = (await supabase
-      .from('users')
-      .select('*')
-      .eq('id', session.user.id)
-      .single()) as any
-
-    if (error || !user) {
-      if (session.user.email) {
-        const { data: userByEmail } = (await supabase
-          .from('users')
-          .select('*')
-          .eq('email', session.user.email)
-          .single()) as any
-        if (userByEmail) user = userByEmail
-      }
-    }
-
+    const { user } = await resolveUser(session, '*')
     if (!user) return null
 
     const goalSettings = user.goal_settings
