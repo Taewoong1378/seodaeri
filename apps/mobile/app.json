@@ -23,7 +23,10 @@
         },
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "8"
+      "buildNumber": "8",
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -47,7 +50,10 @@
           ]
         }
       ],
-      "versionCode": 41
+      "versionCode": 41,
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "plugins": [
       [
@@ -67,6 +73,9 @@
         "projectId": "3d93fed7-6edb-4817-9a2b-5a56ba506ccf"
       }
     },
-    "owner": "taewoong"
+    "owner": "taewoong",
+    "updates": {
+      "url": "https://u.expo.dev/3d93fed7-6edb-4817-9a2b-5a56ba506ccf"
+    }
   }
 }
