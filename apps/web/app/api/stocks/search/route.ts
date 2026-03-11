@@ -37,20 +37,46 @@ export async function GET(request: NextRequest) {
     // 1. Supabase에서 검색 시도
     const supabase = createServiceClient()
 
+    // 다중 단어 검색: 각 토큰으로 OR 검색 후 모든 토큰이 포함된 결과만 필터
+    // 예: "rise 나스닥" → DB에서 "rise" OR "나스닥" 매칭 → 두 단어 모두 포함된 결과 필터
+    const tokens = q.split(/\s+/).filter((t) => t.length > 0)
+
+    // 모든 토큰을 OR로 합쳐서 넓게 검색
+    const orConditions = tokens
+      .flatMap((token) => [
+        `code.ilike.%${token}%`,
+        `name.ilike.%${token}%`,
+        `eng_name.ilike.%${token}%`,
+      ])
+      .join(',')
+
     const { data: dbStocks, error: dbError } = await supabase
       .from('stocks')
-      .select('code, name, market')
+      .select('code, name, market, eng_name')
       .eq('is_active', true)
-      .or(`code.ilike.%${q}%,name.ilike.%${q}%,eng_name.ilike.%${q}%`)
-      .limit(50)
+      .or(orConditions)
+      .limit(200)
 
-    // Supabase에서 결과를 찾았으면 정렬 후 대안 자산과 합쳐서 반환
+    // Supabase에서 결과를 찾았으면 토큰 필터 → 정렬 → 반환
     if (!dbError && dbStocks && dbStocks.length > 0) {
-      // 정렬: 코드 정확 일치 → 코드가 검색어로 시작 → 개별종목 우선 → 이름순
+      // 나머지 토큰으로 AND 필터 (모든 토큰이 code/name/eng_name 중 하나에 포함되어야 함)
+      const filtered =
+        tokens.length > 1
+          ? dbStocks.filter((stock) => {
+              const searchText =
+                `${stock.code} ${stock.name} ${stock.eng_name || ''}`.toLowerCase()
+              return tokens.every((token) => searchText.includes(token.toLowerCase()))
+            })
+          : dbStocks
+
+      // 정렬: 코드 정확 일치 → 이름 시작 일치 → 코드 시작 일치 → 이름에 포함(eng_name만 일치보다 우선) → 이름순
+      const qLower = q.toLowerCase()
       const qUpper = q.toUpperCase()
-      const sorted = dbStocks.sort((a, b) => {
+      const sorted = filtered.sort((a, b) => {
         const aCode = a.code.toUpperCase()
         const bCode = b.code.toUpperCase()
+        const aName = a.name.toLowerCase()
+        const bName = b.name.toLowerCase()
 
         // 1) 코드 정확히 일치
         const aExact = aCode === qUpper
@@ -58,19 +84,25 @@ export async function GET(request: NextRequest) {
         if (aExact && !bExact) return -1
         if (!aExact && bExact) return 1
 
-        // 2) 코드가 검색어로 시작
-        const aStarts = aCode.startsWith(qUpper)
-        const bStarts = bCode.startsWith(qUpper)
-        if (aStarts && !bStarts) return -1
-        if (!aStarts && bStarts) return 1
+        // 2) 이름이 검색어로 시작 (예: "sol" → "SOL 미국배당" 우선)
+        const aNameStarts = aName.startsWith(qLower)
+        const bNameStarts = bName.startsWith(qLower)
+        if (aNameStarts && !bNameStarts) return -1
+        if (!aNameStarts && bNameStarts) return 1
 
-        // 3) 개별종목(비-ETF) 우선
-        const aIsEtf = a.market === 'ETF' || a.market === 'US_ETF'
-        const bIsEtf = b.market === 'ETF' || b.market === 'US_ETF'
-        if (!aIsEtf && bIsEtf) return -1
-        if (aIsEtf && !bIsEtf) return 1
+        // 3) 코드가 검색어로 시작
+        const aCodeStarts = aCode.startsWith(qUpper)
+        const bCodeStarts = bCode.startsWith(qUpper)
+        if (aCodeStarts && !bCodeStarts) return -1
+        if (!aCodeStarts && bCodeStarts) return 1
 
-        // 4) 이름순
+        // 4) 이름에 검색어 포함 (영문명만 일치보다 우선)
+        const aNameContains = aName.includes(qLower)
+        const bNameContains = bName.includes(qLower)
+        if (aNameContains && !bNameContains) return -1
+        if (!aNameContains && bNameContains) return 1
+
+        // 5) 이름순
         return a.name.localeCompare(b.name)
       })
 
