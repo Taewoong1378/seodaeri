@@ -237,21 +237,28 @@ export async function getUSDKRWRate(): Promise<number> {
     return dbCache.rate;
   }
 
-  // 3. 한국수출입은행 API 호출 (여러 날짜 시도)
+  // 3. 한국수출입은행 API 호출 (여러 날짜 병렬 시도 — 첫 성공 즉시 반환)
   const dates = getRecentBusinessDates(5);
 
-  for (const date of dates) {
-    const rate = await fetchFromKoreaExim(date);
-    if (rate) {
-      const cache: ExchangeRateCache = {
-        rate,
-        timestamp: Date.now(),
-        source: "koreaexim",
-      };
-      memoryCache = cache;
-      await saveToDBCache(rate, "koreaexim");
-      return rate;
-    }
+  try {
+    const rate = await Promise.any(
+      dates.map(async (date) => {
+        const result = await fetchFromKoreaExim(date);
+        if (!result) throw new Error(`No data for ${date}`);
+        return result;
+      }),
+    );
+
+    const cache: ExchangeRateCache = {
+      rate,
+      timestamp: Date.now(),
+      source: "koreaexim",
+    };
+    memoryCache = cache;
+    void saveToDBCache(rate, "koreaexim");
+    return rate;
+  } catch {
+    // All dates failed — fall through to fallback
   }
 
   // 4. Fallback

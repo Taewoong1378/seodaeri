@@ -16,6 +16,23 @@ const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
 let memoryCache: { data: Map<string, number>; timestamp: number } | null = null;
 let marketDataCache: { data: HistoricalMarketData; timestamp: number } | null = null;
 
+// 공유 CSV fetch (중복 다운로드 방지)
+let sharedCsvFetchPromise: Promise<string> | null = null;
+async function fetchSharedCSV(): Promise<string> {
+  if (!sharedCsvFetchPromise) {
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${PUBLIC_SPREADSHEET_ID}/export?format=csv`;
+    sharedCsvFetchPromise = fetch(csvUrl, {
+      next: { revalidate: 86400 },
+    }).then((r) => {
+      if (!r.ok) throw new Error(`HTTP error: ${r.status}`);
+      return r.text();
+    });
+    // 1초 후 promise 해제 (다음 요청 시 fresh fetch)
+    setTimeout(() => { sharedCsvFetchPromise = null; }, 1000);
+  }
+  return sharedCsvFetchPromise;
+}
+
 interface DBCacheValue {
   rates: Record<string, number>;
 }
@@ -38,20 +55,10 @@ export interface HistoricalMarketData {
  * 공개 스프레드시트에서 CSV 형식으로 데이터 가져오기
  */
 async function fetchFromPublicSpreadsheet(): Promise<Map<string, number>> {
-  const csvUrl = `https://docs.google.com/spreadsheets/d/${PUBLIC_SPREADSHEET_ID}/export?format=csv`;
-
   try {
     console.log("[HistoricalExchangeRate] Fetching from public spreadsheet");
 
-    const response = await fetch(csvUrl, {
-      next: { revalidate: 86400 }, // 24시간 캐시
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error: ${response.status}`);
-    }
-
-    const csvText = await response.text();
+    const csvText = await fetchSharedCSV();
     const rates = parseCSVExchangeRates(csvText);
 
     console.log(`[HistoricalExchangeRate] Fetched ${rates.size} monthly rates`);
@@ -432,16 +439,7 @@ export async function getHistoricalMarketData(): Promise<HistoricalMarketData> {
 
   // 2. 공개 스프레드시트에서 가져오기
   try {
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${PUBLIC_SPREADSHEET_ID}/export?format=csv`;
-    const response = await fetch(csvUrl, {
-      next: { revalidate: 86400 },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error: ${response.status}`);
-    }
-
-    const csvText = await response.text();
+    const csvText = await fetchSharedCSV();
     const marketData = parseCSVMarketData(csvText);
 
     console.log(`[HistoricalMarketData] Fetched: rates=${marketData.exchangeRates.size}, gold=${marketData.gold.size}, btc=${marketData.bitcoin.size}, re=${marketData.realEstate.size}`);

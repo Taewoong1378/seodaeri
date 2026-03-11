@@ -110,22 +110,38 @@ export class StandaloneDataProvider implements DataProvider {
     let totalInvested = 0;
     const exchangeRate = await getUSDKRWRate();
 
-    // 1) account_balances + deposits 우선 조회
-    const { data: accountBalances } = await (supabase as any)
-      .from("account_balances")
-      .select("year_month, balance")
-      .eq("user_id", userId)
-      .order("year_month", { ascending: false });
-
-    if (accountBalances && accountBalances.length > 0) {
-      // 최신 잔액 = totalAsset
-      totalAsset = accountBalances[0].balance || 0;
-
-      // deposits에서 순입금액 계산 = totalInvested
-      const { data: deposits } = await supabase
+    // 병렬 조회: account_balances, deposits, dividends, first deposit
+    const [balanceResult, depositsResult, dividendsResult, firstDepositResult] = await Promise.all([
+      (supabase as any)
+        .from("account_balances")
+        .select("year_month, balance")
+        .eq("user_id", userId)
+        .order("year_month", { ascending: false }),
+      supabase
         .from("deposits")
         .select("type, amount")
-        .eq("user_id", userId);
+        .eq("user_id", userId),
+      supabase
+        .from("dividends")
+        .select("amount_krw, amount_usd, dividend_date")
+        .eq("user_id", userId),
+      supabase
+        .from("deposits")
+        .select("deposit_date")
+        .eq("user_id", userId)
+        .eq("type", "DEPOSIT")
+        .order("deposit_date", { ascending: true })
+        .limit(1)
+        .single(),
+    ]);
+
+    const accountBalances = balanceResult.data;
+    const deposits = depositsResult.data;
+    const dividends = dividendsResult.data;
+    const firstDeposit = firstDepositResult.data;
+
+    if (accountBalances && accountBalances.length > 0) {
+      totalAsset = accountBalances[0].balance || 0;
 
       if (deposits && deposits.length > 0) {
         for (const d of deposits) {
@@ -137,19 +153,17 @@ export class StandaloneDataProvider implements DataProvider {
         }
       }
     } else {
-      // 2) fallback: holdings 기반 계산 (기존 로직)
+      // fallback: holdings 기반 계산
       const portfolio = await this.getPortfolio(userId);
 
       for (const item of portfolio) {
         if (item.ticker === "CASH") {
-          // CASH 특수 처리: quantity=원화금액, avgPriceOriginal=달러금액
           const krwAmount = item.quantity || 0;
           const usdAmount = item.avgPriceOriginal || 0;
-          totalAsset += item.totalValue; // 이미 KRW 환산됨
+          totalAsset += item.totalValue;
           totalInvested += krwAmount + usdAmount * exchangeRate;
           continue;
         }
-        // getPortfolio()에서 avgPrice, totalValue는 이미 KRW 환산됨 — rate 재적용 불필요
         totalAsset += item.totalValue;
         totalInvested += item.avgPrice * item.quantity;
       }
@@ -161,15 +175,10 @@ export class StandaloneDataProvider implements DataProvider {
         ? ((totalAsset - totalInvested) / totalInvested) * 100
         : 0;
 
-    // 배당금 조회
+    // 배당금 계산
     const now = new Date();
     const thisYear = now.getFullYear();
     const thisMonth = now.getMonth() + 1;
-
-    const { data: dividends } = await supabase
-      .from("dividends")
-      .select("amount_krw, amount_usd, dividend_date")
-      .eq("user_id", userId);
 
     let thisMonthDividend = 0;
     let yearlyDividend = 0;
@@ -188,16 +197,7 @@ export class StandaloneDataProvider implements DataProvider {
       }
     }
 
-    // 투자 일수 계산 (첫 입금일부터)
-    const { data: firstDeposit } = await supabase
-      .from("deposits")
-      .select("deposit_date")
-      .eq("user_id", userId)
-      .eq("type", "DEPOSIT")
-      .order("deposit_date", { ascending: true })
-      .limit(1)
-      .single();
-
+    // 투자 일수 계산
     let investmentDays = 0;
     if (firstDeposit) {
       const firstDate = new Date(firstDeposit.deposit_date);
@@ -239,43 +239,44 @@ export class StandaloneDataProvider implements DataProvider {
       (t) => !ALTERNATIVE_ASSET_CODES.has(t),
     );
 
-    // 현재가 조회: 주식은 KIS API, 기타자산은 스프레드시트
-    const prices =
+    // 현재가 조회: 주식(KIS API) + 기타자산(스프레드시트) 병렬
+    const [prices, altPriceResult] = await Promise.all([
       stockTickers.length > 0
-        ? await getStockPrices(stockTickers)
-        : new Map<string, StockPrice>();
+        ? getStockPrices(stockTickers)
+        : Promise.resolve(new Map<string, StockPrice>()),
+      altTickers.length > 0
+        ? getAlternativeAssetPrices()
+            .then((result) => {
+              console.log(
+                `[StandaloneProvider] Got ${result.length} alt prices:`,
+                result.map((a) => `${a.code}=${a.price}`).join(", "),
+              );
+              return result;
+            })
+            .catch((error) => {
+              console.error(
+                "[StandaloneProvider] Alternative asset price fetch failed:",
+                error,
+              );
+              return [] as { code: string; price: number }[];
+            })
+        : Promise.resolve([] as { code: string; price: number }[]),
+    ]);
 
-    // 기타자산 현재가 조회
-    if (altTickers.length > 0) {
-      try {
-        console.log(
-          `[StandaloneProvider] Fetching alt asset prices for: ${altTickers.join(", ")}`,
-        );
-        const altPrices = await getAlternativeAssetPrices();
-        console.log(
-          `[StandaloneProvider] Got ${altPrices.length} alt prices:`,
-          altPrices.map((a) => `${a.code}=${a.price}`).join(", "),
-        );
-        for (const alt of altPrices) {
-          if (altTickers.includes(alt.code)) {
-            prices.set(alt.code, {
-              ticker: alt.code,
-              price: alt.price,
-              currency: "KRW" as const,
-              timestamp: Date.now(),
-              source: "spreadsheet",
-            });
-          }
-        }
-      } catch (error) {
-        console.error(
-          "[StandaloneProvider] Alternative asset price fetch failed:",
-          error,
-        );
+    // 기타자산 가격을 prices 맵에 병합
+    for (const alt of altPriceResult) {
+      if (altTickers.includes(alt.code)) {
+        prices.set(alt.code, {
+          ticker: alt.code,
+          price: alt.price,
+          currency: "KRW" as const,
+          timestamp: Date.now(),
+          source: "spreadsheet",
+        });
       }
     }
 
-    // KIS API에서 가격을 못 가져온 종목은 DB 캐시에서 조회
+    // KIS API에서 가격을 못 가져온 종목은 DB 캐시에서 조회 (user cache + global cache 통합)
     const missingTickers = allTickers.filter((t) => !prices.has(t));
     if (missingTickers.length > 0) {
       console.log(
@@ -288,50 +289,7 @@ export class StandaloneDataProvider implements DataProvider {
         avgPriceMap.set(h.ticker, h.avg_price || 0);
       }
 
-      // 7일 이내 캐시만 사용 (stale 가격 방지)
-      const cacheMaxAge = new Date(
-        Date.now() - 7 * 24 * 60 * 60 * 1000,
-      ).toISOString();
-      const { data: cachedPrices } = await supabase
-        .from("portfolio_cache")
-        .select("ticker, current_price, currency")
-        .eq("user_id", userId)
-        .in("ticker", missingTickers)
-        .gte("updated_at", cacheMaxAge);
-
-      if (cachedPrices) {
-        for (const cached of cachedPrices) {
-          if (cached.current_price && cached.current_price > 0) {
-            // 캐시 오염 방지: current_price == avg_price인 경우 무시
-            // (KIS API 실패 시 avg_price가 current_price로 저장된 무의미한 값)
-            const avgP = avgPriceMap.get(cached.ticker);
-            if (
-              avgP &&
-              avgP > 0 &&
-              Math.abs(cached.current_price - avgP) / avgP < 0.01
-            ) {
-              console.log(
-                `[StandaloneProvider] Skipping poisoned cache: ${cached.ticker} (current_price=${cached.current_price} == avg_price)`,
-              );
-              continue;
-            }
-            prices.set(cached.ticker, {
-              ticker: cached.ticker,
-              price: cached.current_price,
-              currency: (cached.currency as "KRW" | "USD") || "KRW",
-              timestamp: Date.now(),
-              source: "db-cache",
-            });
-          }
-        }
-      }
-    }
-
-    // 여전히 가격이 없는 종목: 다른 유저의 portfolio_cache에서 최신 가격 조회
-    // (KIS API 장애 시 공유 캐시로 폴백 — 7일 이내, 통화 일치, avg_price와 다른 값만)
-    const stillMissing = allTickers.filter((t) => !prices.has(t));
-    if (stillMissing.length > 0) {
-      // 각 종목의 expected currency를 미리 구함
+      // 각 종목의 expected currency
       const holdingCurrencyMap = new Map<string, string>();
       for (const h of holdings) {
         holdingCurrencyMap.set(
@@ -340,55 +298,81 @@ export class StandaloneDataProvider implements DataProvider {
         );
       }
 
-      const sevenDaysAgo = new Date(
+      // 7일 이내 캐시만 사용 (user + global 통합 조회)
+      const cacheMaxAge = new Date(
         Date.now() - 7 * 24 * 60 * 60 * 1000,
       ).toISOString();
-
-      const { data: globalPrices } = await supabase
+      const { data: allCachedPrices } = await supabase
         .from("portfolio_cache")
-        .select("ticker, current_price, currency, updated_at")
-        .in("ticker", stillMissing)
+        .select("ticker, current_price, currency, user_id, updated_at")
+        .in("ticker", missingTickers)
         .gt("current_price", 0)
-        .gte("updated_at", sevenDaysAgo)
+        .gte("updated_at", cacheMaxAge)
         .order("updated_at", { ascending: false });
 
-      if (globalPrices) {
-        // 종목당 가장 최신 1건만 사용 (이미 updated_at DESC 정렬)
+      if (allCachedPrices) {
+        // user cache 우선, 그 다음 global cache (종목당 1건만)
         const used = new Set<string>();
-        for (const gp of globalPrices) {
-          if (used.has(gp.ticker)) continue;
+        // 1차: user cache
+        for (const cached of allCachedPrices) {
+          if (used.has(cached.ticker)) continue;
+          if (cached.user_id !== userId) continue;
 
-          const expectedCurrency = holdingCurrencyMap.get(gp.ticker);
-          // 통화 불일치 방지
-          if (expectedCurrency && gp.currency !== expectedCurrency) continue;
+          const avgP = avgPriceMap.get(cached.ticker);
+          if (
+            avgP &&
+            avgP > 0 &&
+            Math.abs((cached.current_price ?? 0) - avgP) / avgP < 0.01
+          ) {
+            console.log(
+              `[StandaloneProvider] Skipping poisoned cache: ${cached.ticker} (current_price=${cached.current_price} == avg_price)`,
+            );
+            continue;
+          }
 
-          // avg_price와 동일한 값이면 건너뜀 (이전에 폴백으로 저장된 무의미한 값)
-          const holding = holdings.find((h) => h.ticker === gp.ticker);
+          used.add(cached.ticker);
+          prices.set(cached.ticker, {
+            ticker: cached.ticker,
+            price: cached.current_price ?? 0,
+            currency: (cached.currency as "KRW" | "USD") || "KRW",
+            timestamp: Date.now(),
+            source: "db-cache",
+          });
+        }
+        // 2차: global cache (user cache에서 못 찾은 종목)
+        for (const cached of allCachedPrices) {
+          if (used.has(cached.ticker)) continue;
+          if (cached.user_id === userId) continue; // already processed above
+
+          const expectedCurrency = holdingCurrencyMap.get(cached.ticker);
+          if (expectedCurrency && cached.currency !== expectedCurrency) continue;
+
+          const holding = holdings.find((h) => h.ticker === cached.ticker);
           if (
             holding?.avg_price &&
             holding.avg_price > 0 &&
-            Math.abs((gp.current_price ?? 0) - holding.avg_price) /
+            Math.abs((cached.current_price ?? 0) - holding.avg_price) /
               holding.avg_price <
               0.01
           )
             continue;
 
-          used.add(gp.ticker);
-          prices.set(gp.ticker, {
-            ticker: gp.ticker,
-            price: gp.current_price ?? 0,
-            currency: (gp.currency as "KRW" | "USD") || "KRW",
+          used.add(cached.ticker);
+          prices.set(cached.ticker, {
+            ticker: cached.ticker,
+            price: cached.current_price ?? 0,
+            currency: (cached.currency as "KRW" | "USD") || "KRW",
             timestamp: Date.now(),
             source: "global-cache",
           });
           console.log(
-            `[StandaloneProvider] Global cache hit: ${gp.ticker} = ${gp.current_price} (from ${gp.updated_at})`,
+            `[StandaloneProvider] Global cache hit: ${cached.ticker} = ${cached.current_price} (from ${cached.updated_at})`,
           );
         }
       }
     }
 
-    // 최종 재시도: 여전히 가격 없는 종목에 대해 개별 KIS API 재호출 (2회 재시도)
+    // 최종 재시도: 여전히 가격 없는 종목에 대해 일괄 KIS API 재호출
     const finalMissing = allTickers.filter(
       (t) => !prices.has(t) && !ALTERNATIVE_ASSET_CODES.has(t),
     );
@@ -396,9 +380,8 @@ export class StandaloneDataProvider implements DataProvider {
       console.log(
         `[StandaloneProvider] Final retry for ${finalMissing.length} tickers: ${finalMissing.join(", ")}`,
       );
-      for (const ticker of finalMissing) {
-        const result = await getStockPrices([ticker]);
-        const price = result.get(ticker);
+      const retryResult = await getStockPrices(finalMissing);
+      for (const [ticker, price] of retryResult) {
         if (price && price.price > 0) {
           prices.set(ticker, price);
           console.log(
@@ -526,7 +509,7 @@ export class StandaloneDataProvider implements DataProvider {
           currentPrice: orig?.currentPrice ?? item.currentPrice,
         };
       });
-    await this.updatePriceCache(userId, apiPricedItems);
+    void this.updatePriceCache(userId, apiPricedItems);
 
     return portfolio;
   }
@@ -695,23 +678,26 @@ export class StandaloneDataProvider implements DataProvider {
   async getAccountTrend(userId: string): Promise<AccountTrendData[]> {
     const supabase = createServiceClient();
 
-    // account_balances 조회 (시간순)
-    const { data: balances } = await (supabase as any)
-      .from("account_balances")
-      .select("year_month, balance")
-      .eq("user_id", userId)
-      .order("year_month", { ascending: true });
+    // account_balances + deposits 병렬 조회
+    const [balancesResult, depositsResult] = await Promise.all([
+      (supabase as any)
+        .from("account_balances")
+        .select("year_month, balance")
+        .eq("user_id", userId)
+        .order("year_month", { ascending: true }),
+      supabase
+        .from("deposits")
+        .select("type, amount, deposit_date")
+        .eq("user_id", userId)
+        .order("deposit_date", { ascending: true }),
+    ]);
+
+    const balances = balancesResult.data;
+    const deposits = depositsResult.data;
 
     if (!balances || balances.length === 0) {
       return [];
     }
-
-    // deposits 조회 (시간순)
-    const { data: deposits } = await supabase
-      .from("deposits")
-      .select("type, amount, deposit_date")
-      .eq("user_id", userId)
-      .order("deposit_date", { ascending: true });
 
     // 월별 순입금액 계산
     const monthlyNetDeposit = new Map<string, number>();
@@ -760,24 +746,34 @@ export class StandaloneDataProvider implements DataProvider {
     const currentYear = now.getFullYear();
     const yearPrefix = `${currentYear}-`;
 
-    const { data: balances } = await (supabase as any)
-      .from("account_balances")
-      .select("year_month, balance")
-      .eq("user_id", userId)
-      .like("year_month", `${yearPrefix}%`)
-      .order("year_month", { ascending: true });
+    // 올해 balances + deposits + 작년 12월 balance 병렬 조회
+    const [balancesResult, depositsResult, prevYearResult] = await Promise.all([
+      (supabase as any)
+        .from("account_balances")
+        .select("year_month, balance")
+        .eq("user_id", userId)
+        .like("year_month", `${yearPrefix}%`)
+        .order("year_month", { ascending: true }),
+      supabase
+        .from("deposits")
+        .select("type, amount, deposit_date")
+        .eq("user_id", userId)
+        .gte("deposit_date", `${currentYear}-01-01`)
+        .lte("deposit_date", `${currentYear}-12-31`),
+      (supabase as any)
+        .from("account_balances")
+        .select("balance")
+        .eq("user_id", userId)
+        .eq("year_month", `${currentYear - 1}-12`)
+        .single(),
+    ]);
+
+    const balances = balancesResult.data;
+    const deposits = depositsResult.data;
 
     if (!balances || balances.length === 0) {
       return [];
     }
-
-    // 올해 deposits 조회
-    const { data: deposits } = await supabase
-      .from("deposits")
-      .select("type, amount, deposit_date")
-      .eq("user_id", userId)
-      .gte("deposit_date", `${currentYear}-01-01`)
-      .lte("deposit_date", `${currentYear}-12-31`);
 
     // 월별 순입금액 계산
     const monthlyNetDeposit = new Map<number, number>();
@@ -800,16 +796,9 @@ export class StandaloneDataProvider implements DataProvider {
       monthlyBalance.set(month, b.balance || 0);
     }
 
-    // 이전달 잔액 (작년 12월) 조회
     let prevBalance = 0;
-    const { data: prevYear } = await (supabase as any)
-      .from("account_balances")
-      .select("balance")
-      .eq("user_id", userId)
-      .eq("year_month", `${currentYear - 1}-12`)
-      .single();
-    if (prevYear) {
-      prevBalance = prevYear.balance || 0;
+    if (prevYearResult.data) {
+      prevBalance = prevYearResult.data.balance || 0;
     }
 
     // MonthlyProfitLoss 생성 (1월~현재월까지 항상 포함, 데이터 없는 달은 0)
@@ -912,20 +901,22 @@ export class StandaloneDataProvider implements DataProvider {
           currentMonth + 1,
         );
       } else {
-        // Fallback: account_balances + deposits → 입금 차감 수익률 계산
-        const { data: balances } = await (supabase as any)
-          .from("account_balances")
-          .select("year_month, balance")
-          .eq("user_id", userId)
-          .gte("year_month", `${currentYear}-01`)
-          .order("year_month", { ascending: true });
-
-        // 전체 입금 내역 조회 (누적 투자금 계산용)
-        const { data: allDeposits } = await (supabase as any)
-          .from("deposits")
-          .select("amount, type, deposit_date")
-          .eq("user_id", userId)
-          .order("deposit_date", { ascending: true });
+        // Fallback: account_balances + deposits 병렬 조회 → 입금 차감 수익률 계산
+        const [balancesRes, allDepositsRes] = await Promise.all([
+          (supabase as any)
+            .from("account_balances")
+            .select("year_month, balance")
+            .eq("user_id", userId)
+            .gte("year_month", `${currentYear}-01`)
+            .order("year_month", { ascending: true }),
+          (supabase as any)
+            .from("deposits")
+            .select("amount, type, deposit_date")
+            .eq("user_id", userId)
+            .order("deposit_date", { ascending: true }),
+        ]);
+        const balances = balancesRes.data;
+        const allDeposits = allDepositsRes.data;
 
         // 월별 누적 투자금 계산 (YYYY-MM → 누적액)
         const cumulativeByYM = new Map<string, number>();

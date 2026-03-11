@@ -467,7 +467,7 @@ export async function getStockPrices(
 
     // Rate limit 방지를 위한 딜레이 (청크 사이)
     if (i + CHUNK_SIZE < needFetch.length) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 200));
     }
   }
 

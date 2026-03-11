@@ -1239,17 +1239,21 @@ async function getStandaloneDashboardData(
   const provider = new StandaloneDataProvider();
 
   try {
-    // 환율 조회
-    const exchangeRate = await getUSDKRWRate();
-    const historicalRates = await getHistoricalExchangeRates();
-    const marketData = await getHistoricalMarketData();
+    // 환율 + 시장 데이터 병렬 조회
+    const [exchangeRate, historicalRates, marketData] = await Promise.all([
+      getUSDKRWRate(),
+      getHistoricalExchangeRates(),
+      getHistoricalMarketData(),
+    ]);
 
-    // 1. 포트폴리오 + 계좌추세 + 월별손익 병렬 조회
-    const [portfolioItems, rawAccountTrend, monthlyProfitLoss] =
+    // 1. 모든 데이터 병렬 조회 (포트폴리오 + 계좌추세 + 월별손익 + 요약 + 배당)
+    const [portfolioItems, rawAccountTrend, monthlyProfitLoss, summary, dividends] =
       await Promise.all([
         provider.getPortfolio(userId),
         provider.getAccountTrend(userId),
         provider.getMonthlyProfitLoss(userId),
+        provider.getDashboardSummary(userId),
+        provider.getDividends(userId),
       ]);
 
     // accountTrend: 첫 데이터 월의 한 달 전부터 0으로 시작
@@ -1322,24 +1326,23 @@ async function getStandaloneDashboardData(
           : 0;
       const today = new Date().toISOString().split("T")[0] as string;
 
-      await supabase.from("portfolio_snapshots").upsert(
-        {
-          user_id: userId,
-          snapshot_date: today,
-          total_asset: Math.round(totalAsset),
-          total_invested: Math.round(totalInvested),
-          total_profit: Math.round(totalProfit),
-          yield_percent: Number(yieldPercent.toFixed(2)),
-        },
-        { onConflict: "user_id,snapshot_date" },
-      );
+      void supabase
+        .from("portfolio_snapshots")
+        .upsert(
+          {
+            user_id: userId,
+            snapshot_date: today,
+            total_asset: Math.round(totalAsset),
+            total_invested: Math.round(totalInvested),
+            total_profit: Math.round(totalProfit),
+            yield_percent: Number(yieldPercent.toFixed(2)),
+          },
+          { onConflict: "user_id,snapshot_date" },
+        )
+        .then(({ error }) => {
+          if (error) console.error("[Snapshot] upsert error:", error);
+        });
     }
-
-    // 2. 대시보드 요약 조회
-    const summary = await provider.getDashboardSummary(userId);
-
-    // 3. 배당금 내역 조회 (monthlyDividends 계산용)
-    const dividends = await provider.getDividends(userId);
 
     // DividendRecord 형식으로 변환
     const dividendRecords: DividendRecord[] = dividends.map((d) => ({
