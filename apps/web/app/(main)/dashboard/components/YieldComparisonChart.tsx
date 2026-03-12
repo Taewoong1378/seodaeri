@@ -126,13 +126,11 @@ function SingleBarChart({
     const entry = chartData[index]
     const color = getBarColor(entry?.name || '', value)
     const isNegative = value < 0
-    // 음수 바가 짧으면 (X축 레이블과 겹칠 수 있음) 바 위쪽에 표시
-    const labelY =
-      isNegative && Math.abs(barHeight) < 30
-        ? y - 5 // 바 위에 (0선 위)
-        : isNegative
-          ? y + Math.abs(barHeight) + labelFontSize + 2 // 바 아래
-          : y - 5 // 양수: 바 위
+    // 음수: 항상 바 위쪽(0선 위)에 표시하여 바/X축 텍스트와 겹침 방지
+    // 양수: 바 위에 표시
+    const labelY = isNegative
+      ? y - labelFontSize + 2 // 0선 위로 충분히 올림
+      : y - 5 // 양수: 바 위
     return (
       <text
         x={x + width / 2}
