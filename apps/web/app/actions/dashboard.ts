@@ -1211,7 +1211,7 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
         totalInvested > 0 ? ((totalAsset - totalInvested) / totalInvested) * 100 : 0
       const today = new Date().toISOString().split('T')[0] as string
 
-      void supabase
+      const { error: snapshotError } = await supabase
         .from('portfolio_snapshots')
         .upsert(
           {
@@ -1224,9 +1224,7 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
           },
           { onConflict: 'user_id,snapshot_date' },
         )
-        .then(({ error }) => {
-          if (error) console.error('[Snapshot] upsert error:', error)
-        })
+      if (snapshotError) console.error('[Snapshot] upsert error:', snapshotError)
     }
 
     // DividendRecord 형식으로 변환
