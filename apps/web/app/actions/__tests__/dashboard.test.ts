@@ -543,12 +543,21 @@ describe('getDashboardData – snapshot calculation with CASH holdings', () => {
     } as any)
   }
 
-  it('snapshot uses totalValue for CASH (not avgPrice * quantity)', async () => {
+  it('snapshot uses summary values (not portfolio item calculations)', async () => {
     setupAuth()
 
-    // CASH: quantity=KRW amount (1,000,000), avgPrice=USD amount (500)
-    // If bug existed: totalInvested += 500 * 1,000,000 = 500,000,000,000 (nonsense)
-    // Fixed: totalInvested += totalValue = 1,700,000 (1,000,000 KRW + 500 USD * 1400)
+    // Summary provides the authoritative totals
+    mockProviderInstance.getDashboardSummary.mockResolvedValue({
+      totalAsset: 7500000,
+      totalYield: 7.1,
+      totalInvested: 7000000,
+      totalProfit: 500000,
+      thisMonthDividend: 0,
+      yearlyDividend: 0,
+      investmentDays: 12,
+    })
+
+    // Portfolio has CASH with misleading avgPrice/quantity
     mockProviderInstance.getPortfolio.mockResolvedValue([
       {
         ticker: 'CASH',
@@ -570,21 +579,30 @@ describe('getDashboardData – snapshot calculation with CASH holdings', () => {
 
     await getDashboardData()
 
-    // upsert should have been called with totalInvested = totalValue = 1,700,000 (not 500 * 1,000,000)
+    // Snapshot should use summary values, NOT portfolio item calculations
     expect(upsertSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        total_asset: 1700000,
-        total_invested: 1700000,
-        total_profit: 0,
+        total_asset: 7500000,
+        total_invested: 7000000,
+        total_profit: 500000,
       }),
       expect.anything(),
     )
   })
 
-  it('snapshot totalInvested is correct with CASH + stock holdings', async () => {
+  it('snapshot yield_percent matches summary totalYield', async () => {
     setupAuth()
 
-    // CASH totalValue=1,000,000, stock (avgPrice=70000, quantity=10) invested=700,000
+    mockProviderInstance.getDashboardSummary.mockResolvedValue({
+      totalAsset: 1250000,
+      totalYield: 4.17,
+      totalInvested: 1200000,
+      totalProfit: 50000,
+      thisMonthDividend: 0,
+      yearlyDividend: 0,
+      investmentDays: 30,
+    })
+
     mockProviderInstance.getPortfolio.mockResolvedValue([
       {
         ticker: 'CASH',
@@ -619,29 +637,37 @@ describe('getDashboardData – snapshot calculation with CASH holdings', () => {
 
     await getDashboardData()
 
-    // totalAsset = 500,000 + 750,000 = 1,250,000
-    // totalInvested = 500,000 (CASH totalValue) + 70,000 * 10 (stock) = 500,000 + 700,000 = 1,200,000
     expect(upsertSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         total_asset: 1250000,
         total_invested: 1200000,
         total_profit: 50000,
+        yield_percent: 4.17,
       }),
       expect.anything(),
     )
   })
 
-  it('snapshot handles CASH with $0 USD and large KRW amount correctly', async () => {
+  it('snapshot not saved when summary totalInvested is 0', async () => {
     setupAuth()
 
-    // CASH: no USD, only KRW 10,000,000
+    mockProviderInstance.getDashboardSummary.mockResolvedValue({
+      totalAsset: 0,
+      totalYield: 0,
+      totalInvested: 0,
+      totalProfit: 0,
+      thisMonthDividend: 0,
+      yearlyDividend: 0,
+      investmentDays: 0,
+    })
+
     mockProviderInstance.getPortfolio.mockResolvedValue([
       {
         ticker: 'CASH',
         name: '현금',
         currency: 'KRW',
         quantity: 10000000,
-        avgPrice: 0, // $0 USD
+        avgPrice: 0,
         avgPriceOriginal: 0,
         currentPrice: 1,
         totalValue: 10000000,
@@ -656,29 +682,30 @@ describe('getDashboardData – snapshot calculation with CASH holdings', () => {
 
     await getDashboardData()
 
-    // totalInvested = totalValue = 10,000,000 (not 0 * 10,000,000 = 0)
-    expect(upsertSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        total_asset: 10000000,
-        total_invested: 10000000,
-        total_profit: 0,
-        yield_percent: 0,
-      }),
-      expect.anything(),
-    )
+    // Should NOT upsert when totalInvested is 0
+    expect(upsertSpy).not.toHaveBeenCalled()
   })
 
-  it('snapshot handles CASH with both USD and KRW amounts', async () => {
+  it('snapshot uses summary even when CASH has large USD amount', async () => {
     setupAuth()
 
-    // CASH: 300 USD + 500,000 KRW → totalValue = 300*1400 + 500,000 = 920,000
+    mockProviderInstance.getDashboardSummary.mockResolvedValue({
+      totalAsset: 920000,
+      totalYield: 0,
+      totalInvested: 920000,
+      totalProfit: 0,
+      thisMonthDividend: 0,
+      yearlyDividend: 0,
+      investmentDays: 5,
+    })
+
     mockProviderInstance.getPortfolio.mockResolvedValue([
       {
         ticker: 'CASH',
         name: '현금',
         currency: 'KRW',
         quantity: 500000,
-        avgPrice: 300, // $300 USD
+        avgPrice: 300,
         avgPriceOriginal: 300,
         currentPrice: 1,
         totalValue: 920000,
@@ -693,7 +720,7 @@ describe('getDashboardData – snapshot calculation with CASH holdings', () => {
 
     await getDashboardData()
 
-    // totalInvested must use totalValue (920,000), not avgPrice*quantity (300*500,000 = 150,000,000)
+    // Uses summary (920,000), NOT avgPrice*quantity (300*500,000 = 150,000,000)
     expect(upsertSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         total_asset: 920000,
@@ -704,8 +731,18 @@ describe('getDashboardData – snapshot calculation with CASH holdings', () => {
     )
   })
 
-  it('snapshot handles portfolio with only CASH and no stocks', async () => {
+  it('snapshot saves correctly for CASH-only portfolio', async () => {
     setupAuth()
+
+    mockProviderInstance.getDashboardSummary.mockResolvedValue({
+      totalAsset: 2140000,
+      totalYield: 0,
+      totalInvested: 2140000,
+      totalProfit: 0,
+      thisMonthDividend: 0,
+      yearlyDividend: 0,
+      investmentDays: 3,
+    })
 
     mockProviderInstance.getPortfolio.mockResolvedValue([
       {
@@ -716,7 +753,7 @@ describe('getDashboardData – snapshot calculation with CASH holdings', () => {
         avgPrice: 100,
         avgPriceOriginal: 100,
         currentPrice: 1,
-        totalValue: 2140000, // 2,000,000 KRW + 100 USD * 1400
+        totalValue: 2140000,
         profit: 0,
         profitPercent: 0,
         weight: 100,
@@ -728,8 +765,6 @@ describe('getDashboardData – snapshot calculation with CASH holdings', () => {
 
     await getDashboardData()
 
-    // Only CASH → totalInvested = totalValue = 2,140,000
-    // yield_percent = 0 (asset == invested)
     expect(upsertSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         total_asset: 2140000,

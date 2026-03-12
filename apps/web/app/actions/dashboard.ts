@@ -1053,16 +1053,19 @@ export async function syncPortfolio() {
     }
   }
 
-  // 4. 오늘 포트폴리오 스냅샷 저장
+  // 4. 오늘 포트폴리오 스냅샷 저장 (CASH 특수 처리: totalValue 사용)
   let snapshotSaved = false
   if (portfolio.length > 0) {
     let totalAsset = 0
     let totalInvested = 0
 
     for (const item of portfolio) {
-      // portfolio items already have KRW-converted values from getPortfolio
       totalAsset += item.totalValue
-      totalInvested += item.avgPrice * item.quantity
+      if (item.ticker === 'CASH') {
+        totalInvested += item.totalValue
+      } else {
+        totalInvested += item.avgPrice * item.quantity
+      }
     }
 
     const totalProfit = totalAsset - totalInvested
@@ -1192,23 +1195,12 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       rowIndex: index + 9, // standalone에서는 가상 rowIndex
     }))
 
-    // 1-b. Standalone 포트폴리오 스냅샷 저장
-    if (portfolio.length > 0) {
-      let totalAsset = 0
-      let totalInvested = 0
-      for (const item of portfolio) {
-        totalAsset += item.totalValue
-        if (item.ticker === 'CASH') {
-          // CASH 특수 처리: quantity=원화금액, avgPrice=달러금액이므로
-          // avgPrice * quantity는 의미없는 값. 현금은 손익이 없으므로 totalValue 사용
-          totalInvested += item.totalValue
-        } else {
-          totalInvested += item.avgPrice * item.quantity
-        }
-      }
-      const totalProfit = totalAsset - totalInvested
-      const yieldPercent =
-        totalInvested > 0 ? ((totalAsset - totalInvested) / totalInvested) * 100 : 0
+    // 1-b. Standalone 포트폴리오 스냅샷 저장 (summary의 정확한 값 사용)
+    if (portfolio.length > 0 && summary.totalInvested > 0) {
+      const snapAsset = summary.totalAsset
+      const snapInvested = summary.totalInvested
+      const snapProfit = summary.totalProfit
+      const snapYield = summary.totalYield
       const today = new Date().toISOString().split('T')[0] as string
 
       const { error: snapshotError } = await supabase
@@ -1217,10 +1209,10 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
           {
             user_id: userId,
             snapshot_date: today,
-            total_asset: Math.round(totalAsset),
-            total_invested: Math.round(totalInvested),
-            total_profit: Math.round(totalProfit),
-            yield_percent: Number(yieldPercent.toFixed(2)),
+            total_asset: Math.round(snapAsset),
+            total_invested: Math.round(snapInvested),
+            total_profit: Math.round(snapProfit),
+            yield_percent: Number(snapYield.toFixed(2)),
           },
           { onConflict: 'user_id,snapshot_date' },
         )
@@ -1229,19 +1221,13 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       console.log('[Snapshot] saved:', {
         userId,
         today,
-        totalAsset: Math.round(totalAsset),
-        totalInvested: Math.round(totalInvested),
-        totalProfit: Math.round(totalProfit),
-        yieldPercent: Number(yieldPercent.toFixed(2)),
-        cashItems: portfolio.filter((i) => i.ticker === 'CASH').map((i) => ({
-          ticker: i.ticker,
-          totalValue: i.totalValue,
-          avgPrice: i.avgPrice,
-          quantity: i.quantity,
-        })),
+        totalAsset: Math.round(snapAsset),
+        totalInvested: Math.round(snapInvested),
+        totalProfit: Math.round(snapProfit),
+        yieldPercent: Number(snapYield.toFixed(2)),
       })
 
-      // 오늘 이전의 올해 스냅샷 정리 (CASH total_invested 버그로 잘못 저장된 데이터 제거)
+      // 오늘 이전의 올해 스냅샷 정리 (이전 버그로 잘못 저장된 데이터 제거)
       // 삭제된 월은 account_balances + deposits fallback으로 계산됨
       const yearStart = `${new Date().getFullYear()}-01-01`
       const { data: deletedSnapshots, error: deleteError } = await supabase
