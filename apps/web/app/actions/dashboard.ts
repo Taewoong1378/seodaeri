@@ -1218,30 +1218,15 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
         )
       if (snapshotError) console.error('[Snapshot] upsert error:', snapshotError)
 
-      console.log('[Snapshot] saved:', {
-        userId,
-        today,
-        totalAsset: Math.round(snapAsset),
-        totalInvested: Math.round(snapInvested),
-        totalProfit: Math.round(snapProfit),
-        yieldPercent: Number(snapYield.toFixed(2)),
-      })
-
       // 오늘 이전의 올해 스냅샷 정리 (이전 버그로 잘못 저장된 데이터 제거)
       // 삭제된 월은 account_balances + deposits fallback으로 계산됨
       const yearStart = `${new Date().getFullYear()}-01-01`
-      const { data: deletedSnapshots, error: deleteError } = await supabase
+      await supabase
         .from('portfolio_snapshots')
         .delete()
         .eq('user_id', userId)
         .gte('snapshot_date', yearStart)
         .neq('snapshot_date', today)
-        .select('snapshot_date, total_asset, total_invested')
-      console.log('[Snapshot] cleanup:', {
-        deletedCount: deletedSnapshots?.length ?? 0,
-        deleted: deletedSnapshots,
-        deleteError,
-      })
     }
 
     // DividendRecord 형식으로 변환
@@ -1325,15 +1310,7 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
         }
       }
 
-      console.log('[MoM Debug]', {
-        months: majorIndexYieldComparison.months,
-        accountArr,
-        lastIdx,
-        curYtd: accountArr[lastIdx],
-        prevYtd: accountArr[lastIdx - 1],
-        accountMoM,
-        lastAccountValue,
-      })
+
 
       monthlyYieldComparison = {
         currentMonthYield: {
