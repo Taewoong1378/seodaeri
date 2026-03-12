@@ -978,4 +978,217 @@ describe('StandaloneDataProvider – calculateAccountYields (via getMajorIndexYi
     expect(result!.account[0]).toBe(0)
     expect(result!.account[1]).toBe(10.0)
   })
+
+  // -------------------------------------------------------------------------
+  // calculateAccountYields baseline behaviour (tested via getMajorIndexYieldComparison)
+  // -------------------------------------------------------------------------
+
+  function makeMarketYieldsForN(n: number) {
+    const arr = Array.from({ length: n + 1 }, (_, i) => i * 1.0)
+    return {
+      gold: arr,
+      bitcoin: arr,
+      realEstate: arr,
+      dollar: arr,
+      kospi: arr,
+      sp500: arr,
+      nasdaq: arr,
+      sp500Dollar: arr,
+      nasdaqDollar: arr,
+      goldDollar: arr,
+      bitcoinDollar: arr,
+    }
+  }
+
+  it('when data starts in March (month 2): Jan=null, Feb(baseline)=0, Mar=actual, "시작"=null', async () => {
+    const { calculateMarketYields } = await import('../exchange-rate-enrichment')
+    // months: "시작", Jan, Feb, Mar (monthCount = currentMonth + 1 ≥ 3)
+    vi.mocked(calculateMarketYields).mockReturnValue(makeMarketYieldsForN(12))
+
+    const currentYear = new Date().getFullYear()
+    // Only March snapshot
+    const snapshots = [
+      { snapshot_date: `${currentYear}-03-31`, total_asset: 11000000, total_invested: 10000000 },
+    ]
+    const mock = buildYieldsMock(snapshots)
+    vi.mocked(createServiceClient).mockReturnValue(mock as any)
+
+    const result = await provider.getMajorIndexYieldComparison(
+      'user-1',
+      undefined,
+      makeMarketData() as any,
+    )
+
+    expect(result).not.toBeNull()
+    const acct = result!.account
+    // yields[0] = "시작" point: baseline=Feb(m=1), which is not m=0, so yields[0]=null
+    expect(acct[0]).toBeNull()
+    // yields[1] = Jan (m=0): before firstDataMonth(2), before baseline(1) → null
+    expect(acct[1]).toBeNull()
+    // yields[2] = Feb (m=1): baseline month → 0
+    expect(acct[2]).toBe(0)
+    // yields[3] = Mar (m=2): actual snapshot → 10.0%
+    expect(acct[3]).toBe(10.0)
+  })
+
+  it('when data starts in February (month 1): Jan(baseline)=0, Feb=actual, "시작"=0', async () => {
+    const { calculateMarketYields } = await import('../exchange-rate-enrichment')
+    vi.mocked(calculateMarketYields).mockReturnValue(makeMarketYieldsForN(12))
+
+    const currentYear = new Date().getFullYear()
+    // Only February snapshot
+    const snapshots = [
+      { snapshot_date: `${currentYear}-02-28`, total_asset: 10500000, total_invested: 10000000 },
+    ]
+    const mock = buildYieldsMock(snapshots)
+    vi.mocked(createServiceClient).mockReturnValue(mock as any)
+
+    const result = await provider.getMajorIndexYieldComparison(
+      'user-1',
+      undefined,
+      makeMarketData() as any,
+    )
+
+    expect(result).not.toBeNull()
+    const acct = result!.account
+    // firstDataMonth=1(Feb, 0-indexed), baselineMonth=0(Jan)
+    // yields[0] = "시작": baselineMonth===0 → 0
+    expect(acct[0]).toBe(0)
+    // yields[1] = Jan (m=0): baseline month → 0
+    expect(acct[1]).toBe(0)
+    // yields[2] = Feb (m=1): actual snapshot → 5.0%
+    expect(acct[2]).toBe(5.0)
+  })
+
+  it('when data starts in January (month 0): "시작"=0, Jan=actual, baseline="시작" itself', async () => {
+    const { calculateMarketYields } = await import('../exchange-rate-enrichment')
+    vi.mocked(calculateMarketYields).mockReturnValue(makeMarketYieldsForN(12))
+
+    const currentYear = new Date().getFullYear()
+    // Only January snapshot
+    const snapshots = [
+      { snapshot_date: `${currentYear}-01-31`, total_asset: 12000000, total_invested: 10000000 },
+    ]
+    const mock = buildYieldsMock(snapshots)
+    vi.mocked(createServiceClient).mockReturnValue(mock as any)
+
+    const result = await provider.getMajorIndexYieldComparison(
+      'user-1',
+      undefined,
+      makeMarketData() as any,
+    )
+
+    expect(result).not.toBeNull()
+    const acct = result!.account
+    // firstDataMonth=0(Jan), baselineMonth=0 (firstDataMonth>0 is false, so baselineMonth=0)
+    // yields[0] = "시작": baselineMonth===0 → 0
+    expect(acct[0]).toBe(0)
+    // yields[1] = Jan (m=0): has actual snapshot → 20.0%
+    expect(acct[1]).toBe(20.0)
+  })
+
+  it('fallback path (account_balances): same baseline behaviour – March data has Feb=0, Jan=null', async () => {
+    const { calculateMarketYields } = await import('../exchange-rate-enrichment')
+    vi.mocked(calculateMarketYields).mockReturnValue(makeMarketYieldsForN(12))
+
+    const currentYear = new Date().getFullYear()
+
+    // No portfolio_snapshots → triggers fallback path
+    const mockFallback = {
+      from: vi.fn((table: string) => {
+        if (table === 'portfolio_snapshots') {
+          return createMockChain({ data: [], error: null })
+        }
+        if (table === 'account_balances') {
+          return createMockChain({
+            data: [{ year_month: `${currentYear}-03`, balance: 11000000 }],
+            error: null,
+          })
+        }
+        if (table === 'deposits') {
+          return createMockChain({
+            data: [{ type: 'DEPOSIT', amount: 10000000, deposit_date: `${currentYear}-03-01` }],
+            error: null,
+          })
+        }
+        return createMockChain({ data: null, error: null })
+      }),
+    }
+    vi.mocked(createServiceClient).mockReturnValue(mockFallback as any)
+
+    const result = await provider.getMajorIndexYieldComparison(
+      'user-1',
+      undefined,
+      makeMarketData() as any,
+    )
+
+    expect(result).not.toBeNull()
+    const acct = result!.account
+    // firstDataMonth=3(March, 1-indexed in fallback), baselineMonth=2(Feb, 1-indexed)
+    // yields[0] = "시작": baselineMonth(2) !== 1 → null
+    expect(acct[0]).toBeNull()
+    // yields[1] = Jan (m=1): m < firstDataMonth(3) and m < baselineMonth(2) → null
+    expect(acct[1]).toBeNull()
+    // yields[2] = Feb (m=2): baseline month → 0
+    expect(acct[2]).toBe(0)
+  })
+
+  it('edge case: only one month of data (current month) → "시작"=null, previous month=0, current month=actual', async () => {
+    const { calculateMarketYields } = await import('../exchange-rate-enrichment')
+    vi.mocked(calculateMarketYields).mockReturnValue(makeMarketYieldsForN(12))
+
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    const currentMonthIdx = now.getMonth() // 0-indexed
+
+    if (currentMonthIdx === 0) {
+      // January: firstDataMonth=0, baselineMonth=0, "시작"=0 — separate case
+      // Just verify the structure starts correctly
+      const snapshots = [
+        { snapshot_date: `${currentYear}-01-31`, total_asset: 11000000, total_invested: 10000000 },
+      ]
+      const mock = buildYieldsMock(snapshots)
+      vi.mocked(createServiceClient).mockReturnValue(mock as any)
+
+      const result = await provider.getMajorIndexYieldComparison(
+        'user-1',
+        undefined,
+        makeMarketData() as any,
+      )
+      expect(result).not.toBeNull()
+      expect(result!.account[0]).toBe(0) // January: baseline IS "시작"
+      return
+    }
+
+    // For any month >= February: only provide a snapshot for the current month
+    const monthStr = String(currentMonthIdx + 1).padStart(2, '0')
+    // last day approximation: use 28 which is always valid
+    const snapshots = [
+      { snapshot_date: `${currentYear}-${monthStr}-28`, total_asset: 11000000, total_invested: 10000000 },
+    ]
+    const mock = buildYieldsMock(snapshots)
+    vi.mocked(createServiceClient).mockReturnValue(mock as any)
+
+    const result = await provider.getMajorIndexYieldComparison(
+      'user-1',
+      undefined,
+      makeMarketData() as any,
+    )
+
+    expect(result).not.toBeNull()
+    const acct = result!.account
+    // firstDataMonth = currentMonthIdx (0-indexed), baselineMonth = currentMonthIdx - 1
+    // "시작" (acct[0]): baselineMonth > 0 → null
+    if (currentMonthIdx >= 2) {
+      expect(acct[0]).toBeNull()
+    }
+    // acct[currentMonthIdx + 1] = current month → 10.0%
+    expect(acct[currentMonthIdx + 1]).toBe(10.0)
+    // acct[currentMonthIdx] = previous month (baseline) → 0
+    expect(acct[currentMonthIdx]).toBe(0)
+    // Months before baseline should be null
+    for (let i = 1; i < currentMonthIdx; i++) {
+      expect(acct[i]).toBeNull()
+    }
+  })
 })

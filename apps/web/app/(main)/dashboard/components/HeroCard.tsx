@@ -46,10 +46,10 @@ function StatItem({
             <span
               className={cn(
                 'inline-block text-sm px-1.5 py-0.5 rounded-[6px] font-medium',
-                isPositive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700',
+                yieldPercent >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700',
               )}
             >
-              {isPositive ? '+' : ''}
+              {yieldPercent >= 0 ? '+' : ''}
               {yieldPercent.toFixed(1)}%
             </span>
           )}

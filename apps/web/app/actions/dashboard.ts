@@ -1198,7 +1198,13 @@ async function getStandaloneDashboardData(userId: string): Promise<DashboardData
       let totalInvested = 0
       for (const item of portfolio) {
         totalAsset += item.totalValue
-        totalInvested += item.avgPrice * item.quantity
+        if (item.ticker === 'CASH') {
+          // CASH 특수 처리: quantity=원화금액, avgPrice=달러금액이므로
+          // avgPrice * quantity는 의미없는 값. 현금은 손익이 없으므로 totalValue 사용
+          totalInvested += item.totalValue
+        } else {
+          totalInvested += item.avgPrice * item.quantity
+        }
       }
       const totalProfit = totalAsset - totalInvested
       const yieldPercent =

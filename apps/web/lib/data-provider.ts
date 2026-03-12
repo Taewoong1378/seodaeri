@@ -864,7 +864,7 @@ export class StandaloneDataProvider implements DataProvider {
           return result
         }
 
-        accountYields = [0] // 시작점
+        accountYields = [0] // 시작점 (아래에서 조정)
 
         if (balances && balances.length > 0) {
           const monthlyBalance = new Map<number, number>()
@@ -874,6 +874,10 @@ export class StandaloneDataProvider implements DataProvider {
           }
 
           const firstDataMonth = Math.min(...Array.from(monthlyBalance.keys()))
+          // baseline = 첫 데이터 한 달 전 (0%로 표시), 그 이전은 null
+          const baselineMonth = firstDataMonth > 1 ? firstDataMonth - 1 : 1
+          // "시작" 포인트: baseline이 1월이면 시작점도 0%, 아니면 null
+          accountYields[0] = baselineMonth === 1 ? 0 : null
 
           for (let m = 1; m <= currentMonth + 1; m++) {
             const bal = monthlyBalance.get(m)
@@ -885,8 +889,12 @@ export class StandaloneDataProvider implements DataProvider {
               } else {
                 accountYields.push(0)
               }
+            } else if (m === baselineMonth) {
+              accountYields.push(0) // baseline 월만 0%
+            } else if (m < firstDataMonth) {
+              accountYields.push(null) // baseline 이전은 미표시
             } else {
-              accountYields.push(m < firstDataMonth ? 0 : null)
+              accountYields.push(null) // 데이터 이후 빈 월도 미표시
             }
           }
         } else {
@@ -966,13 +974,21 @@ export class StandaloneDataProvider implements DataProvider {
     const firstDataMonth = Math.min(...Array.from(monthlySnapshots.keys()))
 
     // 월별 수익률 계산
+    // baseline = 첫 데이터 한 달 전 (0%로 표시), 그 이전은 null (차트 미표시)
+    const baselineMonth = firstDataMonth > 0 ? firstDataMonth - 1 : 0
+    // "시작" 포인트: baseline이 1월(m=0)이면 시작점도 0%, 아니면 null
+    yields[0] = baselineMonth === 0 ? 0 : null
     for (let m = 0; m < monthCount; m++) {
       const monthSnapshot = monthlySnapshots.get(m)
 
       if (!monthSnapshot) {
-        // 첫 데이터 이전 월은 0%로 채움 (라인이 연결되도록)
-        // 첫 데이터 이후 빈 월은 null (forward-fill 안 함)
-        yields.push(m < firstDataMonth ? 0 : null)
+        if (m === baselineMonth) {
+          yields.push(0) // baseline 월만 0%
+        } else if (m < firstDataMonth) {
+          yields.push(null) // baseline 이전은 미표시
+        } else {
+          yields.push(null) // 첫 데이터 이후 빈 월도 미표시
+        }
         continue
       }
 

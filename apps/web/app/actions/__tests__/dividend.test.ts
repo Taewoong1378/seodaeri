@@ -160,8 +160,9 @@ describe('saveDividend – standalone mode', () => {
   })
 
   it('returns 401 error message when sheet API throws with 401 code', async () => {
-    const { appendSheetData } = await import('../../../lib/google-sheets')
-    vi.mocked(appendSheetData).mockRejectedValueOnce({ code: 401, message: '401 Unauthorized' })
+    const { batchUpdateSheet, fetchSheetData } = await import('../../../lib/google-sheets')
+    vi.mocked(fetchSheetData).mockResolvedValueOnce([]) // findLastDividendDataRow
+    vi.mocked(batchUpdateSheet).mockRejectedValueOnce({ code: 401, message: '401 Unauthorized' })
 
     mockedAuth.mockResolvedValueOnce({
       user: { id: 'user-1', email: 'test@test.com', name: 'Test' },

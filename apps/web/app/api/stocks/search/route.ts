@@ -37,25 +37,23 @@ export async function GET(request: NextRequest) {
     // 1. Supabase에서 검색 시도
     const supabase = createServiceClient()
 
-    // 다중 단어 검색: 각 토큰으로 OR 검색 후 모든 토큰이 포함된 결과만 필터
-    // 예: "rise 나스닥" → DB에서 "rise" OR "나스닥" 매칭 → 두 단어 모두 포함된 결과 필터
+    // 다중 단어 검색: 각 토큰이 code/name/eng_name 중 하나에 포함되어야 함 (AND)
+    // 예: "tiger 미국" → name ILIKE '%tiger%' AND name ILIKE '%미국%'
     const tokens = q.split(/\s+/).filter((t) => t.length > 0)
 
-    // 모든 토큰을 OR로 합쳐서 넓게 검색
-    const orConditions = tokens
-      .flatMap((token) => [
-        `code.ilike.%${token}%`,
-        `name.ilike.%${token}%`,
-        `eng_name.ilike.%${token}%`,
-      ])
-      .join(',')
-
-    const { data: dbStocks, error: dbError } = await supabase
+    // Supabase 쿼리 빌드: 각 토큰별 .or()를 체이닝하면 AND로 동작
+    let query = supabase
       .from('stocks')
       .select('code, name, market, eng_name')
       .eq('is_active', true)
-      .or(orConditions)
-      .limit(200)
+
+    for (const token of tokens) {
+      query = query.or(
+        `code.ilike.%${token}%,name.ilike.%${token}%,eng_name.ilike.%${token}%`,
+      )
+    }
+
+    const { data: dbStocks, error: dbError } = await query.limit(200)
 
     // Supabase에서 결과를 찾았으면 토큰 필터 → 정렬 → 반환
     if (!dbError && dbStocks && dbStocks.length > 0) {

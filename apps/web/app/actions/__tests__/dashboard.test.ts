@@ -493,6 +493,255 @@ describe('getDashboardData – sheet mode (spreadsheet_id present)', () => {
   })
 })
 
+// ---------------------------------------------------------------------------
+// Snapshot calculation – CASH bug fix
+// ---------------------------------------------------------------------------
+
+describe('getDashboardData – snapshot calculation with CASH holdings', () => {
+  let upsertSpy: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockProviderInstance = buildDefaultProviderInstance()
+    upsertSpy = vi.fn().mockResolvedValue({ error: null })
+  })
+
+  function buildSnapshotSupabase() {
+    const snapshotChain: Record<string, any> = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      gt: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      like: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: { id: 'user-1', spreadsheet_id: null }, error: null }),
+      insert: vi.fn().mockResolvedValue({ error: null }),
+      upsert: upsertSpy,
+    }
+    ;(snapshotChain as any).then = (resolve: (v: any) => any) =>
+      Promise.resolve({ data: null, error: null }).then(resolve)
+
+    return {
+      from: vi.fn((table: string) => {
+        if (table === 'users') {
+          return createMockChain({ data: { id: 'user-1', spreadsheet_id: null }, error: null })
+        }
+        return snapshotChain
+      }),
+    }
+  }
+
+  function setupAuth() {
+    vi.mocked(auth).mockResolvedValue({
+      user: { id: 'user-1', email: 'test@test.com', name: 'Test' },
+      accessToken: null,
+      isDemo: false,
+    } as any)
+  }
+
+  it('snapshot uses totalValue for CASH (not avgPrice * quantity)', async () => {
+    setupAuth()
+
+    // CASH: quantity=KRW amount (1,000,000), avgPrice=USD amount (500)
+    // If bug existed: totalInvested += 500 * 1,000,000 = 500,000,000,000 (nonsense)
+    // Fixed: totalInvested += totalValue = 1,700,000 (1,000,000 KRW + 500 USD * 1400)
+    mockProviderInstance.getPortfolio.mockResolvedValue([
+      {
+        ticker: 'CASH',
+        name: '현금',
+        currency: 'KRW',
+        quantity: 1000000,
+        avgPrice: 500,
+        avgPriceOriginal: 500,
+        currentPrice: 1,
+        totalValue: 1700000,
+        profit: 0,
+        profitPercent: 0,
+        weight: 100,
+      },
+    ])
+
+    const mockSupa = buildSnapshotSupabase()
+    vi.mocked(createServiceClient).mockReturnValue(mockSupa as any)
+
+    await getDashboardData()
+
+    // upsert should have been called with totalInvested = totalValue = 1,700,000 (not 500 * 1,000,000)
+    expect(upsertSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        total_asset: 1700000,
+        total_invested: 1700000,
+        total_profit: 0,
+      }),
+      expect.anything(),
+    )
+  })
+
+  it('snapshot totalInvested is correct with CASH + stock holdings', async () => {
+    setupAuth()
+
+    // CASH totalValue=1,000,000, stock (avgPrice=70000, quantity=10) invested=700,000
+    mockProviderInstance.getPortfolio.mockResolvedValue([
+      {
+        ticker: 'CASH',
+        name: '현금',
+        currency: 'KRW',
+        quantity: 500000,
+        avgPrice: 0,
+        avgPriceOriginal: 0,
+        currentPrice: 1,
+        totalValue: 500000,
+        profit: 0,
+        profitPercent: 0,
+        weight: 40,
+      },
+      {
+        ticker: '005930',
+        name: '삼성전자',
+        currency: 'KRW',
+        quantity: 10,
+        avgPrice: 70000,
+        avgPriceOriginal: 70000,
+        currentPrice: 75000,
+        totalValue: 750000,
+        profit: 50000,
+        profitPercent: 7.14,
+        weight: 60,
+      },
+    ])
+
+    const mockSupa = buildSnapshotSupabase()
+    vi.mocked(createServiceClient).mockReturnValue(mockSupa as any)
+
+    await getDashboardData()
+
+    // totalAsset = 500,000 + 750,000 = 1,250,000
+    // totalInvested = 500,000 (CASH totalValue) + 70,000 * 10 (stock) = 500,000 + 700,000 = 1,200,000
+    expect(upsertSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        total_asset: 1250000,
+        total_invested: 1200000,
+        total_profit: 50000,
+      }),
+      expect.anything(),
+    )
+  })
+
+  it('snapshot handles CASH with $0 USD and large KRW amount correctly', async () => {
+    setupAuth()
+
+    // CASH: no USD, only KRW 10,000,000
+    mockProviderInstance.getPortfolio.mockResolvedValue([
+      {
+        ticker: 'CASH',
+        name: '현금',
+        currency: 'KRW',
+        quantity: 10000000,
+        avgPrice: 0, // $0 USD
+        avgPriceOriginal: 0,
+        currentPrice: 1,
+        totalValue: 10000000,
+        profit: 0,
+        profitPercent: 0,
+        weight: 100,
+      },
+    ])
+
+    const mockSupa = buildSnapshotSupabase()
+    vi.mocked(createServiceClient).mockReturnValue(mockSupa as any)
+
+    await getDashboardData()
+
+    // totalInvested = totalValue = 10,000,000 (not 0 * 10,000,000 = 0)
+    expect(upsertSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        total_asset: 10000000,
+        total_invested: 10000000,
+        total_profit: 0,
+        yield_percent: 0,
+      }),
+      expect.anything(),
+    )
+  })
+
+  it('snapshot handles CASH with both USD and KRW amounts', async () => {
+    setupAuth()
+
+    // CASH: 300 USD + 500,000 KRW → totalValue = 300*1400 + 500,000 = 920,000
+    mockProviderInstance.getPortfolio.mockResolvedValue([
+      {
+        ticker: 'CASH',
+        name: '현금',
+        currency: 'KRW',
+        quantity: 500000,
+        avgPrice: 300, // $300 USD
+        avgPriceOriginal: 300,
+        currentPrice: 1,
+        totalValue: 920000,
+        profit: 0,
+        profitPercent: 0,
+        weight: 100,
+      },
+    ])
+
+    const mockSupa = buildSnapshotSupabase()
+    vi.mocked(createServiceClient).mockReturnValue(mockSupa as any)
+
+    await getDashboardData()
+
+    // totalInvested must use totalValue (920,000), not avgPrice*quantity (300*500,000 = 150,000,000)
+    expect(upsertSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        total_asset: 920000,
+        total_invested: 920000,
+        total_profit: 0,
+      }),
+      expect.anything(),
+    )
+  })
+
+  it('snapshot handles portfolio with only CASH and no stocks', async () => {
+    setupAuth()
+
+    mockProviderInstance.getPortfolio.mockResolvedValue([
+      {
+        ticker: 'CASH',
+        name: '현금',
+        currency: 'KRW',
+        quantity: 2000000,
+        avgPrice: 100,
+        avgPriceOriginal: 100,
+        currentPrice: 1,
+        totalValue: 2140000, // 2,000,000 KRW + 100 USD * 1400
+        profit: 0,
+        profitPercent: 0,
+        weight: 100,
+      },
+    ])
+
+    const mockSupa = buildSnapshotSupabase()
+    vi.mocked(createServiceClient).mockReturnValue(mockSupa as any)
+
+    await getDashboardData()
+
+    // Only CASH → totalInvested = totalValue = 2,140,000
+    // yield_percent = 0 (asset == invested)
+    expect(upsertSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        total_asset: 2140000,
+        total_invested: 2140000,
+        total_profit: 0,
+        yield_percent: 0,
+      }),
+      expect.anything(),
+    )
+  })
+})
+
 describe('getDashboardData – DashboardData shape invariants', () => {
   beforeEach(() => {
     vi.clearAllMocks()
