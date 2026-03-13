@@ -74,11 +74,13 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
   console.log('[PerformanceComparisonChart] filteredData:', JSON.stringify(filteredData.map(d => ({ date: d.date, portfolio: d.portfolio }))))
   const trimmedData = (() => {
     const firstDataIdx = filteredData.findIndex((d) => d.portfolio !== 0)
-    console.log('[PerformanceComparisonChart] firstDataIdx:', firstDataIdx)
-    if (firstDataIdx <= 0) return filteredData // 데이터 없거나 첫 항목부터 데이터 있음
+    // baseline = 첫 데이터 직전 월 (0%로 시작)
+    const baselineIdx = firstDataIdx > 0 ? firstDataIdx - 1 : -1
+    console.log('[PerformanceComparisonChart] firstDataIdx:', firstDataIdx, 'baselineIdx:', baselineIdx)
+    if (baselineIdx < 0) return filteredData // 데이터 없거나 첫 항목부터 데이터 있음
 
-    // 첫 실제 데이터부터 시작, 그 데이터를 0% 기준으로 리베이스
-    const sliced = filteredData.slice(firstDataIdx)
+    // baseline 월부터 시작 (2월=0%, 3월=실제 수익률)
+    const sliced = filteredData.slice(baselineIdx)
     // 지수를 baseline 시점 기준 0%로 리베이스
     const base = sliced[0]
     if (!base) return sliced
