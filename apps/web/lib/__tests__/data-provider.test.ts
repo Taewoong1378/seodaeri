@@ -1021,12 +1021,15 @@ describe('StandaloneDataProvider – calculateAccountYields (via getMajorIndexYi
 
     expect(result).not.toBeNull()
     const acct = result!.account
-    // After trimming: baseline(Feb) becomes "시작"=0, then Mar=actual
-    // months = ["시작", "3월"], account = [0, 10.0]
-    expect(acct[0]).toBe(0)
-    expect(acct[1]).toBe(10.0)
+    // No trimming: all months shown, account has null before baseline
+    // months = ["시작", "1월", "2월", "3월", ...], account = [null, null, 0, 10.0, ...]
+    expect(acct[0]).toBeNull() // "시작" = null (baseline is Feb, not Jan)
+    expect(acct[1]).toBeNull() // 1월 = null (before baseline)
+    expect(acct[2]).toBe(0)    // 2월 = baseline (0%)
+    expect(acct[3]).toBe(10.0) // 3월 = actual
     expect(result!.months[0]).toBe('시작')
-    expect(result!.months[1]).toBe('3월')
+    expect(result!.months[2]).toBe('2월')
+    expect(result!.months[3]).toBe('3월')
   })
 
   it('when data starts in February (month 1): Jan(baseline)=0, Feb=actual, "시작"=0', async () => {
@@ -1122,8 +1125,8 @@ describe('StandaloneDataProvider – calculateAccountYields (via getMajorIndexYi
 
     expect(result).not.toBeNull()
     const acct = result!.account
-    // After trimming: baseline becomes "시작"=0, then current month=actual
-    expect(acct[0]).toBe(0)
+    // No trimming: all months shown, account has null before baseline
+    expect(acct[0]).toBeNull() // "시작" = null (baseline is Feb, not Jan)
     expect(result!.months[0]).toBe('시작')
   })
 
@@ -1171,14 +1174,15 @@ describe('StandaloneDataProvider – calculateAccountYields (via getMajorIndexYi
 
     expect(result).not.toBeNull()
     const acct = result!.account
-    // After trimming: baseline becomes "시작", then current month=actual
-    // For any month >= 2: trimmed to [0, 10.0]
+    // No trimming: all months shown, account has null before baseline
+    // For any month >= 2: baseline is previous month, earlier months are null
     if (currentMonthIdx >= 2) {
-      expect(acct[0]).toBe(0)
-      expect(acct[1]).toBe(10.0)
+      expect(acct[0]).toBeNull() // "시작" = null (baseline is not Jan)
+      expect(acct[currentMonthIdx]).toBe(0) // baseline month = 0%
+      expect(acct[currentMonthIdx + 1]).toBe(10.0) // current month = actual
       expect(result!.months[0]).toBe('시작')
     } else {
-      // February (currentMonthIdx=1): baseline=Jan(m=0), no trimming needed
+      // February (currentMonthIdx=1): baseline=Jan(m=0), "시작"=0
       expect(acct[0]).toBe(0)
       expect(acct[currentMonthIdx + 1]).toBe(10.0)
     }

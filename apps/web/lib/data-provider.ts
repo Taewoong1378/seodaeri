@@ -902,40 +902,8 @@ export class StandaloneDataProvider implements DataProvider {
         }
       }
 
-      // 계좌 baseline 시점에 맞춰 차트 시작점 조정
-      // (3월 시작 → 2월이 baseline → 차트를 2월부터 시작, 계좌추세 차트와 동일)
-      const baselineIdx = accountYields.findIndex((v) => v !== null)
-      if (baselineIdx > 0) {
-        // 시장 지수를 baseline 시점 기준으로 리베이스 (baseline에서 0% 시작)
-        const rebase = (arr: number[]): number[] => {
-          const sliced = arr.slice(baselineIdx)
-          const base = sliced[0] ?? 0
-          if (base === 0) return sliced
-          const round1 = (n: number) => Math.round(n * 10) / 10
-          return sliced.map((v) =>
-            round1(((1 + v / 100) / (1 + base / 100) - 1) * 100),
-          )
-        }
-
-        const trimmedMonths = ['시작', ...months.slice(baselineIdx + 1)]
-        const trimmedAccount = accountYields.slice(baselineIdx)
-
-        return {
-          months: trimmedMonths,
-          account: trimmedAccount,
-          kospi: rebase(marketYields.kospi),
-          sp500: rebase(marketYields.sp500),
-          nasdaq: rebase(marketYields.nasdaq),
-          sp500Dollar: rebase(marketYields.sp500Dollar),
-          nasdaqDollar: rebase(marketYields.nasdaqDollar),
-          dollar: rebase(marketYields.dollar),
-          gold: rebase(marketYields.gold),
-          bitcoin: rebase(marketYields.bitcoin),
-          realEstate: rebase(marketYields.realEstate),
-          goldDollar: rebase(marketYields.goldDollar),
-          bitcoinDollar: rebase(marketYields.bitcoinDollar),
-        }
-      }
+      // 모든 월을 표시 (1월부터), 계좌 라인만 데이터 있는 시점부터 시작
+      // 시장 지수는 트리밍하지 않고 1월부터 전부 표시
 
       return {
         months,

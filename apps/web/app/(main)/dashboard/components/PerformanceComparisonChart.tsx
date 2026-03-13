@@ -71,12 +71,14 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
 
   // 계좌추세 차트와 시작점 일치: portfolio가 0이 아닌 첫 데이터의 직전(baseline)부터 시작
   // 예: 3월 시작 → [0,0,0,7.1] → 2월(baseline=0%)부터 시작
+  console.log('[PerformanceComparisonChart] filteredData:', JSON.stringify(filteredData.map(d => ({ date: d.date, portfolio: d.portfolio }))))
   const trimmedData = (() => {
     const firstDataIdx = filteredData.findIndex((d) => d.portfolio !== 0)
-    const baselineIdx = firstDataIdx > 0 ? firstDataIdx - 1 : -1
-    if (baselineIdx <= 0) return filteredData // 처음부터 시작하거나 데이터 없음
+    console.log('[PerformanceComparisonChart] firstDataIdx:', firstDataIdx)
+    if (firstDataIdx <= 0) return filteredData // 데이터 없거나 첫 항목부터 데이터 있음
 
-    const sliced = filteredData.slice(baselineIdx)
+    // 첫 실제 데이터부터 시작, 그 데이터를 0% 기준으로 리베이스
+    const sliced = filteredData.slice(firstDataIdx)
     // 지수를 baseline 시점 기준 0%로 리베이스
     const base = sliced[0]
     if (!base) return sliced

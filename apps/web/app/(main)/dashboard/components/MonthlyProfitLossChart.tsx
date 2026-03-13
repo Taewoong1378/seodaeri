@@ -47,7 +47,9 @@ function formatYAxisValue(value: number): string {
 // 폭포 차트 데이터 생성
 function buildWaterfallData(data: MonthlyProfitLoss[]) {
   let cumulative = 0
-  const result = data.map((d) => {
+  const result = data
+    .filter((d) => d.profit !== 0 || d.loss !== 0) // net=0인 월 제외 (라벨 위치 밀림 방지)
+    .map((d) => {
     const net = d.profit - d.loss
     const base = net >= 0 ? cumulative : cumulative + net
     const value = Math.abs(net)
@@ -86,7 +88,9 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
 
   if (!data || data.length === 0) return null
 
+  console.log('[MonthlyProfitLossChart] input data:', JSON.stringify(data))
   const waterfallData = buildWaterfallData(data)
+  console.log('[MonthlyProfitLossChart] waterfallData:', JSON.stringify(waterfallData.map(d => ({ month: d.month, net: d.net, base: d.base, value: d.value }))))
 
   const totalProfit = data.reduce((sum, d) => sum + d.profit, 0)
   const totalLoss = data.reduce((sum, d) => sum + d.loss, 0)
@@ -106,12 +110,15 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
 
   // 커스텀 레이블 (바 위에 금액 표시, net=0이면 숨김)
   const renderLabel = (fontSize: number) => (props: any) => {
-    const { x, y, width, index } = props
-    const entry = waterfallData[index]
+    const { x, y, width, index, payload } = props
+    console.log('[renderLabel]', { index, payloadMonth: payload?.month, payloadNet: payload?.net, waterfallMonth: waterfallData[index]?.month, waterfallNet: waterfallData[index]?.net })
+    // payload 우선 사용 (stacked bar에서 index가 밀릴 수 있음)
+    const entry = payload || waterfallData[index]
     if (!entry) return null
     // net이 0이면 라벨 숨김
     if (entry.net === 0 && !entry.isTotal) return null
-    const labelY = entry.net >= 0 ? y - 4 : y + entry.value + 12
+    const barValue = entry.value ?? 0
+    const labelY = entry.net >= 0 ? y - 4 : y + barValue + 12
     const color = entry.isTotal ? '#64748b' : entry.net >= 0 ? profitColor : lossColor
     return (
       <text
