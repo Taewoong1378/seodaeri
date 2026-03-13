@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useRef } from 'react'
+import { useRef } from "react";
 import {
   Bar,
   BarChart,
@@ -12,64 +12,65 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-} from 'recharts'
-import { LandscapeChartModal } from './LandscapeChartModal'
-import { ShareChartButton } from './ShareChartButton'
+} from "recharts";
+import { LandscapeChartModal } from "./LandscapeChartModal";
+import { ShareChartButton } from "./ShareChartButton";
 
 interface MonthlyProfitLoss {
-  month: string
-  profit: number
-  loss: number
+  month: string;
+  profit: number;
+  loss: number;
 }
 
 interface MonthlyProfitLossChartProps {
-  data: MonthlyProfitLoss[]
-  variant?: 'default' | 'landing'
+  data: MonthlyProfitLoss[];
+  variant?: "default" | "landing";
 }
 
 function formatCurrencyShort(value: number): string {
-  const abs = Math.abs(value)
-  const sign = value >= 0 ? '+' : '-'
-  if (abs >= 100000000) return `${sign}${(abs / 100000000).toFixed(1)}억`
-  if (abs >= 10000) return `${sign}${Math.round(abs / 10000)}만`
-  if (abs >= 1000) return `${sign}${(abs / 1000).toFixed(0)}K`
-  return `${sign}${abs}`
+  const abs = Math.abs(value);
+  const sign = value >= 0 ? "+" : "-";
+  if (abs >= 100000000) return `${sign}${(abs / 100000000).toFixed(1)}억`;
+  if (abs >= 10000) return `${sign}${Math.round(abs / 10000)}만`;
+  if (abs >= 1000) return `${sign}${(abs / 1000).toFixed(0)}K`;
+  return `${sign}${abs}`;
 }
 
 function formatYAxisValue(value: number): string {
-  const absValue = Math.abs(value)
-  const sign = value < 0 ? '-' : ''
-  if (absValue >= 100000000) return `${sign}${(absValue / 100000000).toFixed(1)}억`
-  if (absValue >= 10000) return `${sign}${Math.round(absValue / 10000)}만`
-  return value.toLocaleString()
+  const absValue = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+  if (absValue >= 100000000)
+    return `${sign}${(absValue / 100000000).toFixed(1)}억`;
+  if (absValue >= 10000) return `${sign}${Math.round(absValue / 10000)}만`;
+  return value.toLocaleString();
 }
 
 // 폭포 차트 데이터 생성
 function buildWaterfallData(data: MonthlyProfitLoss[]) {
-  let cumulative = 0
+  let cumulative = 0;
   const result = data
     .filter((d) => d.profit !== 0 || d.loss !== 0) // net=0인 월 제외 (라벨 위치 밀림 방지)
     .map((d) => {
-    const net = d.profit - d.loss
-    const base = net >= 0 ? cumulative : cumulative + net
-    const value = Math.abs(net)
-    const entry = {
-      month: d.month,
-      base,
-      value,
-      net,
-      profit: d.profit,
-      loss: d.loss,
-      cumulative: cumulative + net,
-      isTotal: false,
-    }
-    cumulative += net
-    return entry
-  })
+      const net = d.profit - d.loss;
+      const base = net >= 0 ? cumulative : cumulative + net;
+      const value = Math.abs(net);
+      const entry = {
+        month: d.month,
+        base,
+        value,
+        net,
+        profit: d.profit,
+        loss: d.loss,
+        cumulative: cumulative + net,
+        isTotal: false,
+      };
+      cumulative += net;
+      return entry;
+    });
 
   // 소계 바 추가
   result.push({
-    month: '소계',
+    month: "소계",
     base: 0,
     value: Math.abs(cumulative),
     net: cumulative,
@@ -77,49 +78,73 @@ function buildWaterfallData(data: MonthlyProfitLoss[]) {
     loss: data.reduce((s, d) => s + d.loss, 0),
     cumulative,
     isTotal: true,
-  })
+  });
 
-  return result
+  return result;
 }
 
-export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyProfitLossChartProps) {
-  const chartRef = useRef<HTMLDivElement>(null)
-  const hiddenChartRef = useRef<HTMLDivElement>(null)
+export function MonthlyProfitLossChart({
+  data,
+  variant = "default",
+}: MonthlyProfitLossChartProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const hiddenChartRef = useRef<HTMLDivElement>(null);
 
-  if (!data || data.length === 0) return null
+  if (!data || data.length === 0) return null;
 
-  console.log('[MonthlyProfitLossChart] input data:', JSON.stringify(data))
-  const waterfallData = buildWaterfallData(data)
-  console.log('[MonthlyProfitLossChart] waterfallData:', JSON.stringify(waterfallData.map(d => ({ month: d.month, net: d.net, base: d.base, value: d.value }))))
+  console.log("[MonthlyProfitLossChart] input data:", JSON.stringify(data));
+  const waterfallData = buildWaterfallData(data);
+  console.log(
+    "[MonthlyProfitLossChart] waterfallData:",
+    JSON.stringify(
+      waterfallData.map((d) => ({
+        month: d.month,
+        net: d.net,
+        base: d.base,
+        value: d.value,
+      })),
+    ),
+  );
 
-  const totalProfit = data.reduce((sum, d) => sum + d.profit, 0)
-  const totalLoss = data.reduce((sum, d) => sum + d.loss, 0)
-  const netTotal = totalProfit - totalLoss
+  const totalProfit = data.reduce((sum, d) => sum + d.profit, 0);
+  const totalLoss = data.reduce((sum, d) => sum + d.loss, 0);
+  const netTotal = totalProfit - totalLoss;
 
   // Y축 범위
-  const allTops = waterfallData.map((d) => d.base + d.value)
-  const allBottoms = waterfallData.map((d) => d.base)
-  const yMax = Math.ceil(Math.max(...allTops) * 1.15)
-  const yMin = Math.floor(Math.min(...allBottoms, 0) * 1.15)
+  const allTops = waterfallData.map((d) => d.base + d.value);
+  const allBottoms = waterfallData.map((d) => d.base);
+  const yMax = Math.ceil(Math.max(...allTops) * 1.15);
+  const yMin = Math.floor(Math.min(...allBottoms, 0) * 1.15);
 
-  const profitColor = variant === 'landing' ? '#059669' : '#ef4444'
-  const lossColor = '#3b82f6'
-  const totalColor = '#94a3b8'
-  const profitText = variant === 'landing' ? 'text-emerald-600' : 'text-red-500'
-  const profitBg = variant === 'landing' ? 'bg-emerald-500' : 'bg-red-500'
+  const profitColor = variant === "landing" ? "#059669" : "#ef4444";
+  const lossColor = "#3b82f6";
+  const totalColor = "#94a3b8";
+  const profitText =
+    variant === "landing" ? "text-emerald-600" : "text-red-500";
+  const profitBg = variant === "landing" ? "bg-emerald-500" : "bg-red-500";
 
   // 커스텀 레이블 (바 위에 금액 표시, net=0이면 숨김)
   const renderLabel = (fontSize: number) => (props: any) => {
-    const { x, y, width, index, payload } = props
-    console.log('[renderLabel]', { index, payloadMonth: payload?.month, payloadNet: payload?.net, waterfallMonth: waterfallData[index]?.month, waterfallNet: waterfallData[index]?.net })
+    const { x, y, width, index, payload } = props;
+    console.log("[renderLabel]", {
+      index,
+      payloadMonth: payload?.month,
+      payloadNet: payload?.net,
+      waterfallMonth: waterfallData[index]?.month,
+      waterfallNet: waterfallData[index]?.net,
+    });
     // payload 우선 사용 (stacked bar에서 index가 밀릴 수 있음)
-    const entry = payload || waterfallData[index]
-    if (!entry) return null
+    const entry = payload || waterfallData[index];
+    if (!entry) return null;
     // net이 0이면 라벨 숨김
-    if (entry.net === 0 && !entry.isTotal) return null
-    const barValue = entry.value ?? 0
-    const labelY = entry.net >= 0 ? y - 4 : y + barValue + 12
-    const color = entry.isTotal ? '#64748b' : entry.net >= 0 ? profitColor : lossColor
+    if (entry.net === 0 && !entry.isTotal) return null;
+    const barValue = entry.value ?? 0;
+    const labelY = entry.net >= 0 ? y - 4 : y + barValue + 12;
+    const color = entry.isTotal
+      ? "#64748b"
+      : entry.net >= 0
+        ? profitColor
+        : lossColor;
     return (
       <text
         x={x + width / 2}
@@ -131,38 +156,42 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
       >
         {formatCurrencyShort(entry.net)}
       </text>
-    )
-  }
+    );
+  };
 
   const renderWaterfallChart = (
-    height: string | number = '240px',
+    height: string | number = "240px",
     isModal = false,
     isCapture = false,
   ) => {
-    const labelFontSize = isModal ? 10 : isCapture ? 11 : 8
-    const xFontSize = isModal ? 11 : isCapture ? 12 : 9
+    const labelFontSize = isModal ? 10 : isCapture ? 11 : 8;
+    const xFontSize = isModal ? 11 : isCapture ? 12 : 9;
     const margin = isModal
       ? { top: 24, right: 20, left: 10, bottom: 5 }
       : isCapture
         ? { top: 28, right: 30, left: 10, bottom: 10 }
-        : { top: 20, right: 5, left: -5, bottom: 5 }
+        : { top: 20, right: 5, left: -5, bottom: 5 };
 
     return (
       <div className="relative w-full" style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={waterfallData} margin={margin}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#e2e8f0"
+              vertical={false}
+            />
             <XAxis
               dataKey="month"
-              axisLine={{ stroke: '#cbd5e1' }}
+              axisLine={{ stroke: "#cbd5e1" }}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: xFontSize }}
+              tick={{ fill: "#64748b", fontSize: xFontSize }}
               tickFormatter={(v) => v}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#64748b', fontSize: 9 }}
+              tick={{ fill: "#64748b", fontSize: 9 }}
               tickFormatter={formatYAxisValue}
               domain={[yMin, yMax]}
               width={isCapture ? 50 : isModal ? 45 : 40}
@@ -170,37 +199,46 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
             <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1.5} />
             {!isCapture && (
               <Tooltip
-                cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+                cursor={{ fill: "rgba(0,0,0,0.04)" }}
                 content={({ active, payload, label }) => {
-                  if (!active || !payload?.length) return null
-                  const entry = waterfallData.find((d) => d.month === label)
-                  if (!entry) return null
+                  if (!active || !payload?.length) return null;
+                  const entry = waterfallData.find((d) => d.month === label);
+                  if (!entry) return null;
                   return (
                     <div className="bg-popover border border-border px-3 py-2 rounded-lg shadow-xl">
                       <p className="text-muted-foreground text-[10px] mb-1">
-                        {entry.isTotal ? '소계' : label}
+                        {entry.isTotal ? "소계" : label}
                       </p>
                       {!entry.isTotal && entry.profit > 0 && (
-                        <p className="text-xs font-medium" style={{ color: profitColor }}>
+                        <p
+                          className="text-xs font-medium"
+                          style={{ color: profitColor }}
+                        >
                           수익: +{entry.profit.toLocaleString()}원
                         </p>
                       )}
                       {!entry.isTotal && entry.loss > 0 && (
-                        <p className="text-xs font-medium" style={{ color: lossColor }}>
+                        <p
+                          className="text-xs font-medium"
+                          style={{ color: lossColor }}
+                        >
                           손실: -{entry.loss.toLocaleString()}원
                         </p>
                       )}
                       <div className="border-t border-border mt-1 pt-1">
                         <p
                           className="text-sm font-bold"
-                          style={{ color: entry.net >= 0 ? profitColor : lossColor }}
+                          style={{
+                            color: entry.net >= 0 ? profitColor : lossColor,
+                          }}
                         >
-                          {entry.isTotal ? '합계' : '순손익'}: {entry.net >= 0 ? '+' : ''}
+                          {entry.isTotal ? "합계" : "순손익"}:{" "}
+                          {entry.net >= 0 ? "+" : ""}
                           {entry.net.toLocaleString()}원
                         </p>
                       </div>
                     </div>
-                  )
+                  );
                 }}
               />
             )}
@@ -221,11 +259,21 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
               maxBarSize={isModal ? 32 : isCapture ? 36 : 22}
               isAnimationActive={!isCapture}
             >
-              <LabelList dataKey="value" position="top" content={renderLabel(labelFontSize)} />
+              <LabelList
+                dataKey="value"
+                position="top"
+                content={renderLabel(labelFontSize)}
+              />
               {waterfallData.map((entry) => (
                 <Cell
                   key={entry.month}
-                  fill={entry.isTotal ? totalColor : entry.net >= 0 ? profitColor : lossColor}
+                  fill={
+                    entry.isTotal
+                      ? totalColor
+                      : entry.net >= 0
+                        ? profitColor
+                        : lossColor
+                  }
                   opacity={entry.isTotal ? 0.6 : 0.85}
                 />
               ))}
@@ -233,8 +281,8 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
           </BarChart>
         </ResponsiveContainer>
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <div ref={chartRef} className="space-y-4">
@@ -256,7 +304,7 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
               <span className="text-[10px] text-muted-foreground">소계</span>
             </div>
           </div>
-          {variant === 'default' && (
+          {variant === "default" && (
             <>
               <ShareChartButton chartRef={hiddenChartRef} title="월별 손익" />
               <LandscapeChartModal title="월별 손익">
@@ -264,18 +312,26 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
                   <div className="flex items-center justify-center gap-5 mb-2 shrink-0">
                     <div className="flex items-center gap-1.5">
                       <div className={`w-3 h-3 rounded-sm ${profitBg}`} />
-                      <span className="text-xs text-muted-foreground">수익</span>
+                      <span className="text-xs text-muted-foreground">
+                        수익
+                      </span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <div className="w-3 h-3 rounded-sm bg-blue-500" />
-                      <span className="text-xs text-muted-foreground">손실</span>
+                      <span className="text-xs text-muted-foreground">
+                        손실
+                      </span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <div className="w-3 h-3 rounded-sm bg-slate-400/60" />
-                      <span className="text-xs text-muted-foreground">소계</span>
+                      <span className="text-xs text-muted-foreground">
+                        소계
+                      </span>
                     </div>
                   </div>
-                  <div className="flex-1 min-h-0">{renderWaterfallChart('100%', true)}</div>
+                  <div className="flex-1 min-h-0">
+                    {renderWaterfallChart("100%", true)}
+                  </div>
                 </div>
               </LandscapeChartModal>
             </>
@@ -287,22 +343,30 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
       <div className="bg-card border border-border rounded-xl p-4 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <span className="text-[10px] text-muted-foreground block mb-1">총 수익</span>
+            <span className="text-[10px] text-muted-foreground block mb-1">
+              총 수익
+            </span>
             <span className={`text-xs sm:text-sm font-bold ${profitText}`}>
               +{totalProfit.toLocaleString()}원
             </span>
           </div>
           <div>
-            <span className="text-[10px] text-muted-foreground block mb-1">총 손실</span>
+            <span className="text-[10px] text-muted-foreground block mb-1">
+              총 손실
+            </span>
             <span className="text-xs sm:text-sm font-bold text-blue-500">
               -{totalLoss.toLocaleString()}원
             </span>
           </div>
         </div>
         <div className="pt-3 border-t border-border">
-          <span className="text-[10px] text-muted-foreground block mb-1">순손익</span>
-          <span className={`text-xl font-bold ${netTotal >= 0 ? profitText : 'text-blue-500'}`}>
-            {netTotal >= 0 ? '+' : ''}
+          <span className="text-[10px] text-muted-foreground block mb-1">
+            순손익
+          </span>
+          <span
+            className={`text-xl font-bold ${netTotal >= 0 ? profitText : "text-blue-500"}`}
+          >
+            {netTotal >= 0 ? "+" : ""}
             {netTotal.toLocaleString()}원
           </span>
         </div>
@@ -312,81 +376,101 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
       {renderWaterfallChart()}
 
       {/* Hidden Chart for Capture */}
-      {variant === 'default' && (
+      {variant === "default" && (
         <div
           ref={hiddenChartRef}
           style={{
-            position: 'fixed',
+            position: "fixed",
             top: 0,
             left: 0,
             zIndex: -50,
             opacity: 0,
-            width: '800px',
-            height: '450px',
-            backgroundColor: '#ffffff',
-            padding: '20px',
-            pointerEvents: 'none',
+            width: "800px",
+            height: "450px",
+            backgroundColor: "#ffffff",
+            padding: "20px",
+            pointerEvents: "none",
           }}
         >
           <div
             style={{
-              marginBottom: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              marginBottom: "16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
             <div>
-              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>
+              <h3
+                style={{
+                  fontSize: "20px",
+                  fontWeight: 700,
+                  color: "#1e293b",
+                  margin: 0,
+                }}
+              >
                 월별 손익
               </h3>
-              <p style={{ fontSize: '14px', color: '#64748b', margin: '4px 0 0 0' }}>
-                순손익 {netTotal >= 0 ? '+' : ''}
+              <p
+                style={{
+                  fontSize: "14px",
+                  color: "#64748b",
+                  margin: "4px 0 0 0",
+                }}
+              >
+                순손익 {netTotal >= 0 ? "+" : ""}
                 {netTotal.toLocaleString()}원
               </p>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "24px",
+              marginBottom: "16px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <div
                 style={{
-                  width: '16px',
-                  height: '16px',
-                  borderRadius: '2px',
+                  width: "16px",
+                  height: "16px",
+                  borderRadius: "2px",
                   backgroundColor: profitColor,
                 }}
               />
-              <span style={{ fontSize: '14px', color: '#64748b' }}>수익</span>
+              <span style={{ fontSize: "14px", color: "#64748b" }}>수익</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <div
                 style={{
-                  width: '16px',
-                  height: '16px',
-                  borderRadius: '2px',
+                  width: "16px",
+                  height: "16px",
+                  borderRadius: "2px",
                   backgroundColor: lossColor,
                 }}
               />
-              <span style={{ fontSize: '14px', color: '#64748b' }}>손실</span>
+              <span style={{ fontSize: "14px", color: "#64748b" }}>손실</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <div
                 style={{
-                  width: '16px',
-                  height: '16px',
-                  borderRadius: '2px',
+                  width: "16px",
+                  height: "16px",
+                  borderRadius: "2px",
                   backgroundColor: totalColor,
                   opacity: 0.6,
                 }}
               />
-              <span style={{ fontSize: '14px', color: '#64748b' }}>소계</span>
+              <span style={{ fontSize: "14px", color: "#64748b" }}>소계</span>
             </div>
           </div>
-          <div style={{ width: '100%', height: '350px' }}>
-            {renderWaterfallChart('100%', false, true)}
+          <div style={{ width: "100%", height: "350px" }}>
+            {renderWaterfallChart("100%", false, true)}
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }
