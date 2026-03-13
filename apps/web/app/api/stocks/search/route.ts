@@ -67,7 +67,18 @@ export async function GET(request: NextRequest) {
             })
           : dbStocks
 
-      // 정렬: 코드 정확 일치 → 이름 시작 일치 → 코드 시작 일치 → 이름에 포함(eng_name만 일치보다 우선) → 이름순
+      // 국내 ETF 브랜드 패턴 (검색어가 브랜드명과 일치하면 해당 ETF 우선 표시)
+      const ETF_BRANDS = [
+        'KODEX', 'TIGER', 'KBSTAR', 'SOL', 'ACE', 'HANARO', 'ARIRANG',
+        'KOSEF', 'TIMEFOLIO', 'PLUS', 'RISE', 'FOCUS',
+      ]
+      const isKrMarket = (market: string) =>
+        market === 'KOSPI' || market === 'KOSDAQ' || market === 'ETF'
+      // 검색어의 첫 토큰이 ETF 브랜드인지 확인
+      const firstToken = tokens[0]?.toUpperCase() ?? ''
+      const isEtfBrandSearch = ETF_BRANDS.includes(firstToken)
+
+      // 정렬: ETF 브랜드 검색 시 국내 ETF 우선 → 코드 정확 일치 → 이름 시작 일치 → 코드 시작 일치 → 이름순
       const qLower = q.toLowerCase()
       const qUpper = q.toUpperCase()
       const sorted = filtered.sort((a, b) => {
@@ -75,6 +86,14 @@ export async function GET(request: NextRequest) {
         const bCode = b.code.toUpperCase()
         const aName = a.name.toLowerCase()
         const bName = b.name.toLowerCase()
+
+        // 0) ETF 브랜드 검색: 해당 브랜드의 국내 ETF를 최우선
+        if (isEtfBrandSearch) {
+          const aIsEtf = isKrMarket(a.market) && a.name.toUpperCase().startsWith(firstToken)
+          const bIsEtf = isKrMarket(b.market) && b.name.toUpperCase().startsWith(firstToken)
+          if (aIsEtf && !bIsEtf) return -1
+          if (!aIsEtf && bIsEtf) return 1
+        }
 
         // 1) 코드 정확히 일치
         const aExact = aCode === qUpper
