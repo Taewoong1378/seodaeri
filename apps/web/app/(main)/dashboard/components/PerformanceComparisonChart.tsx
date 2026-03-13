@@ -69,16 +69,42 @@ export function PerformanceComparisonChart({ data }: PerformanceComparisonChartP
     return item.date <= currentDate
   })
 
+  // 계좌추세 차트와 시작점 일치: portfolio가 0이 아닌 첫 데이터의 직전(baseline)부터 시작
+  // 예: 3월 시작 → [0,0,0,7.1] → 2월(baseline=0%)부터 시작
+  const trimmedData = (() => {
+    const firstDataIdx = filteredData.findIndex((d) => d.portfolio !== 0)
+    const baselineIdx = firstDataIdx > 0 ? firstDataIdx - 1 : -1
+    if (baselineIdx <= 0) return filteredData // 처음부터 시작하거나 데이터 없음
+
+    const sliced = filteredData.slice(baselineIdx)
+    // 지수를 baseline 시점 기준 0%로 리베이스
+    const base = sliced[0]
+    if (!base) return sliced
+    const rebase = (cur: number, baseVal: number): number => {
+      if (baseVal === 0) return cur
+      return Math.round(((1 + cur / 100) / (1 + baseVal / 100) - 1) * 100 * 10) / 10
+    }
+    return sliced.map((d) => ({
+      ...d,
+      portfolio: rebase(d.portfolio, base.portfolio),
+      kospi: rebase(d.kospi, base.kospi),
+      sp500: rebase(d.sp500, base.sp500),
+      nasdaq: rebase(d.nasdaq, base.nasdaq),
+      sp500Dollar: d.sp500Dollar !== undefined ? rebase(d.sp500Dollar, base.sp500Dollar ?? 0) : undefined,
+      nasdaqDollar: d.nasdaqDollar !== undefined ? rebase(d.nasdaqDollar, base.nasdaqDollar ?? 0) : undefined,
+    }))
+  })()
+
   // 데이터가 0인 경우 이전 값으로 채우기 (forward fill)
-  const displayData = filteredData.map((item, index) => {
+  const displayData = trimmedData.map((item, index) => {
     const result = { ...item }
 
     // portfolio가 0이면 이전 값 사용
     if (result.portfolio === 0 && index > 0) {
       // 이전에 유효한 값을 찾기
       for (let i = index - 1; i >= 0; i--) {
-        if (filteredData[i]?.portfolio !== 0) {
-          result.portfolio = filteredData[i]?.portfolio || 0
+        if (trimmedData[i]?.portfolio !== 0) {
+          result.portfolio = trimmedData[i]?.portfolio || 0
           break
         }
       }

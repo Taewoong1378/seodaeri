@@ -38,9 +38,10 @@ function formatCurrencyShort(value: number): string {
 
 function formatYAxisValue(value: number): string {
   const absValue = Math.abs(value)
-  if (absValue >= 1000000) return `${(value / 1000000).toFixed(1)}M`
-  if (absValue >= 1000) return `${(value / 1000).toFixed(0)}K`
-  return value.toString()
+  const sign = value < 0 ? '-' : ''
+  if (absValue >= 100000000) return `${sign}${(absValue / 100000000).toFixed(1)}억`
+  if (absValue >= 10000) return `${sign}${Math.round(absValue / 10000)}만`
+  return value.toLocaleString()
 }
 
 // 폭포 차트 데이터 생성
@@ -149,7 +150,7 @@ export function MonthlyProfitLossChart({ data, variant = 'default' }: MonthlyPro
               axisLine={{ stroke: '#cbd5e1' }}
               tickLine={false}
               tick={{ fill: '#64748b', fontSize: xFontSize }}
-              tickFormatter={(v) => (v === '소계' ? '소계' : v.replace('월', ''))}
+              tickFormatter={(v) => v}
             />
             <YAxis
               axisLine={false}

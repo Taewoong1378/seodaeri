@@ -351,7 +351,7 @@ export function EditTransactionModal({
                   onYearChange={setSelectedYear}
                   onMonthChange={setSelectedMonth}
                   startYear={currentYear - 20}
-                  endYear={currentYear + 1}
+                  endYear={currentYear}
                 />
               </div>
               <div className="space-y-2">

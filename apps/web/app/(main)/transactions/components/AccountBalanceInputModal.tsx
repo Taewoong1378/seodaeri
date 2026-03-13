@@ -170,7 +170,7 @@ export function AccountBalanceInputModal({
                 onYearChange={setSelectedYear}
                 onMonthChange={setSelectedMonth}
                 startYear={currentYear - 20}
-                endYear={currentYear + 1}
+                endYear={currentYear}
               />
             </div>
           </div>
